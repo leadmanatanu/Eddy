@@ -1566,7 +1566,8 @@ namespace Eddy
 
         private void btnCali_MouseDown(object sender, MouseButtonEventArgs e)
         {
-            if (DeviceCOM.IsTubeSatart || DeviceCOM.IsCalibarationStart)
+            //if (DeviceCOM.IsTubeSatart || DeviceCOM.IsCalibarationStart)
+            if (DeviceCOM.IsCalibarationStart)
             {
                 MessageBox.Show("The tube/calibration is in progress, no calibration are allowed!", "Information");
             }
@@ -1587,9 +1588,11 @@ namespace Eddy
 
         private void btnCalibration_MouseDown(object sender, MouseButtonEventArgs e)
         {
-            if (DeviceCOM.IsTubeSatart || DeviceCOM.IsCalibarationStart)
-            {
-                MessageBox.Show("The tube/calibration is in progress, no calibration are allowed!", "Information");
+            //if (DeviceCOM.IsTubeSatart || DeviceCOM.IsCalibarationStart)
+            if (DeviceCOM.IsCalibarationStart)
+
+                {
+                    MessageBox.Show("The tube/calibration is in progress, no calibration are allowed!", "Information");
             }
             else
             {
