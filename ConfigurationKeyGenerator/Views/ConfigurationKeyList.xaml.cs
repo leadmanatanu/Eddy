@@ -1,4 +1,4 @@
-﻿using ConfigurationKeyGenerator.Models;
+using ConfigurationKeyGenerator.Models;
 using ConfigurationKeyGenerator.Services;
 using Microsoft.Win32;
 using System;
@@ -121,7 +121,7 @@ namespace ConfigurationKeyGenerator.Views
 
 
             // Empty state only shows when there truly are no records at all
-            // (not just because the search filtered everything out) —
+            // (not just because the search filtered everything out) �
             // but we still want feedback for a filtered-to-zero search too.
             if (allLogs.Count == 0)
             {

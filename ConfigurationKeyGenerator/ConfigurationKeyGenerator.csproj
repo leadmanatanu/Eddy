@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -14,7 +14,23 @@
     </Content>
   </ItemGroup>
 
-	<ItemGroup>
-		<PackageReference Include="Npgsql" Version="8.0.3" />
-	</ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\8F\Services\ConfigKey\MachineIdCodec.cs" Link="Services\ConfigKey\MachineIdCodec.cs" />
+    <Compile Include="..\8F\Services\ConfigKey\ConfigurationWhitelist.cs" Link="Services\ConfigKey\ConfigurationWhitelist.cs" />
+    <Compile Include="..\Shared.MagkraftTools\DatabaseBootstrap.cs" Link="Services\DatabaseBootstrap.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Keys\config.secret" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Npgsql" Version="8.0.3" />
+  </ItemGroup>
 </Project>

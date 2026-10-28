@@ -37,7 +37,7 @@ namespace _8F.ViewModels
             set => SetProperty(ref _logs, value);
         }
 
-        public bool IsReNewConfig => Convert.ToBoolean(System.Configuration.ConfigurationManager.AppSettings["isrenewconfig"]);
+        public bool IsReNewConfig => _8F.Services.ConfigKey.ProtectedSettings.IsReNewConfig;
         public string BatchCaption => IsReNewConfig ? "Shift" : "Batch Name";
 
         public Action? CloseAction { get; set; }

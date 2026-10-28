@@ -56,4 +56,8 @@
     <Folder Include="Scripts\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Keys\config.secret" />
+  </ItemGroup>
 </Project>
+

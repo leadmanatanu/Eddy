@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Npgsql" Version="8.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MachineInfo.Application\MachineInfo.Application.csproj" />
+    <ProjectReference Include="..\MachineInfo.Domain\MachineInfo.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Shared.MagkraftTools\DatabaseBootstrap.cs" Link="DatabaseBootstrap.cs" />
+  </ItemGroup>
+
+</Project>

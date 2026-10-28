@@ -60,3 +60,4 @@ D:\New folder\Eddy\ConfigurationKeyGenerator\obj\Debug\net8.0-windows\refint\Con
 D:\New folder\Eddy\ConfigurationKeyGenerator\obj\Debug\net8.0-windows\ConfigurationKeyGenerator.pdb
 D:\New folder\Eddy\ConfigurationKeyGenerator\obj\Debug\net8.0-windows\ConfigurationKeyGenerator.genruntimeconfig.cache
 D:\New folder\Eddy\ConfigurationKeyGenerator\obj\Debug\net8.0-windows\ref\ConfigurationKeyGenerator.dll
+D:\New folder\Eddy\ConfigurationKeyGenerator\bin\Debug\net8.0-windows\appsettings.json

@@ -22,7 +22,7 @@ namespace _8F
 
         public List<LogData> listOfLog = new();
 
-        private bool IsReNewConfig =>Convert.ToBoolean(System.Configuration.ConfigurationManager.AppSettings["isrenewconfig"]);
+        private bool IsReNewConfig => _8F.Services.ConfigKey.ProtectedSettings.IsReNewConfig;
 
         private string BatchCaption => IsReNewConfig ? "Shift" : "Batch Name";
 
@@ -41,9 +41,9 @@ namespace _8F
 
         private static bool GetConfigBool(string key, bool defaultValue = true)
         {
-            string? val = System.Configuration.ConfigurationManager.AppSettings[key];
-            if (string.IsNullOrWhiteSpace(val)) return defaultValue;
-            return bool.TryParse(val, out bool result) ? result : defaultValue;
+            return _8F.Services.ConfigKey.ProtectedSettings.GetBool(key, defaultValue);
+
+
         }
 
         private void ApplyColumnVisibility()

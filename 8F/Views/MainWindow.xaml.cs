@@ -72,69 +72,76 @@ namespace _8F
 
         private static bool GetConfigBool(string key, bool defaultValue = true)
         {
-            string? val = System.Configuration.ConfigurationManager.AppSettings[key];
-            if (string.IsNullOrWhiteSpace(val)) return defaultValue;
-            return bool.TryParse(val, out bool result) ? result : defaultValue;
+            return _8F.Services.ConfigKey.ProtectedSettings.GetBool(key, defaultValue);
+
+
         }
 
-        private static int GetConfigInt(string key, int defaultValue = 5020)
+        private static int GetConfigInt(string key, int defaultValue = 5020) => _8F.Services.ConfigKey.ProtectedSettings.GetInt(key, defaultValue); /*
         {
-            string? val = System.Configuration.ConfigurationManager.AppSettings[key];
-            if (string.IsNullOrWhiteSpace(val)) return defaultValue;
-            return int.TryParse(val, out int result) ? result : defaultValue;
+            return _8F.Services.ConfigKey.ProtectedSettings.GetBool(key, defaultValue);
+
+
         }
 
-        bool isRenewConfig = Convert.ToBoolean(System.Configuration.ConfigurationManager.AppSettings["isrenewconfig"]);
-        bool isTestLogOff = Convert.ToBoolean(System.Configuration.ConfigurationManager.AppSettings["IsTestLogOff"]);
-        bool isTxStrengthEnabled = Convert.ToBoolean(System.Configuration.ConfigurationManager.AppSettings["IsTxStrengthEnable"]);
+        */ bool isRenewConfig => _8F.Services.ConfigKey.ProtectedSettings.IsReNewConfig;
+        bool isTestLogOff => _8F.Services.ConfigKey.ProtectedSettings.IsTestLogOff;
+        bool isTxStrengthEnabled => _8F.Services.ConfigKey.ProtectedSettings.IsTxStrengthEnable;
 
         // Config-driven feature toggle fields (WithDb / WithFile)
-        public bool isOpenWithDb = GetConfigBool("IsOpenWithDb", GetConfigBool("isOpenDbEbable", true));
-        public bool isOpenWithFile = GetConfigBool("IsOpenWithFile", GetConfigBool("isOpenEnable", false));
+        public bool isOpenWithDb => _8F.Services.ConfigKey.ProtectedSettings.IsOpenWithDb;
+        public bool isOpenWithFile => _8F.Services.ConfigKey.ProtectedSettings.IsOpenWithFile;
 
-        public bool isSaveWithDb = GetConfigBool("IsSaveWithDb", GetConfigBool("IsSaveToDb", true));
-        public bool isSaveWithFile = GetConfigBool("IsSaveWithFile", GetConfigBool("IsSaveToFile", false));
+        public bool isSaveWithDb => _8F.Services.ConfigKey.ProtectedSettings.IsSaveWithDb;
+        public bool isSaveWithFile => _8F.Services.ConfigKey.ProtectedSettings.IsSaveWithFile;
 
-        public bool isSaveAsWithDb = GetConfigBool("IsSaveAsWithDb", GetConfigBool("IsSaveAsToDb", true));
-        public bool isSaveAsWithFile = GetConfigBool("IsSaveAsWithFile", GetConfigBool("IsSaveAsToFile", false));
+        public bool isSaveAsWithDb => _8F.Services.ConfigKey.ProtectedSettings.IsSaveAsWithDb;
+        public bool isSaveAsWithFile => _8F.Services.ConfigKey.ProtectedSettings.IsSaveAsWithFile;
 
-        public bool isImportConfigWithDb = GetConfigBool("IsImportConfigurationWithDb", false);
-        public bool isImportConfigWithFile = GetConfigBool("IsImportConfigurationWithFile", GetConfigBool("IsImportConfigurationEnable", true));
+        public bool isImportConfigWithDb => _8F.Services.ConfigKey.ProtectedSettings.IsImportConfigurationWithDb;
+        public bool isImportConfigWithFile => _8F.Services.ConfigKey.ProtectedSettings.IsImportConfigurationWithFile;
 
-        public bool isExportConfigWithDb = GetConfigBool("IsExportConfigurationWithDb", GetConfigBool("IsExportConfigurationEnable", false));
-        public bool isExportConfigWithFile = GetConfigBool("IsExportConfigurationWithFile", false);
+        public bool isExportConfigWithDb => _8F.Services.ConfigKey.ProtectedSettings.IsExportConfigurationWithDb;
+        public bool isExportConfigWithFile => _8F.Services.ConfigKey.ProtectedSettings.IsExportConfigurationWithFile;
 
-        bool isExitEnable = GetConfigBool("IsExitEnable", true);
+        bool isExitEnable => _8F.Services.ConfigKey.ProtectedSettings.IsExitEnable;
 
-        public bool isModbusServerEnable = GetConfigBool("IsModbusServerEnable", false);
-        public int modbusServerPort = GetConfigInt("ModbusServerPort", 5020);
-        public int modbusHeartbeatIntervalMs = GetConfigInt("ModbusHeartbeatIntervalMs", 1000);
+        public bool isModbusServerEnable => _8F.Services.ConfigKey.ProtectedSettings.IsModbusServerEnable;
+        public int modbusServerPort => _8F.Services.ConfigKey.ProtectedSettings.ModbusServerPort;
+        public int modbusHeartbeatIntervalMs => _8F.Services.ConfigKey.ProtectedSettings.ModbusHeartbeatIntervalMs;
         public IModbusSlaveService modbusSlaveService = new ModbusSlaveService();
 
-        public bool isPasswordEnable = GetConfigBool("IsPasswordEnable", true);
-        bool isChangeConfigEnable = GetConfigBool("IsChangeConfigurationEnable", true);
-        bool isThresholdSettingEnable = GetConfigBool("IsThresholdSettingEnable", true);
-        bool isAutoEllipseEnabled = GetConfigBool("IsAutoEllipseEnable", true);
-        bool isWriteConfigEnable = GetConfigBool("IsWriteConfigurationEnable", true);
-        bool isCopyChannel1ConfigEnable = GetConfigBool("IsCopyChannel1ConfigurationEnable", true);
+        public bool isPasswordEnable => _8F.Services.ConfigKey.ProtectedSettings.IsPasswordEnable;
+        bool isChangeConfigEnable => _8F.Services.ConfigKey.ProtectedSettings.IsChangeConfigurationEnable;
+        bool isThresholdSettingEnable => _8F.Services.ConfigKey.ProtectedSettings.IsThresholdSettingEnable;
+        bool isAutoEllipseEnabled => _8F.Services.ConfigKey.ProtectedSettings.IsAutoEllipseEnable;
+        bool isWriteConfigEnable => _8F.Services.ConfigKey.ProtectedSettings.IsWriteConfigurationEnable;
+        bool isCopyChannel1ConfigEnable => _8F.Services.ConfigKey.ProtectedSettings.IsCopyChannel1ConfigurationEnable;
 
-        bool isBatchWiseLogEnable = GetConfigBool("IsBatchWiseLogEnable", true);
-        bool isSerialNoLogEnable = GetConfigBool("IsSerialNumberLogEnable", true);
-        bool isPdfReportEnable = GetConfigBool("IsPdfReportEnable", true);
+        bool isBatchWiseLogEnable => _8F.Services.ConfigKey.ProtectedSettings.IsBatchWiseLogEnable;
+        bool isSerialNoLogEnable => _8F.Services.ConfigKey.ProtectedSettings.IsSerialNumberLogEnable;
+        bool isPdfReportEnable => _8F.Services.ConfigKey.ProtectedSettings.IsPdfReportEnable;
 
-        bool isTotalCountVisible = GetConfigBool("IsTotalCountVisible", true);
-        bool isOkCountVisible = GetConfigBool("IsOkCountVisible", true);
-        bool isNotOkCountVisible = GetConfigBool("IsNotOkCountVisible", true);
+        bool isTotalCountVisible => _8F.Services.ConfigKey.ProtectedSettings.IsTotalCountVisible;
+        bool isOkCountVisible => _8F.Services.ConfigKey.ProtectedSettings.IsOkCountVisible;
+        bool isNotOkCountVisible => _8F.Services.ConfigKey.ProtectedSettings.IsNotOkCountVisible;
 
         public MainWindow()
         {
-            if (!ValidateMachine())
+            var configResult = _8F.Services.ConfigKey.ConfigKeyService.Load();
+            if (!configResult.Success)
+            {
+                _8F.Services.ConfigKey.ConfigKeyService.ShowVerificationError(configResult.ErrorCode ?? "CK-02");
+                Close();
+                return;
+            }
+            /* if (false)
             {
                 Close();
                 return;
             }
 
-            InitializeComponent();
+            */ InitializeComponent();
 
             // UI Hides for Total Count, OK Count, and Not OK Count
             if (!isTotalCountVisible)
@@ -191,13 +198,13 @@ namespace _8F
 
             WebPage = System.Configuration.ConfigurationManager.AppSettings["WebPage"] ?? string.Empty;
             DeviceCOM.IsJSON = Convert.ToBoolean(System.Configuration.ConfigurationManager.AppSettings["IsJSON"]);
-            DeviceCOM.IsLogRequiredOnBalance = Convert.ToBoolean(System.Configuration.ConfigurationManager.AppSettings["IsLogRequiredOnBalance"]);
+            DeviceCOM.IsLogRequiredOnBalance = _8F.Services.ConfigKey.ProtectedSettings.IsLogRequiredOnBalance;
             ScreenId = Convert.ToInt32(System.Configuration.ConfigurationManager.AppSettings["ScreenId"]);
             BoxSize1 = Convert.ToInt32(System.Configuration.ConfigurationManager.AppSettings["BoxSize1"]);
             BoxSize2 = Convert.ToInt32(System.Configuration.ConfigurationManager.AppSettings["BoxSize2"]);
             BoxSize3 = Convert.ToInt32(System.Configuration.ConfigurationManager.AppSettings["BoxSize3"]);
             BoxSize4 = Convert.ToInt32(System.Configuration.ConfigurationManager.AppSettings["BoxSize4"]);
-            FrequencyNo = Convert.ToInt32(System.Configuration.ConfigurationManager.AppSettings["FrequencyNo"]);
+            FrequencyNo = _8F.Services.ConfigKey.ProtectedSettings.FrequencyNo;
             var LogEnabled = Convert.ToBoolean(System.Configuration.ConfigurationManager.AppSettings["LogEnable"]);
             modeApp = Convert.ToInt16(System.Configuration.ConfigurationManager.AppSettings["AppMode"]);
             CodeReadGapInMS = Convert.ToInt16(System.Configuration.ConfigurationManager.AppSettings["CodeReadGapInMS"]);
@@ -448,7 +455,7 @@ namespace _8F
             }
         }
 
-        private bool ValidateMachine()
+        /* private bool ValidateMachine()
         {
             try
             {
@@ -753,7 +760,7 @@ namespace _8F
             return string.Empty;
         }
 
-        private void Client_DataReceived(object sender, string data)
+        */ private void Client_DataReceived(object sender, string data)
         {
             ProcessCode(data);
         }
@@ -2575,7 +2582,7 @@ namespace _8F
             }
             else
             {
-                var IsReNewConfig = Convert.ToBoolean(System.Configuration.ConfigurationManager.AppSettings["IsReNewConfig"]);
+                var IsReNewConfig = _8F.Services.ConfigKey.ProtectedSettings.IsReNewConfig;
                 if (IsReNewConfig)
                 {
                     partConfigReNew = new PartConfigReNew();

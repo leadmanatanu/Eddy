@@ -57,8 +57,8 @@ namespace _8F.Tests
                 InspectionTimestamp = DateTime.UtcNow,
                 ChannelNumber = 1,
                 FrequencyHz = 400,
-                XValue = 15.5,
-                YValue = 25.5,
+                FrequencyData = "[]",
+
                 ResultPass = true
             };
 

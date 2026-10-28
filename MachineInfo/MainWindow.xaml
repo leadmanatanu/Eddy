@@ -1,9 +1,9 @@
-﻿<Window x:Class="MachineInfo.MainWindow"
+<Window x:Class="MachineInfo.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Machine Information"
-        Height="320"
-        Width="720"
+        Height="430"
+        Width="740"
         WindowStartupLocation="CenterScreen"
         ResizeMode="NoResize"
         Background="#F3F4F6"
@@ -23,15 +23,10 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border Background="{TemplateBinding Background}"
-                                CornerRadius="6">
-                            <StackPanel Orientation="Horizontal"
-                                        HorizontalAlignment="Center"
-                                        VerticalAlignment="Center">
-                                <TextBlock Text="&#128203;"
-                                           FontSize="13"
-                                           Margin="0,0,7,0"/>
-                                <ContentPresenter VerticalAlignment="Center"/>
-                            </StackPanel>
+                                CornerRadius="6"
+                                Padding="14,0">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
                         </Border>
                     </ControlTemplate>
                 </Setter.Value>
@@ -42,6 +37,10 @@
                 </Trigger>
                 <Trigger Property="IsPressed" Value="True">
                     <Setter Property="Background" Value="#1E40AF"/>
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Background" Value="#9CA3AF"/>
+                    <Setter Property="Cursor" Value="Arrow"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
@@ -58,9 +57,10 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border Background="{TemplateBinding Background}"
-                                CornerRadius="6">
+                                CornerRadius="6"
+                                Padding="14,0">
                             <ContentPresenter HorizontalAlignment="Center"
-                                               VerticalAlignment="Center"/>
+                                              VerticalAlignment="Center"/>
                         </Border>
                     </ControlTemplate>
                 </Setter.Value>
@@ -79,7 +79,7 @@
             Background="White"
             BorderBrush="#E5E7EB"
             BorderThickness="1"
-            Padding="34">
+            Padding="32">
 
         <Border.Effect>
             <DropShadowEffect BlurRadius="20"
@@ -92,15 +92,16 @@
 
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition Height="26"/>
+                <RowDefinition Height="20"/>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition Height="28"/>
+                <RowDefinition Height="18"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="24"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
             <!-- Header -->
-            <StackPanel>
-
+            <StackPanel Grid.Row="0">
                 <StackPanel Orientation="Horizontal">
                     <Border Width="6"
                             Height="26"
@@ -114,16 +115,55 @@
                                VerticalAlignment="Center"/>
                 </StackPanel>
 
-                <TextBlock Text="Share this Machine ID with the support team to generate your license."
+                <TextBlock Text="Enter the instrument serial number to generate or retrieve the unique Machine ID."
                            Margin="18,6,0,0"
                            Foreground="#6B7280"
                            FontSize="13"/>
-
             </StackPanel>
 
-            <!-- Machine ID -->
+            <!-- Serial Number Input -->
             <StackPanel Grid.Row="2">
+                <TextBlock Text="Serial Number"
+                           FontWeight="SemiBold"
+                           FontSize="13"
+                           Foreground="#1F2937"
+                           Margin="0,0,0,8"/>
 
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="12"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Border Grid.Column="0"
+                            Background="#FFFFFF"
+                            BorderBrush="#D1D5DB"
+                            BorderThickness="1"
+                            CornerRadius="6">
+                        <TextBox x:Name="txtSerialNumber"
+                                 Height="42"
+                                 FontSize="14"
+                                 VerticalContentAlignment="Center"
+                                 Padding="12,0"
+                                 Background="Transparent"
+                                 BorderThickness="0"
+                                 Foreground="#111827"
+                                 KeyDown="TxtSerialNumber_KeyDown"/>
+                    </Border>
+
+                    <Button x:Name="btnGenerate"
+                            Grid.Column="2"
+                            Width="130"
+                            Height="42"
+                            Content="Generate"
+                            Style="{StaticResource PrimaryButton}"
+                            Click="BtnGenerate_Click"/>
+                </Grid>
+            </StackPanel>
+
+            <!-- Machine ID Output -->
+            <StackPanel Grid.Row="4">
                 <TextBlock Text="Machine ID"
                            FontWeight="SemiBold"
                            FontSize="13"
@@ -134,10 +174,9 @@
                         BorderBrush="#D1D5DB"
                         BorderThickness="1"
                         CornerRadius="6">
-
                     <TextBox x:Name="txtMachineId"
                              Height="44"
-                             FontSize="14"
+                             FontSize="12"
                              FontFamily="Consolas"
                              IsReadOnly="True"
                              VerticalContentAlignment="Center"
@@ -145,26 +184,25 @@
                              Background="Transparent"
                              BorderThickness="0"
                              Foreground="#111827"/>
-
                 </Border>
-
             </StackPanel>
 
             <!-- Buttons -->
-            <StackPanel Grid.Row="4"
+            <StackPanel Grid.Row="6"
                         Orientation="Horizontal"
                         HorizontalAlignment="Right">
 
                 <Button x:Name="btnCopy"
-                        Width="140"
+                        Width="130"
                         Height="40"
-                        Margin="0,0,10,0"
+                        Margin="0,0,12,0"
                         Content="Copy"
+                        IsEnabled="False"
                         Style="{StaticResource PrimaryButton}"
                         Click="BtnCopy_Click"/>
 
                 <Button x:Name="btnClose"
-                        Width="120"
+                        Width="110"
                         Height="40"
                         Content="Close"
                         Style="{StaticResource SecondaryButton}"

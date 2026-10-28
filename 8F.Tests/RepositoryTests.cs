@@ -40,8 +40,8 @@ namespace _8F.Tests
                 InspectionTimestamp = DateTime.UtcNow,
                 ChannelNumber = 1,
                 FrequencyHz = 400,
-                XValue = 12.34,
-                YValue = 56.78,
+                FrequencyData = "[]",
+
                 ResultPass = true,
                 DefectType = "None",
                 MachineId = "M01"
@@ -149,8 +149,8 @@ namespace _8F.Tests
                 InspectionTimestamp = DateTime.UtcNow,
                 ChannelNumber = 1,
                 FrequencyHz = 400,
-                XValue = 10.0,
-                YValue = 20.0,
+                FrequencyData = "[]",
+
                 ResultPass = true,
                 DefectType = "None",
                 MachineId = "M01"

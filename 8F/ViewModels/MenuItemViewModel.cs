@@ -63,7 +63,7 @@ namespace _8F.ViewModels
         public CircleSetting? ellipsesPop { get; set; }
         public MainWindow? mainWindow { get; set; }
         public ObservableCollection<MenuItemViewModel> MenuItems { get; set; } = new();
-        public bool isRenewConfig = Convert.ToBoolean(System.Configuration.ConfigurationManager.AppSettings["isrenewconfig"]);
+        public bool isRenewConfig => _8F.Services.ConfigKey.ProtectedSettings.IsReNewConfig;
         public ICommand Command
         {
             get

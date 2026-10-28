@@ -64,7 +64,7 @@ namespace _8F.ViewModels
 
         public FreqViewModel()
         {
-            IsTxStrengthEnabled = Convert.ToBoolean(System.Configuration.ConfigurationManager.AppSettings["IsTxStrengthEnable"]);
+            IsTxStrengthEnabled = _8F.Services.ConfigKey.ProtectedSettings.IsTxStrengthEnable;
 
             SaveConfigCommand = new RelayCommand(ExecuteSaveConfig);
             CloseCommand = new RelayCommand(ExecuteClose);

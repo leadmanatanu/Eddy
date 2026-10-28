@@ -1,4 +1,6 @@
-﻿namespace ConfigurationKeyGenerator.Models
+using System;
+
+namespace ConfigurationKeyGenerator.Models
 {
     public class ConfigurationKeyLog
     {
@@ -19,5 +21,6 @@
         public DateTime GeneratedDate { get; set; }
         public DateTime? UpdatedDate { get; set; }
 
+        public string? SettingsJson { get; set; }
     }
 }

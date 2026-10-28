@@ -22,3 +22,13 @@ $RECYCLE.BIN/
 *.log
 scratch/
 *.zip
+
+## Encryption keys
+Keys/
+**/Keys/
+*.secret
+
+# Configuration
+appsettings.json
+!appsettings.sample.json
+
