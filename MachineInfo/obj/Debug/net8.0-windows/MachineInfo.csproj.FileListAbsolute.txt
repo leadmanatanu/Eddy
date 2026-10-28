@@ -58,9 +58,3 @@ D:\New folder\Eddy\MachineInfo\bin\Debug\net8.0-windows\Microsoft.Extensions.Fil
 D:\New folder\Eddy\MachineInfo\bin\Debug\net8.0-windows\Microsoft.Extensions.Logging.Abstractions.dll
 D:\New folder\Eddy\MachineInfo\bin\Debug\net8.0-windows\Microsoft.Extensions.Primitives.dll
 D:\New folder\Eddy\MachineInfo\bin\Debug\net8.0-windows\Npgsql.dll
-D:\New folder\Eddy\MachineInfo\bin\Debug\net8.0-windows\MachineInfo.Application.dll
-D:\New folder\Eddy\MachineInfo\bin\Debug\net8.0-windows\MachineInfo.Domain.dll
-D:\New folder\Eddy\MachineInfo\bin\Debug\net8.0-windows\MachineInfo.Infrastructure.dll
-D:\New folder\Eddy\MachineInfo\bin\Debug\net8.0-windows\MachineInfo.Domain.pdb
-D:\New folder\Eddy\MachineInfo\bin\Debug\net8.0-windows\MachineInfo.Application.pdb
-D:\New folder\Eddy\MachineInfo\bin\Debug\net8.0-windows\MachineInfo.Infrastructure.pdb

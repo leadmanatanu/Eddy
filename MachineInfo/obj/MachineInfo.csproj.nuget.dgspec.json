@@ -4,221 +4,6 @@
     "D:\\New folder\\Eddy\\MachineInfo\\MachineInfo.csproj": {}
   },
   "projects": {
-    "D:\\New folder\\Eddy\\MachineInfo.Application\\MachineInfo.Application.csproj": {
-      "version": "1.0.0",
-      "restore": {
-        "projectUniqueName": "D:\\New folder\\Eddy\\MachineInfo.Application\\MachineInfo.Application.csproj",
-        "projectName": "MachineInfo.Application",
-        "projectPath": "D:\\New folder\\Eddy\\MachineInfo.Application\\MachineInfo.Application.csproj",
-        "packagesPath": "C:\\Users\\atm00\\.nuget\\packages\\",
-        "outputPath": "D:\\New folder\\Eddy\\MachineInfo.Application\\obj\\",
-        "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-        ],
-        "configFilePaths": [
-          "C:\\Users\\atm00\\AppData\\Roaming\\NuGet\\NuGet.Config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
-        ],
-        "originalTargetFrameworks": [
-          "net8.0"
-        ],
-        "sources": {
-          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-          "C:\\Program Files\\dotnet\\library-packs": {},
-          "https://api.nuget.org/v3/index.json": {}
-        },
-        "frameworks": {
-          "net8.0": {
-            "targetAlias": "net8.0",
-            "projectReferences": {
-              "D:\\New folder\\Eddy\\MachineInfo.Domain\\MachineInfo.Domain.csproj": {
-                "projectPath": "D:\\New folder\\Eddy\\MachineInfo.Domain\\MachineInfo.Domain.csproj"
-              }
-            }
-          }
-        },
-        "warningProperties": {
-          "warnAsError": [
-            "NU1605"
-          ]
-        },
-        "restoreAuditProperties": {
-          "enableAudit": "true",
-          "auditLevel": "low",
-          "auditMode": "direct"
-        },
-        "SdkAnalysisLevel": "9.0.300"
-      },
-      "frameworks": {
-        "net8.0": {
-          "targetAlias": "net8.0",
-          "imports": [
-            "net461",
-            "net462",
-            "net47",
-            "net471",
-            "net472",
-            "net48",
-            "net481"
-          ],
-          "assetTargetFallback": true,
-          "warn": true,
-          "frameworkReferences": {
-            "Microsoft.NETCore.App": {
-              "privateAssets": "all"
-            }
-          },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.316/PortableRuntimeIdentifierGraph.json"
-        }
-      }
-    },
-    "D:\\New folder\\Eddy\\MachineInfo.Domain\\MachineInfo.Domain.csproj": {
-      "version": "1.0.0",
-      "restore": {
-        "projectUniqueName": "D:\\New folder\\Eddy\\MachineInfo.Domain\\MachineInfo.Domain.csproj",
-        "projectName": "MachineInfo.Domain",
-        "projectPath": "D:\\New folder\\Eddy\\MachineInfo.Domain\\MachineInfo.Domain.csproj",
-        "packagesPath": "C:\\Users\\atm00\\.nuget\\packages\\",
-        "outputPath": "D:\\New folder\\Eddy\\MachineInfo.Domain\\obj\\",
-        "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-        ],
-        "configFilePaths": [
-          "C:\\Users\\atm00\\AppData\\Roaming\\NuGet\\NuGet.Config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
-        ],
-        "originalTargetFrameworks": [
-          "net8.0"
-        ],
-        "sources": {
-          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-          "C:\\Program Files\\dotnet\\library-packs": {},
-          "https://api.nuget.org/v3/index.json": {}
-        },
-        "frameworks": {
-          "net8.0": {
-            "targetAlias": "net8.0",
-            "projectReferences": {}
-          }
-        },
-        "warningProperties": {
-          "warnAsError": [
-            "NU1605"
-          ]
-        },
-        "restoreAuditProperties": {
-          "enableAudit": "true",
-          "auditLevel": "low",
-          "auditMode": "direct"
-        },
-        "SdkAnalysisLevel": "9.0.300"
-      },
-      "frameworks": {
-        "net8.0": {
-          "targetAlias": "net8.0",
-          "imports": [
-            "net461",
-            "net462",
-            "net47",
-            "net471",
-            "net472",
-            "net48",
-            "net481"
-          ],
-          "assetTargetFallback": true,
-          "warn": true,
-          "frameworkReferences": {
-            "Microsoft.NETCore.App": {
-              "privateAssets": "all"
-            }
-          },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.316/PortableRuntimeIdentifierGraph.json"
-        }
-      }
-    },
-    "D:\\New folder\\Eddy\\MachineInfo.Infrastructure\\MachineInfo.Infrastructure.csproj": {
-      "version": "1.0.0",
-      "restore": {
-        "projectUniqueName": "D:\\New folder\\Eddy\\MachineInfo.Infrastructure\\MachineInfo.Infrastructure.csproj",
-        "projectName": "MachineInfo.Infrastructure",
-        "projectPath": "D:\\New folder\\Eddy\\MachineInfo.Infrastructure\\MachineInfo.Infrastructure.csproj",
-        "packagesPath": "C:\\Users\\atm00\\.nuget\\packages\\",
-        "outputPath": "D:\\New folder\\Eddy\\MachineInfo.Infrastructure\\obj\\",
-        "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-        ],
-        "configFilePaths": [
-          "C:\\Users\\atm00\\AppData\\Roaming\\NuGet\\NuGet.Config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
-        ],
-        "originalTargetFrameworks": [
-          "net8.0"
-        ],
-        "sources": {
-          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-          "C:\\Program Files\\dotnet\\library-packs": {},
-          "https://api.nuget.org/v3/index.json": {}
-        },
-        "frameworks": {
-          "net8.0": {
-            "targetAlias": "net8.0",
-            "projectReferences": {
-              "D:\\New folder\\Eddy\\MachineInfo.Application\\MachineInfo.Application.csproj": {
-                "projectPath": "D:\\New folder\\Eddy\\MachineInfo.Application\\MachineInfo.Application.csproj"
-              },
-              "D:\\New folder\\Eddy\\MachineInfo.Domain\\MachineInfo.Domain.csproj": {
-                "projectPath": "D:\\New folder\\Eddy\\MachineInfo.Domain\\MachineInfo.Domain.csproj"
-              }
-            }
-          }
-        },
-        "warningProperties": {
-          "warnAsError": [
-            "NU1605"
-          ]
-        },
-        "restoreAuditProperties": {
-          "enableAudit": "true",
-          "auditLevel": "low",
-          "auditMode": "direct"
-        },
-        "SdkAnalysisLevel": "9.0.300"
-      },
-      "frameworks": {
-        "net8.0": {
-          "targetAlias": "net8.0",
-          "dependencies": {
-            "Npgsql": {
-              "target": "Package",
-              "version": "[8.0.3, )"
-            }
-          },
-          "imports": [
-            "net461",
-            "net462",
-            "net47",
-            "net471",
-            "net472",
-            "net48",
-            "net481"
-          ],
-          "assetTargetFallback": true,
-          "warn": true,
-          "frameworkReferences": {
-            "Microsoft.NETCore.App": {
-              "privateAssets": "all"
-            }
-          },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.316/PortableRuntimeIdentifierGraph.json"
-        }
-      }
-    },
     "D:\\New folder\\Eddy\\MachineInfo\\MachineInfo.csproj": {
       "version": "1.0.0",
       "restore": {
@@ -245,19 +30,10 @@
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
-          "net8.0-windows7.0": {
+          "net8.0-windows": {
+            "framework": "net8.0-windows7.0",
             "targetAlias": "net8.0-windows",
-            "projectReferences": {
-              "D:\\New folder\\Eddy\\MachineInfo.Application\\MachineInfo.Application.csproj": {
-                "projectPath": "D:\\New folder\\Eddy\\MachineInfo.Application\\MachineInfo.Application.csproj"
-              },
-              "D:\\New folder\\Eddy\\MachineInfo.Domain\\MachineInfo.Domain.csproj": {
-                "projectPath": "D:\\New folder\\Eddy\\MachineInfo.Domain\\MachineInfo.Domain.csproj"
-              },
-              "D:\\New folder\\Eddy\\MachineInfo.Infrastructure\\MachineInfo.Infrastructure.csproj": {
-                "projectPath": "D:\\New folder\\Eddy\\MachineInfo.Infrastructure\\MachineInfo.Infrastructure.csproj"
-              }
-            }
+            "projectReferences": {}
           }
         },
         "warningProperties": {
@@ -270,10 +46,11 @@
           "auditLevel": "low",
           "auditMode": "direct"
         },
-        "SdkAnalysisLevel": "9.0.300"
+        "SdkAnalysisLevel": "10.0.300"
       },
       "frameworks": {
-        "net8.0-windows7.0": {
+        "net8.0-windows": {
+          "framework": "net8.0-windows7.0",
           "targetAlias": "net8.0-windows",
           "dependencies": {
             "Microsoft.Extensions.Configuration": {
@@ -287,6 +64,10 @@
             "Microsoft.Extensions.DependencyInjection": {
               "target": "Package",
               "version": "[8.0.0, )"
+            },
+            "Npgsql": {
+              "target": "Package",
+              "version": "[8.0.3, )"
             }
           },
           "imports": [
@@ -308,7 +89,7 @@
               "privateAssets": "none"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.316/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.302/PortableRuntimeIdentifierGraph.json"
         }
       }
     }

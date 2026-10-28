@@ -12,12 +12,12 @@
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.0" />
+		<PackageReference Include="Npgsql" Version="8.0.3" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\MachineInfo.Domain\MachineInfo.Domain.csproj" />
-		<ProjectReference Include="..\MachineInfo.Application\MachineInfo.Application.csproj" />
-		<ProjectReference Include="..\MachineInfo.Infrastructure\MachineInfo.Infrastructure.csproj" />
+		<Compile Include="..\8F\Services\ConfigKey\MachineIdCodec.cs" Link="Services\ConfigKey\MachineIdCodec.cs" />
+		<Compile Include="..\Shared.MagkraftTools\DatabaseBootstrap.cs" Link="Services\DatabaseBootstrap.cs" />
 	</ItemGroup>
 
 	<ItemGroup>
