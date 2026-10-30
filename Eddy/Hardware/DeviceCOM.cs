@@ -39,6 +39,7 @@ namespace Eddy
         public static Configuration Configuration = null!;
         public static bool IsTubeSatart = false;
         public static GraphData graphData = new GraphData();
+        public static readonly object AmpD1Lock = new();
         public static bool IsTestOn = false;
         public static bool IsAttRequired = false;
         public static bool IsJSON = false;
@@ -51,6 +52,81 @@ namespace Eddy
 
         public static int Ok = 0;
         public static int NoOk = 0;
+
+        public static readonly bool EnablePerfLog =
+            bool.TryParse(System.Configuration.ConfigurationManager.AppSettings["EnablePerfLog"], out bool enabled) && enabled;
+
+        private static long _pktCount = 0;
+        private static long _s2Count = 0;
+        private static long _s4Count = 0;
+        private static long _s6Count = 0;
+        private static long _sOtherCount = 0;
+        private static readonly object _pktLogLock = new();
+
+        public static void LogStep(string message)
+        {
+            if (!EnablePerfLog) return;
+
+            string logMsg = $"[{DateTime.Now:HH:mm:ss.fff}] [STEP] {message}";
+            System.Diagnostics.Trace.WriteLine(logMsg);
+            lock (_pktLogLock)
+            {
+                try
+                {
+                    string logPath = System.IO.Path.Combine(AppContext.BaseDirectory, "perf.log");
+                    System.IO.File.AppendAllText(logPath, $"{logMsg}{Environment.NewLine}");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[PERF] LogStep exception: {ex.Message}");
+                }
+            }
+        }
+
+        public static void LogPacket(byte[] packet, string layer)
+        {
+            if (!EnablePerfLog || packet == null || packet.Length == 0) return;
+
+            long total = System.Threading.Interlocked.Increment(ref _pktCount);
+            int type = packet[0];
+            int startIdx = packet.Length > 3 ? packet[3] : -1;
+
+            if (startIdx == 2) System.Threading.Interlocked.Increment(ref _s2Count);
+            else if (startIdx == 4) System.Threading.Interlocked.Increment(ref _s4Count);
+            else if (startIdx == 6) System.Threading.Interlocked.Increment(ref _s6Count);
+            else System.Threading.Interlocked.Increment(ref _sOtherCount);
+
+            long s2 = System.Threading.Interlocked.Read(ref _s2Count);
+            long s4 = System.Threading.Interlocked.Read(ref _s4Count);
+            long s6 = System.Threading.Interlocked.Read(ref _s6Count);
+            long other = System.Threading.Interlocked.Read(ref _sOtherCount);
+
+            string logMsg = $"[{DateTime.Now:HH:mm:ss.fff}] [PKT][{layer}] #{total} Type={type} StartIdx={startIdx} Len={packet.Length} | Counts: s2={s2}, s4={s4}, s6={s6}, other={other}";
+            System.Diagnostics.Trace.WriteLine(logMsg);
+
+            lock (_pktLogLock)
+            {
+                try
+                {
+                    string logPath = System.IO.Path.Combine(AppContext.BaseDirectory, "perf.log");
+                    System.IO.File.AppendAllText(logPath, $"{logMsg}{Environment.NewLine}");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[PERF] LogPacket exception: {ex.Message}");
+                }
+            }
+        }
+
+        public static string GetPacketCountsSummary()
+        {
+            long total = System.Threading.Interlocked.Read(ref _pktCount);
+            long s2 = System.Threading.Interlocked.Read(ref _s2Count);
+            long s4 = System.Threading.Interlocked.Read(ref _s4Count);
+            long s6 = System.Threading.Interlocked.Read(ref _s6Count);
+            long other = System.Threading.Interlocked.Read(ref _sOtherCount);
+            return $"Pkts: total={total} [s2={s2}, s4={s4}, s6={s6}, other={other}]";
+        }
 
 
         public void InitialPort()
