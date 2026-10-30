@@ -318,7 +318,9 @@ namespace Eddy
         public Filter Filter { get; set; } = new Filter();
 
         public int TestTime = 10;
+
         public int SamplePerSecond = 3050;
+
         //public bool SaveGraphImage { get; set; }
 
     }

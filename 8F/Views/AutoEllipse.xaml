@@ -145,9 +145,19 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <StackPanel Grid.Column="0" Orientation="Horizontal">
-                    <Button Name="btnRunTest" Content="Run Test" Width="150" Height="40" Style="{StaticResource MagkraftButtonStyle}" FontSize="16" Command="{Binding RunTestCommand}" IsEnabled="{Binding IsRunTestEnabled}" Margin="0,0,10,0"/>
-                    <Button Name="btnMakeEllipse" Content="Make Ellipse" Width="160" Height="40" Style="{StaticResource MagkraftButtonStyle}" FontSize="16" Command="{Binding MakeEllipseCommand}" IsEnabled="{Binding IsMakeEllipseEnabled}"/>
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Name="btnBalance" Content="Balance" Width="130" Height="40" Style="{StaticResource MagkraftButtonStyle}" FontSize="16" Command="{Binding BalanceCommand}" IsEnabled="{Binding IsBalanceEnabled}" Margin="0,0,10,0"/>
+
+                    <!-- Balance Status Pill -->
+                    <Border Background="#E2E8F0" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="8" Padding="12,4" Margin="0,0,12,0" VerticalAlignment="Center" Height="40">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Ellipse Width="10" Height="10" Fill="{Binding BalanceStatusBrush}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding BalanceStatusText}" Foreground="#0F172A" FontSize="13" FontWeight="Bold" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Button Name="btnRunTest" Content="Run Test" Width="130" Height="40" Style="{StaticResource MagkraftButtonStyle}" FontSize="16" Command="{Binding RunTestCommand}" IsEnabled="{Binding IsRunTestEnabled}" Margin="0,0,10,0"/>
+                    <Button Name="btnMakeEllipse" Content="Make Ellipse" Width="150" Height="40" Style="{StaticResource MagkraftButtonStyle}" FontSize="16" Command="{Binding MakeEllipseCommand}" IsEnabled="{Binding IsMakeEllipseEnabled}"/>
                 </StackPanel>
             </Grid>
         </Grid>

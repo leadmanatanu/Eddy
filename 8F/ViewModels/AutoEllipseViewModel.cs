@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Data;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -22,6 +23,8 @@ namespace _8F.ViewModels
         private readonly Dictionary<int, DataTable> _channelTables = new();
         private readonly Dictionary<int, List<AutoEllipseTest>> _channelRawRecords = new();
         private readonly DispatcherTimer _acquisitionTimer;
+        private readonly DispatcherTimer _balanceWatchTimer;
+        private CancellationTokenSource? _balanceCts;
 
         private bool _isTestActive = false;
         private DateTime _testStartTime;
@@ -45,7 +48,45 @@ namespace _8F.ViewModels
                 {
                     int chId = value + 1;
                     _ = SetupChannelTableAndColumnsAsync(chId);
+                    UpdateBalanceState();
                 }
+            }
+        }
+
+        private bool _isBalancing = false;
+        public bool IsBalancing
+        {
+            get => _isBalancing;
+            set
+            {
+                if (SetProperty(ref _isBalancing, value))
+                {
+                    UpdateBalanceState();
+                }
+            }
+        }
+
+        public bool IsBalanceEnabled => !IsBalancing && !_isTestActive;
+
+        public string BalanceStatusText
+        {
+            get
+            {
+                if (IsBalancing) return "Balancing…";
+                int chId = SelectedChannelIndex + 1;
+                return DeviceCOM.IsChannelBalanced(chId) ? "Balanced" : "Not balanced";
+            }
+        }
+
+        public Brush BalanceStatusBrush
+        {
+            get
+            {
+                if (IsBalancing) return new SolidColorBrush(Color.FromRgb(0xD9, 0x77, 0x06));
+                int chId = SelectedChannelIndex + 1;
+                return DeviceCOM.IsChannelBalanced(chId)
+                    ? new SolidColorBrush(Color.FromRgb(0x16, 0xA3, 0x4A))
+                    : new SolidColorBrush(Color.FromRgb(0xDC, 0x26, 0x26));
             }
         }
 
@@ -88,7 +129,7 @@ namespace _8F.ViewModels
         private bool _isRunTestEnabled = true;
         public bool IsRunTestEnabled
         {
-            get => _isRunTestEnabled;
+            get => _isRunTestEnabled && !IsBalancing && !_isTestActive;
             set => SetProperty(ref _isRunTestEnabled, value);
         }
 
@@ -102,7 +143,7 @@ namespace _8F.ViewModels
         private bool _isChannelEnabled = true;
         public bool IsChannelEnabled
         {
-            get => _isChannelEnabled;
+            get => _isChannelEnabled && !IsBalancing && !_isTestActive;
             set => SetProperty(ref _isChannelEnabled, value);
         }
 
@@ -118,6 +159,7 @@ namespace _8F.ViewModels
         // Commands
         public ICommand SelectAllCommand { get; }
         public ICommand DeselectAllCommand { get; }
+        public ICommand BalanceCommand { get; }
         public ICommand RunTestCommand { get; }
         public ICommand MakeEllipseCommand { get; }
         public ICommand DeleteRowCommand { get; }
@@ -136,14 +178,38 @@ namespace _8F.ViewModels
             };
             _acquisitionTimer.Tick += AcquisitionTimer_Tick;
 
+            _balanceWatchTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(250)
+            };
+            _balanceWatchTimer.Tick += BalanceWatchTimer_Tick;
+
             SelectAllCommand = new RelayCommand(ExecuteSelectAll);
             DeselectAllCommand = new RelayCommand(ExecuteDeselectAll);
+            BalanceCommand = new RelayCommand(ExecuteBalance);
             RunTestCommand = new RelayCommand(ExecuteRunTest);
             MakeEllipseCommand = new RelayCommand(ExecuteMakeEllipse);
             DeleteRowCommand = new RelayCommand(ExecuteDeleteRow);
             CloseCommand = new RelayCommand(ExecuteClose);
             LoadedCommand = new RelayCommand(ExecuteLoaded);
             UnloadedCommand = new RelayCommand(ExecuteUnloaded);
+        }
+
+        public void UpdateBalanceState()
+        {
+            OnPropertyChanged(nameof(BalanceStatusText));
+            OnPropertyChanged(nameof(BalanceStatusBrush));
+            OnPropertyChanged(nameof(IsBalanceEnabled));
+            OnPropertyChanged(nameof(IsRunTestEnabled));
+            OnPropertyChanged(nameof(IsChannelEnabled));
+        }
+
+        private void BalanceWatchTimer_Tick(object? sender, EventArgs e)
+        {
+            if (!_isBalancing)
+            {
+                UpdateBalanceState();
+            }
         }
 
         public void AttachDataGrid(DataGrid grid)
@@ -155,11 +221,17 @@ namespace _8F.ViewModels
         {
             DeviceCOM.IsAutoEllipseActive = false;
             PopulateChannels();
+            _balanceWatchTimer.Start();
+            UpdateBalanceState();
         }
 
         private void ExecuteUnloaded()
         {
             DeviceCOM.IsAutoEllipseActive = false;
+            _balanceWatchTimer.Stop();
+            _balanceCts?.Cancel();
+            _balanceCts?.Dispose();
+            _balanceCts = null;
             if (_isTestActive)
             {
                 StopAcquisition("Window closed.");
@@ -428,6 +500,95 @@ namespace _8F.ViewModels
             }
         }
 
+        private async void ExecuteBalance()
+        {
+            if (IsBalancing) return;
+
+            int chId = SelectedChannelIndex + 1;
+
+            if (PortCOM == null)
+            {
+                MessageBox.Show("Unable to balance due to the error in the communication!", "Error Information", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            if (DeviceCOM.IsSystemBusy)
+            {
+                MessageBox.Show("System is busy so you can not perform this command, please wait...", "System Information", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            if (!PortCOM.SendBalanceCommand(chId, "Auto Ellipse Popup", out string errorMessage))
+            {
+                if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    string title = DeviceCOM.IsSystemBusy ? "System Information" : "Error Information";
+                    MessageBox.Show(errorMessage, title, MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+                return;
+            }
+
+            IsBalancing = true;
+            StatusMessage = $"Balancing Channel-{chId}...";
+
+            _balanceCts = new CancellationTokenSource();
+            var token = _balanceCts.Token;
+
+            var startTime = DateTime.Now;
+            var timeout = TimeSpan.FromSeconds(DeviceCOM.BalanceTimeoutSeconds);
+
+            try
+            {
+                while (!token.IsCancellationRequested)
+                {
+                    if (DeviceCOM.ERRCode == 16 || DeviceCOM.IsBalanceErrorHandled)
+                    {
+                        DeviceCOM.HandleBalanceError();
+                        DeviceCOM.BalancingChannelId = 0;
+                        DeviceCOM.IsBalanceBusyEnable = false;
+                        StatusMessage = $"Balance failed for Channel-{chId}: ECT instrument reported error.";
+                        System.Diagnostics.Debug.WriteLine($"[Auto Ellipse Popup] Balance failed for Channel {chId}: hardware reported ERR 16.");
+                        return;
+                    }
+
+                    if (DeviceCOM.IsChannelBalanced(chId))
+                    {
+                        DeviceCOM.BalancingChannelId = 0;
+                        StatusMessage = $"Channel-{chId} balanced successfully.";
+                        System.Diagnostics.Debug.WriteLine($"[Auto Ellipse Popup] Balance completed successfully for Channel {chId}.");
+                        return;
+                    }
+
+                    if (DateTime.Now - startTime > timeout)
+                    {
+                        DeviceCOM.IsBalanceBusyEnable = false;
+                        DeviceCOM.BalancingChannelId = 0;
+                        DeviceCOM.IsSystemBusy = false;
+                        StatusMessage = $"Balance operation timed out for Channel-{chId}.";
+                        System.Diagnostics.Debug.WriteLine($"[Auto Ellipse Popup] Balance timed out after {DeviceCOM.BalanceTimeoutSeconds}s for Channel {chId}.");
+                        MessageBox.Show("Balance operation timed out. Please check the instrument connection and try again.", "Balance Timeout", MessageBoxButton.OK, MessageBoxImage.Error);
+                        return;
+                    }
+
+                    await Task.Delay(100, token);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                System.Diagnostics.Debug.WriteLine($"[Auto Ellipse Popup] Balance polling canceled (popup closed).");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[Auto Ellipse Popup] Balance polling exception: {ex.Message}");
+            }
+            finally
+            {
+                DeviceCOM.BalancingChannelId = 0;
+                IsBalancing = false;
+                UpdateBalanceState();
+            }
+        }
+
         private void ExecuteRunTest()
         {
             if (DeviceCOM.IsLogEnable)
@@ -444,11 +605,9 @@ namespace _8F.ViewModels
 
             int chId = SelectedChannelIndex + 1;
 
-            bool isChannelBalanced = !DeviceCOM.IsBalanceRequired &&
-                                     (DeviceCOM.responses != null && DeviceCOM.responses.Any(r => r.CN == chId && r.IsBalacenced));
-
-            if (DeviceCOM.IsBalanceRequired || !isChannelBalanced)
+            if (!DeviceCOM.IsChannelBalanced(chId))
             {
+                UpdateBalanceState();
                 StatusMessage = "Please click Balance first.";
                 MessageBox.Show("Please click Balance first.", "Balance Required", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;

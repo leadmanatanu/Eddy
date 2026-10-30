@@ -12,6 +12,7 @@ using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Threading;
@@ -58,6 +59,106 @@ namespace _8F.Services
         public static bool PortAck = false ;
         public static string PortData = "";
         private ManualResetEvent _ackEvent = new ManualResetEvent(false);
+
+        public const int BalanceTimeoutSeconds = 30;
+        public static int BalancingChannelId = 0;
+        public static bool IsBalanceErrorHandled = false;
+
+        public static bool IsChannelBalanced(int chId)
+        {
+            if (IsBalanceRequired) return false;
+            var list = responses;
+            if (list == null) return false;
+            try
+            {
+                for (int i = 0; i < list.Count; i++)
+                {
+                    var r = list[i];
+                    if (r != null && r.CN == chId && r.IsBalacenced)
+                        return true;
+                }
+                return false;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public static bool HandleBalanceError()
+        {
+            if (ERRCode == 16)
+            {
+                ERRCode = 0;
+                if (!IsBalanceErrorHandled)
+                {
+                    IsBalanceErrorHandled = true;
+                    MessageBox.Show("Balance Operation failed, please reboot the ECT Instrument.", "Error Information");
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public bool SendBalanceCommand(int channelId, string source, out string errorMessage)
+        {
+            errorMessage = string.Empty;
+            if (IsSystemBusy)
+            {
+                errorMessage = "System is busy so you can not perform this command, please wait...";
+                System.Diagnostics.Debug.WriteLine($"[{source}] Balance aborted: system is busy.");
+                return false;
+            }
+
+            System.Diagnostics.Debug.WriteLine($"[{source}] Starting balance for Channel {channelId}...");
+            IsBalanceErrorHandled = false;
+            ERRCode = 0;
+
+            bool isBalanceAll = (channelId == 0);
+            BalanceTest balanceTest = new BalanceTest() { FC = 16, CN = channelId };
+
+            bool rat = false;
+            try
+            {
+                var isJson = Convert.ToBoolean(System.Configuration.ConfigurationManager.AppSettings["IsJSON"]);
+                if (isJson)
+                {
+                    rat = WriteData(JsonConvert.SerializeObject(balanceTest));
+                }
+                else
+                {
+                    byte[] data = new byte[7];
+                    data[0] = Convert.ToByte(2);
+                    data[1] = Convert.ToByte(16);
+                    data[2] = Convert.ToByte(2);
+                    data[3] = Convert.ToByte(channelId);
+                    data[4] = IsLogRequiredOnBalance ? (IsLogEnable ? Convert.ToByte(1) : Convert.ToByte(2)) : Convert.ToByte(0);
+
+                    rat = WriteDataInBytes(data);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[{source}] Balance communication exception: {ex.Message}");
+                rat = false;
+            }
+
+            if (rat)
+            {
+                IsBalanceAll = isBalanceAll;
+                BalancingChannelId = channelId;
+                IsBalanceBusyEnable = true;
+                System.Diagnostics.Debug.WriteLine($"[{source}] Balance command sent successfully for Channel {channelId} (All={isBalanceAll}).");
+                return true;
+            }
+            else
+            {
+                BalancingChannelId = 0;
+                errorMessage = "Unable to balance due to the error in the communication!";
+                System.Diagnostics.Debug.WriteLine($"[{source}] Balance command failed for Channel {channelId}.");
+                return false;
+            }
+        }
 
         public void InitialPort(int communicationType, string portName, int baudRate, string ipAddress, int sport)
         {

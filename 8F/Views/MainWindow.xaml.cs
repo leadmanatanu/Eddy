@@ -1028,19 +1028,22 @@ namespace _8F
                 //    DeviceCOM.responses.Add(res);
                 //}
 
-                var SChId = DeviceCOM.channelDatas.FirstOrDefault(c => c.IsSeleted)?.Id;
-                if (DeviceCOM.IsBalanceAll)
+                var SChId = DeviceCOM.BalancingChannelId > 0
+                    ? DeviceCOM.BalancingChannelId
+                    : (DeviceCOM.channelDatas.FirstOrDefault(c => c.IsSeleted)?.Id ?? 1);
+                int targetChId = Convert.ToInt32(SChId);
+                if (DeviceCOM.IsBalanceAll || targetChId == 0)
                 {
                     ClearGraphData();
                 }
                 else
                 {
-                    ClearGraphDataByChId(Convert.ToInt32(SChId));
+                    ClearGraphDataByChId(targetChId);
                 }
 
                 foreach (var ch in DeviceCOM.channelDatas)
                 {
-                    if (DeviceCOM.IsBalanceAll || ch.IsSeleted)
+                    if (DeviceCOM.IsBalanceAll || targetChId == 0 || ch.Id == targetChId)
                     {
                         var rData = "{\"FC\":20,\"CN\":1,\"OR\":0,\"FD\":[{\"FN\":1,\"R\":0,\"X\":0,\"Y\":0},{\"FN\":2,\"R\":0,\"X\":0,\"Y\":0},{\"FN\":3,\"R\":0,\"X\":0,\"Y\":0},{\"FN\":4,\"R\":0,\"X\":0,\"Y\":0},{\"FN\":5,\"R\":0,\"X\":0,\"Y\":0},{\"FN\":6,\"R\":0,\"X\":0,\"Y\":0},{\"FN\":7,\"R\":0,\"X\":0,\"Y\":0},{\"FN\":8,\"R\":0,\"X\":0,\"Y\":0}]}";
                         var res = JsonConvert.DeserializeObject<Response>(rData);
@@ -1053,6 +1056,7 @@ namespace _8F
                     }
                 }
 
+                DeviceCOM.BalancingChannelId = 0;
                 DeviceCOM.IsResponseRefreshRequired = true;
                 DeviceCOM.IsResponseClearRequired = false;
 
@@ -1060,8 +1064,7 @@ namespace _8F
 
             if (DeviceCOM.ERRCode == 16)
             {
-                DeviceCOM.ERRCode = 0;
-                MessageBox.Show("Balance Operation failed, please reboot the ECT Instrument.", "Error Information");
+                DeviceCOM.HandleBalanceError();
             }
             else if (DeviceCOM.ERRCode == 17)
             {
@@ -1990,49 +1993,20 @@ namespace _8F
         private void btnBalance_Click(object sender, RoutedEventArgs e)
         {
             if (portCOM == null) return;
-            if (DeviceCOM.IsSystemBusy)
+            var IsBalaneAll = (((Border)sender).Name == "btnBalance1All") || (((Border)sender).Name == "btnBalanceAll") || (((Border)sender).Name == "btnBalance2All");
+            var SChId = DeviceCOM.channelDatas.FirstOrDefault(c => c.IsSeleted)?.Id;
+            int ChId = IsBalaneAll ? 0 : Convert.ToInt32(SChId);
+
+            if (!portCOM.SendBalanceCommand(ChId, "Main Window", out string errorMessage))
             {
-                MessageBox.Show("System is busy so you can not perform this command, please wait...", "System Information");
-            }
-            else
-            {
-
-                var IsBalaneAll = (((Border)sender).Name == "btnBalance1All") || (((Border)sender).Name == "btnBalanceAll") || (((Border)sender).Name == "btnBalance2All");
-                var SChId = DeviceCOM.channelDatas.FirstOrDefault(c => c.IsSeleted)?.Id;
-                int ChId = IsBalaneAll ? 0 : Convert.ToInt32(SChId);
-                BalanceTest balanceTest = new BalanceTest() { FC = 16, CN = ChId };
-
-                bool rat = false;
-                var IsJSON = Convert.ToBoolean(System.Configuration.ConfigurationManager.AppSettings["IsJSON"]);
-                if (IsJSON)
+                if (!string.IsNullOrEmpty(errorMessage))
                 {
-                    rat = portCOM.WriteData(JsonConvert.SerializeObject(balanceTest));
-                }
-                else
-                {
-                    byte[] data = new byte[7];
-                    data[0] = Convert.ToByte(2);
-                    data[1] = Convert.ToByte(16);
-                    data[2] = Convert.ToByte(2);
-                    data[3] = Convert.ToByte(ChId);
-                    data[4] = DeviceCOM.IsLogRequiredOnBalance ? (DeviceCOM.IsLogEnable ? Convert.ToByte(1) : Convert.ToByte(2)) : Convert.ToByte(0);
-
-                    rat = portCOM.WriteDataInBytes(data);
-                }
-
-                if (rat)
-                {
-                    DeviceCOM.IsBalanceAll = IsBalaneAll;
-                    DeviceCOM.IsBalanceBusyEnable = true;
-                }
-                else
-                {
-                    MessageBox.Show("Unable to balance due to the error in the communication!", "Error Information");
+                    string title = DeviceCOM.IsSystemBusy ? "System Information" : "Error Information";
+                    MessageBox.Show(errorMessage, title);
                 }
             }
 
             lblCode.Content = "";
-
         }
 
         private void btnTest_Click(object sender, RoutedEventArgs e)
@@ -2643,41 +2617,12 @@ namespace _8F
             {
                 if (e.Key == Key.B)
                 {
-                    if (DeviceCOM.IsSystemBusy)
+                    if (!portCOM.SendBalanceCommand(0, "Main Window (Hotkey)", out string errorMessage))
                     {
-                        MessageBox.Show("System is busy so you can not perform this command, please wait...", "System Information");
-                    }
-                    else
-                    {
-                        BalanceTest balanceTest = new BalanceTest() { FC = 16, CN = 0 };
-
-                        bool rat = false;
-                        var IsJSON = Convert.ToBoolean(System.Configuration.ConfigurationManager.AppSettings["IsJSON"]);
-                        if (IsJSON)
+                        if (!string.IsNullOrEmpty(errorMessage))
                         {
-                            rat = portCOM.WriteData(JsonConvert.SerializeObject(balanceTest));
-                        }
-                        else
-                        {
-                            byte[] data = new byte[7];
-                            data[0] = Convert.ToByte(2);
-                            data[1] = Convert.ToByte(16);
-                            data[2] = Convert.ToByte(2);
-                            data[3] = Convert.ToByte(0);
-                            data[4] = DeviceCOM.IsLogRequiredOnBalance ? (DeviceCOM.IsLogEnable ? Convert.ToByte(1) : Convert.ToByte(2)) : Convert.ToByte(0);
-
-                            rat = portCOM.WriteDataInBytes(data);
-                        }
-
-
-                        if (rat)
-                        {
-                            DeviceCOM.IsBalanceAll = true;
-                            DeviceCOM.IsBalanceBusyEnable = true;
-                        }
-                        else
-                        {
-                            MessageBox.Show("Unable to balance due to the error in the communication!", "Error Information");
+                            string title = DeviceCOM.IsSystemBusy ? "System Information" : "Error Information";
+                            MessageBox.Show(errorMessage, title);
                         }
                     }
 

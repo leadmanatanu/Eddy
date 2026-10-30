@@ -46,6 +46,7 @@ namespace Eddy
     public partial class MainWindow_APS : Window
     {
         public ObservableCollection<MenuItemViewModel_APS> MenuItems { get; set; } = new ObservableCollection<MenuItemViewModel_APS>();
+        private readonly ObservableCollection<TestResultRecord> _lastTestResults = new();
         ScottPlot.Plot myPlot1 = null!;
         ScottPlot.Plot myPlot2 = null!;
         //ScottPlot.Plot myPlot3;
@@ -328,24 +329,11 @@ namespace Eddy
             //var rat = deviceCOM.GetSystemStatus(JsonConvert.SerializeObject(status));
             // Marked Busy Flag 
 
-            List<PieSlice> pieSlices = new List<PieSlice>();
+            icLastResults.ItemsSource = _lastTestResults;
+            txtNoResults.Visibility = _lastTestResults.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+            UpdateCounterChart();
 
-            PieSlice pieSliceG = new PieSlice(0, ScottPlot.Colors.Green, "Ok");
-            pieSlices.Add(pieSliceG);
 
-            PieSlice pieSliceN = new PieSlice(0, ScottPlot.Colors.Red, "Not Ok");
-            pieSlices.Add(pieSliceN);
-
-            //PieSlice pieSliceT = new PieSlice(20, ScottPlot.Colors.Orange, "Total");
-            //pieSlices.Add(pieSliceT);
-
-            var pie = wpCounter.Plot.Add.Pie(pieSlices);
-
-            wpCounter.Plot.Axes.Bottom.IsVisible = false;
-            wpCounter.Plot.Axes.Left.IsVisible = false;
-
-            wpCounter.Plot.Title("Counter Distribution");
-            wpCounter.Refresh();
 
             //Get counter file and Reset wpCounter
                 StartPerfLogger();
@@ -845,23 +833,20 @@ namespace Eddy
 
                         LastGraph(Ld);
 
-                        // Write counter file
-                        wpCounter.Plot.Clear();
+                        // Update bar chart and last 4 test results
+                        UpdateCounterChart();
 
-                        List<PieSlice> pieSlices = new List<PieSlice>();
-
-                        PieSlice pieSliceG = new PieSlice(DeviceCOM.Ok, ScottPlot.Colors.Green, "Ok");
-                        pieSlices.Add(pieSliceG);
-
-                        PieSlice pieSliceN = new PieSlice(DeviceCOM.NoOk, ScottPlot.Colors.Red, "Not Ok");
-                        pieSlices.Add(pieSliceN);
-
-                        var pie = wpCounter.Plot.Add.Pie(pieSlices);
-
-                        wpCounter.Plot.Axes.Bottom.IsVisible = false;
-                        wpCounter.Plot.Axes.Left.IsVisible = false;
-
-                        wpCounter.Refresh();
+                        var record = new TestResultRecord
+                        {
+                            IsOk = result,
+                            TimeText = DateTime.Now.ToString("HH:mm:ss")
+                        };
+                        _lastTestResults.Insert(0, record);
+                        while (_lastTestResults.Count > 4)
+                        {
+                            _lastTestResults.RemoveAt(_lastTestResults.Count - 1);
+                        }
+                        txtNoResults.Visibility = _lastTestResults.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
 
                         string? imagePath = ConfigurationManager.AppSettings["ImagePath"];
 
@@ -1667,9 +1652,9 @@ namespace Eddy
             lblNotOk.Content = "Not Ok Count-" + DeviceCOM.NoOk.ToString();
             lblTotal.Content = "Total Count-" + (DeviceCOM.Ok + DeviceCOM.NoOk).ToString();
 
-            wpCounter.Plot.Clear();
-
-            wpCounter.Refresh();
+            _lastTestResults.Clear();
+            txtNoResults.Visibility = Visibility.Visible;
+            UpdateCounterChart();
 
             // Delete counter file 
 
@@ -1762,7 +1747,93 @@ namespace Eddy
                 }
             }
         }
+
+        private void UpdateCounterChart()
+        {
+            try
+            {
+                wpCounter.Plot.Clear();
+                wpCounter.Plot.FigureBackground.Color = ScottPlot.Colors.Black;
+                wpCounter.Plot.DataBackground.Color = ScottPlot.Colors.Black;
+
+                var bars = new ScottPlot.Bar[]
+                {
+                    new()
+                    {
+                        Position = 2,
+                        Value = DeviceCOM.Ok,
+                        FillColor = ScottPlot.Colors.Green,
+                        Orientation = ScottPlot.Orientation.Horizontal,
+                        ValueLabel = DeviceCOM.Ok > 0 ? DeviceCOM.Ok.ToString() : ""
+                    },
+                    new()
+                    {
+                        Position = 1,
+                        Value = DeviceCOM.NoOk,
+                        FillColor = ScottPlot.Colors.Red,
+                        Orientation = ScottPlot.Orientation.Horizontal,
+                        ValueLabel = DeviceCOM.NoOk > 0 ? DeviceCOM.NoOk.ToString() : ""
+                    }
+                };
+
+                var barPlot = wpCounter.Plot.Add.Bars(bars);
+                barPlot.Horizontal = true;
+                barPlot.ValueLabelStyle.ForeColor = ScottPlot.Colors.White;
+                barPlot.ValueLabelStyle.FontSize = 14;
+                barPlot.ValueLabelStyle.Bold = true;
+
+                ScottPlot.Tick[] ticks = { new(2, "Ok"), new(1, "Not Ok") };
+                wpCounter.Plot.Axes.Left.TickGenerator = new ScottPlot.TickGenerators.NumericManual(ticks);
+                wpCounter.Plot.Axes.Left.MajorTickStyle.Length = 0;
+                wpCounter.Plot.Axes.Left.TickLabelStyle.ForeColor = ScottPlot.Colors.White;
+                wpCounter.Plot.Axes.Left.TickLabelStyle.FontSize = 14;
+                wpCounter.Plot.Axes.Left.TickLabelStyle.Bold = true;
+                wpCounter.Plot.Axes.Left.IsVisible = true;
+
+                wpCounter.Plot.Axes.Bottom.TickLabelStyle.ForeColor = ScottPlot.Colors.White;
+                wpCounter.Plot.Axes.Bottom.TickLabelStyle.FontSize = 11;
+                wpCounter.Plot.Axes.Bottom.MajorTickStyle.Length = 3;
+                wpCounter.Plot.Axes.Bottom.MajorTickStyle.Color = ScottPlot.Colors.White;
+                wpCounter.Plot.Axes.Bottom.IsVisible = true;
+
+                wpCounter.Plot.Axes.Color(ScottPlot.Colors.White);
+                wpCounter.Plot.Axes.Right.IsVisible = false;
+                wpCounter.Plot.Axes.Top.IsVisible = false;
+                wpCounter.Plot.Grid.LineColor = ScottPlot.Color.FromHex("#333333");
+
+                wpCounter.Plot.Axes.SetLimitsY(0.2, 2.8);
+                double maxX = Math.Max(10, Math.Max(DeviceCOM.Ok, DeviceCOM.NoOk) * 1.25);
+                wpCounter.Plot.Axes.SetLimitsX(0, maxX);
+
+                wpCounter.Plot.Title("Counter Distribution");
+                wpCounter.Plot.Axes.Title.Label.ForeColor = ScottPlot.Colors.White;
+                wpCounter.Plot.Axes.Title.Label.FontSize = 16;
+                wpCounter.Plot.Axes.Title.Label.Bold = true;
+
+                wpCounter.Refresh();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"UpdateCounterChart exception: {ex}");
+            }
+        }
     }
 
+    public class TestResultRecord
+    {
+        private static readonly Brush OkBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(46, 125, 50));
+        private static readonly Brush NotOkBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(198, 40, 40));
+
+        static TestResultRecord()
+        {
+            OkBrush.Freeze();
+            NotOkBrush.Freeze();
+        }
+
+        public bool IsOk { get; set; }
+        public string StatusText => IsOk ? "OK" : "NOT OK";
+        public string TimeText { get; set; } = string.Empty;
+        public Brush BackgroundBrush => IsOk ? OkBrush : NotOkBrush;
+    }
 
 }
