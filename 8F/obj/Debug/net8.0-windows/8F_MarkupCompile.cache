@@ -1,5 +1,5 @@
 ﻿8F
-
+1.0.0.0
 
 winexe
 C#
@@ -12,9 +12,9 @@ TRACE;DEBUG;NET;NET8_0;NETCOREAPP;WINDOWS;WINDOWS7_0;NET5_0_OR_GREATER;NET6_0_OR
 D:\New folder\Eddy\8F\App.xaml
 201977141915
 11613912260
-80-74412889
+82-292582889
 211-1856966918
 Views\AutoEllipse.xaml;Views\ChannelRemappingWindow.xaml;Views\CircleSetting.xaml;Views\ExportProfilePickerWindow.xaml;Views\Freq.xaml;Views\Logs.xaml;Views\LogsAll.xaml;Views\MainWindow.xaml;Views\MakeEllipseSelection.xaml;Views\ModbusTestPanel.xaml;Views\OpenSourceSelectionDialog.xaml;Views\OperatorMaster.xaml;Views\PartConfig.xaml;Views\PartConfigReNew.xaml;Views\PartFamilyMaster.xaml;Views\PasswordDialog.xaml;Views\RenewBatchWiseLog.xaml;Views\Report.xaml;Views\SaveProfileDialog.xaml;Views\TestWindow.xaml;
 
-False
+True
 
