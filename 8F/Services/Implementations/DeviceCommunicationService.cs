@@ -471,26 +471,43 @@ namespace _8F.Services
         {
             try
             {
-                // Validate that all eight unique frequency numbers (1..8) are present before saving a complete event
                 if (res?.FD == null)
                     return;
 
+                var targetCh = DeviceCOM.channelDatas.FirstOrDefault(r => r.Id == ChId);
+                if (targetCh == null) return;
+
+                var enabledChannels = targetCh.graphDatas.Where(g => g.isEnable).ToList();
+                var enabledFns = enabledChannels.Select(g => g.Id).ToHashSet();
+
+                // Validate that all enabled frequency numbers are present before saving
                 var uniqueFns = res.FD.Where(f => f != null).Select(f => f.FN).Distinct().ToList();
-                if (uniqueFns.Count != 8 || !Enumerable.Range(1, 8).All(fn => uniqueFns.Contains(fn)))
+                if (enabledFns.Count > 0)
                 {
-                    // Do not save incomplete event and do not fabricate missing values
-                    return;
+                    if (!enabledFns.All(fn => uniqueFns.Contains(fn)))
+                    {
+                        // Incomplete data for enabled channels - do not fabricate or save
+                        return;
+                    }
+                }
+                else
+                {
+                    if (uniqueFns.Count != 8 || !Enumerable.Range(1, 8).All(fn => uniqueFns.Contains(fn)))
+                        return;
                 }
 
                 using (var con = new NpgsqlConnection(ConnectionString))
                 {
                     con.Open();
-                    var targetCh = DeviceCOM.channelDatas.FirstOrDefault(r => r.Id == ChId);
-                    if (targetCh == null) return;
                     var fdData = JsonConvert.SerializeObject(targetCh.graphDatas);
 
                     var partData = JsonConvert.SerializeObject(DeviceCOM.part);
-                    var frequencyList = res.FD.OrderBy(f => f.FN).ToList();
+
+                    // Persist ONLY the ON (enabled) channels in FrequencyData
+                    var frequencyList = res.FD
+                        .Where(f => f != null && (enabledFns.Count == 0 || enabledFns.Contains(f.FN)))
+                        .OrderBy(f => f.FN)
+                        .ToList();
                     var frequencyDataJson = JsonConvert.SerializeObject(frequencyList);
 
                     if (ChId == 1)

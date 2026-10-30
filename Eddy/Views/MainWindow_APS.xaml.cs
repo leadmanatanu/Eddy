@@ -305,7 +305,7 @@ namespace Eddy
             IpAddress = Convert.ToString(System.Configuration.ConfigurationManager.AppSettings["IP"]) ?? "";
             Port = Convert.ToInt32(System.Configuration.ConfigurationManager.AppSettings["Port"]);
 
-            receiver = new UdpReceiver(Port);
+            receiver = new UdpReceiver(Port, processingQueue);
             receiver.StartReceiving();
 
             //dispatcherTimer = new DispatcherTimer();
@@ -315,8 +315,10 @@ namespace Eddy
 
             dispatcherTimerui = new DispatcherTimer();
             dispatcherTimerui.Tick += new EventHandler(dispatcherTimerui_Tick);
-            dispatcherTimerui.Interval = new TimeSpan(0, 0, 0, 0, 10);
+            dispatcherTimerui.Interval = TimeSpan.FromMilliseconds(33);
             dispatcherTimerui.Start();
+
+            Closing += MainWindow_APS_Closing;
 
             Task.Run(() => PollLoop());
 
@@ -346,6 +348,7 @@ namespace Eddy
             wpCounter.Refresh();
 
             //Get counter file and Reset wpCounter
+                StartPerfLogger();
 
 
         }
@@ -583,102 +586,198 @@ namespace Eddy
 
         }
 
-        private void dispatcherTimerui_Tick(object? sender, EventArgs e)
+        private static readonly bool _enablePerfLog =
+            bool.TryParse(System.Configuration.ConfigurationManager.AppSettings["EnablePerfLog"], out bool enabled) && enabled;
+
+        private static string GetCpuModelName()
         {
-            UIUpdates();
+            try
+            {
+                var name = Microsoft.Win32.Registry.GetValue(@"HKEY_LOCAL_MACHINE\HARDWARE\DESCRIPTION\System\CentralProcessor\0", "ProcessorNameString", null);
+                return name?.ToString()?.Trim() ?? "Unknown CPU";
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[PERF] CPU Name Registry exception: {ex.Message}");
+                return "Unknown CPU";
+            }
         }
 
-        private ConcurrentQueue<byte[]> processingQueue = new();
+        private double _lastUiTickMs = 0;
+        private int _lastCanvasVisualCount = 0;
+        private readonly System.Diagnostics.Stopwatch _tickSw = new();
+        private DispatcherTimer? _perfTimer;
+        private DateTime _prevCpuTime = DateTime.UtcNow;
+        private TimeSpan _prevTotalProcessorTime = TimeSpan.Zero;
+        private readonly Process _currentProcess = Process.GetCurrentProcess();
+        private volatile bool _plotDirty;
+        private CancellationTokenSource? _consumerCts;
+        private readonly VisualHost _dotsHost = new();
+        private readonly Ellipse _elLth = new() { Stroke = new SolidColorBrush(Colors.Orange), StrokeThickness = 1 };
+        private readonly Ellipse _elUth = new() { Stroke = new SolidColorBrush(Colors.Red), StrokeThickness = 1 };
+        private bool _canvasInitialized = false;
+        private int _lastDrawnCount = 0;
+
+        private void StartPerfLogger()
+        {
+            if (!_enablePerfLog) return;
+
+            string cpuName = GetCpuModelName();
+            int coreCount = Environment.ProcessorCount;
+            string header = $"=== Perf Log Started: {DateTime.Now:yyyy-MM-dd HH:mm:ss} | CPU: {cpuName} | Logical Cores: {coreCount} ===";
+            System.Diagnostics.Trace.WriteLine(header);
+
+            try
+            {
+                string logPath = System.IO.Path.Combine(AppContext.BaseDirectory, "perf.log");
+                System.IO.File.AppendAllText(logPath, $"{header}{Environment.NewLine}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[PERF] File header exception: {ex.Message}");
+            }
+
+            _prevCpuTime = DateTime.UtcNow;
+            _prevTotalProcessorTime = _currentProcess.TotalProcessorTime;
+
+            _perfTimer = new DispatcherTimer(DispatcherPriority.Background)
+            {
+                Interval = TimeSpan.FromSeconds(1)
+            };
+            _perfTimer.Tick += (s, e) =>
+            {
+                try
+                {
+                    var now = DateTime.UtcNow;
+                    var cpuElapsedMs = (now - _prevCpuTime).TotalMilliseconds * Environment.ProcessorCount;
+                    var currentTotalProcessorTime = _currentProcess.TotalProcessorTime;
+                    var cpuUsedMs = (currentTotalProcessorTime - _prevTotalProcessorTime).TotalMilliseconds;
+                    _prevCpuTime = now;
+                    _prevTotalProcessorTime = currentTotalProcessorTime;
+
+                    double cpuPercent = cpuElapsedMs > 0 ? (cpuUsedMs / cpuElapsedMs) * 100.0 : 0.0;
+                    double workingSetMb = Environment.WorkingSet / (1024.0 * 1024.0);
+                    double gcTotalMb = GC.GetTotalMemory(false) / (1024.0 * 1024.0);
+                    int gen0 = GC.CollectionCount(0);
+                    int gen1 = GC.CollectionCount(1);
+                    int gen2 = GC.CollectionCount(2);
+                    int queueLen = processingQueue.Count;
+                    int ampCount;
+                    lock (DeviceCOM.AmpD1Lock)
+                    {
+                        ampCount = DeviceCOM.graphData.AmpD1?.Count ?? 0;
+                    }
+                    int renderTier = RenderCapability.Tier >> 16;
+                    int visualCount = _lastCanvasVisualCount;
+                    double tickMs = _lastUiTickMs;
+
+                    string timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
+                    string logMsg = $"[{timestamp}] [PERF][1s] CPU: {cpuPercent,5:F1}% | WS: {workingSetMb,6:F1}MB | GCHeap: {gcTotalMb,5:F1}MB | Gen0/1/2: {gen0}/{gen1}/{gen2} | Queue: {queueLen,3} | AmpD1: {ampCount,5} | UITick: {tickMs,5:F2}ms | CanvasVisuals: {visualCount,2} | Tier: {renderTier} | {DeviceCOM.GetPacketCountsSummary()}";
+                    System.Diagnostics.Trace.WriteLine(logMsg);
+
+                    try
+                    {
+                        string logPath = System.IO.Path.Combine(AppContext.BaseDirectory, "perf.log");
+                        System.IO.File.AppendAllText(logPath, $"{logMsg}{Environment.NewLine}");
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[PERF] File log exception: {ex.Message}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[PERF] Logger Exception: {ex.Message}");
+                }
+            };
+            _perfTimer.Start();
+        }
+
+        private void dispatcherTimerui_Tick(object? sender, EventArgs e)
+        {
+            _tickSw.Restart();
+            UIUpdates();
+            if (_plotDirty)
+            {
+                _plotDirty = false;
+                WpfPlot1.Refresh();
+                WpfPlotA1.Refresh();
+            }
+            _tickSw.Stop();
+            _lastUiTickMs = _tickSw.Elapsed.TotalMilliseconds;
+            _lastCanvasVisualCount = Canvas2.Children.Count;
+        }
+
+        private readonly BlockingCollection<byte[]> processingQueue = new();
 
         private void dispatcherTimer_Tick(object sender, EventArgs e)
         {
-            if (!receiver._udpClient.Client.Connected)
-            {
-                receiver.StartReceiving();
-            }
-
-            if (DeviceCOM.receiveBytes != null && DeviceCOM.receiveBytes.Length > 0)
-            {
-                var data = DeviceCOM.receiveBytes.ToArray();
-                DeviceCOM.receiveBytes = null;
-                processingQueue.Enqueue(data);
-                TryStartProcessing();
-                //Task.Run(() => ProcessPortDataTest(data));
-                //Task.Run(() => ProcessPortData(data));
-            }
         }
 
+        private void MainWindow_APS_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
+        {
+            try
+            {
+                _consumerCts?.Cancel();
+                processingQueue.CompleteAdding();
+                receiver?.StopReceiving();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"MainWindow_APS_Closing exception: {ex}");
+            }
+        }
 
         private void PollLoop()
         {
-            while (true)
+            _consumerCts = new CancellationTokenSource();
+            var token = _consumerCts.Token;
+
+            try
             {
-                if (DeviceCOM.receiveBytes != null && DeviceCOM.receiveBytes.Length > 0)
-                {
-                    var data = DeviceCOM.receiveBytes.ToArray();
-                    DeviceCOM.receiveBytes = null;
-
-                    processingQueue.Enqueue(data);
-                    TryStartProcessing(); // same logic as before
-                }
-
-                //Thread.Sleep(1); // adjust this depending on how fast you want to pol
-            }
-        }
-
-        private void UIUpdateLoop()
-        {
-            while (true)
-            {
-                UIUpdates();
-
-            }
-        }
-
-        private bool isProcessing = false;
-
-        private void TryStartProcessing()
-        {
-            if (isProcessing || processingQueue.IsEmpty)
-                return;
-
-            isProcessing = true;
-
-            Task.Run(() =>
-            {
-                while (processingQueue.TryDequeue(out var data))
+                foreach (var data in processingQueue.GetConsumingEnumerable(token))
                 {
                     ProcessPortData(data);
                 }
-
-                isProcessing = false;
-            });
+            }
+            catch (OperationCanceledException)
+            {
+                // Normal shutdown
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"PollLoop Consumer Exception: {ex}");
+            }
         }
 
         private void StopTude(bool result)
         {
             try
             {
-                System.Threading.Thread.Sleep(10);
-                myPlot4.Clear();
-                logger4 = myPlot4.Add.DataLogger();
-                logger4.Clear();
+                if (DeviceCOM.EnablePerfLog)
+                {
+                    int preCount;
+                    lock (DeviceCOM.AmpD1Lock)
+                    {
+                        preCount = DeviceCOM.graphData.AmpD1?.Count ?? 0;
+                    }
+                    DeviceCOM.LogStep($"StopTude entered with result={result}, AmpD1.Count={preCount}");
+                }
 
-                myPlotA1Last.Clear();
-                loggerA1Last = myPlotA1Last.Add.DataLogger();
-                loggerA1Last.Clear();
+                System.Threading.Thread.Sleep(10);
 
                 DeviceCOM.graphData.Result = result;
-                var Ld = DeviceCOM.graphData.AmpD1.ToList();
+                List<Fdata> Ld;
+                lock (DeviceCOM.AmpD1Lock)
+                {
+                    Ld = DeviceCOM.graphData.AmpD1.ToList();
+                    DeviceCOM.graphData.AmpD1 = new List<Fdata>();
+                }
                 string ImageName = Guid.NewGuid().ToString() + ".jpeg";
-                // Add Log
+
+                // Heavy DB work stays on background thread
                 if (DeviceCOM.IsLogEnable)
                 {
-                    // DeviceCOM.Configuration
-                    //DeviceCOM.part
-                    //DeviceCOM.graphData
-                    /// result 
-                    //DeviceCOM.part.Name
                     try
                     {
                         using (var con = new NpgsqlConnection(DeviceCOM.DBConnection))
@@ -712,15 +811,12 @@ namespace Eddy
                             }
                         }
                     }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
-                        MessageBox.Show("Something went wrong. Please try again");
+                        System.Diagnostics.Debug.WriteLine($"StopTude DB Log exception: {ex}");
+                        Dispatcher.InvokeAsync(() => MessageBox.Show("Something went wrong. Please try again"));
                     }
                 }
-
-                LastGraph(Ld);
-
-                //LastGraphA1(Ld);
 
                 if (result)
                 {
@@ -731,56 +827,70 @@ namespace Eddy
                     DeviceCOM.NoOk = DeviceCOM.NoOk + 1;
                 }
 
-                // Write counter file
-
-                wpCounter.Plot.Clear();
-
-                List<PieSlice> pieSlices = new List<PieSlice>();
-
-                PieSlice pieSliceG = new PieSlice(DeviceCOM.Ok, ScottPlot.Colors.Green, "Ok");
-                pieSlices.Add(pieSliceG);
-
-                PieSlice pieSliceN = new PieSlice(DeviceCOM.NoOk, ScottPlot.Colors.Red, "Not Ok");
-                pieSlices.Add(pieSliceN);
-
-                var pie = wpCounter.Plot.Add.Pie(pieSlices);
-
-                wpCounter.Plot.Axes.Bottom.IsVisible = false;
-                wpCounter.Plot.Axes.Left.IsVisible = false;
-
-                //wpCounter.Plot.Title("Counter Distribution");
-                wpCounter.Refresh();
-
-                //lblOk.Content = "Ok Count-" + DeviceCOM.Ok.ToString();
-                //lblNotOk.Content = "Not Ok Count-" + DeviceCOM.NoOk.ToString();
-                //lblTotal.Content = "Total Count-" + (DeviceCOM.Ok + DeviceCOM.NoOk).ToString();
-
-                DeviceCOM.graphData.AmpD1 = new List<Fdata>();
-
-                string? imagePath = ConfigurationManager.AppSettings["ImagePath"];
-
-                if (DeviceCOM.IsLogEnable && !string.IsNullOrWhiteSpace(imagePath))
+                // Marshal all UI and ScottPlot updates to the UI thread
+                Dispatcher.InvokeAsync(() =>
                 {
                     try
                     {
-                        string fullPath = System.IO.Path.Combine(imagePath, ImageName);
+                        _dotsHost.Clear();
+                        _lastDrawnCount = 0;
 
-                        // Ensure directory exists
-                        Directory.CreateDirectory(imagePath);
+                        myPlot4.Clear();
+                        logger4 = myPlot4.Add.DataLogger();
+                        logger4.Clear();
 
-                        WpfPlot4.Plot.SaveJpeg(fullPath, 600, 400);
+                        myPlotA1Last.Clear();
+                        loggerA1Last = myPlotA1Last.Add.DataLogger();
+                        loggerA1Last.Clear();
+
+                        LastGraph(Ld);
+
+                        // Write counter file
+                        wpCounter.Plot.Clear();
+
+                        List<PieSlice> pieSlices = new List<PieSlice>();
+
+                        PieSlice pieSliceG = new PieSlice(DeviceCOM.Ok, ScottPlot.Colors.Green, "Ok");
+                        pieSlices.Add(pieSliceG);
+
+                        PieSlice pieSliceN = new PieSlice(DeviceCOM.NoOk, ScottPlot.Colors.Red, "Not Ok");
+                        pieSlices.Add(pieSliceN);
+
+                        var pie = wpCounter.Plot.Add.Pie(pieSlices);
+
+                        wpCounter.Plot.Axes.Bottom.IsVisible = false;
+                        wpCounter.Plot.Axes.Left.IsVisible = false;
+
+                        wpCounter.Refresh();
+
+                        string? imagePath = ConfigurationManager.AppSettings["ImagePath"];
+
+                        if (DeviceCOM.IsLogEnable && !string.IsNullOrWhiteSpace(imagePath))
+                        {
+                            try
+                            {
+                                string fullPath = System.IO.Path.Combine(imagePath, ImageName);
+
+                                // Ensure directory exists
+                                Directory.CreateDirectory(imagePath);
+
+                                WpfPlot4.Plot.SaveJpeg(fullPath, 600, 400);
+                            }
+                            catch (Exception ex)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"StopTude SaveJpeg exception: {ex}");
+                            }
+                        }
                     }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
-                        // Log properly instead of silent failure
-                        // Example: Logger.LogError(ex);
+                        System.Diagnostics.Debug.WriteLine($"StopTude UI Dispatcher exception: {ex}");
                     }
-                }
-
+                });
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-
+                System.Diagnostics.Debug.WriteLine($"StopTude exception: {ex}");
             }
         }
 
@@ -806,6 +916,63 @@ namespace Eddy
             WpfPlotA1Last.Plot.Axes.Rules.Clear();
             WpfPlotA1Last.Plot.Axes.Rules.Add(rule1);
 
+            // Add threshold lines once before the sample loop
+            var d1 = DeviceCOM.Configuration?.Frequency?.FD?.FirstOrDefault(d => d.FN == 1);
+            if (d1 != null)
+            {
+                if (thresholdLine4 != null)
+                {
+                    WpfPlot4.Plot.Remove(thresholdLine4);
+                }
+                thresholdLine4 = WpfPlot4.Plot.Add.HorizontalLine(y: d1.LTH);
+                thresholdLine4.LineWidth = 0.5f;
+                thresholdLine4.Color = ScottPlot.Colors.Orange;
+
+                if (thresholdLine5 != null)
+                {
+                    WpfPlot4.Plot.Remove(thresholdLine5);
+                }
+                thresholdLine5 = WpfPlot4.Plot.Add.HorizontalLine(y: d1.UTH);
+                thresholdLine5.LineWidth = 0.5f;
+                thresholdLine5.Color = ScottPlot.Colors.Red;
+
+                if (thresholdLine6 != null)
+                {
+                    WpfPlot4.Plot.Remove(thresholdLine6);
+                }
+                thresholdLine6 = WpfPlot4.Plot.Add.HorizontalLine(y: d1.TH);
+                thresholdLine6.LineWidth = 0.5f;
+                thresholdLine6.Color = ScottPlot.Colors.White;
+            }
+
+            var d5 = DeviceCOM.Configuration?.Frequency?.FD?.FirstOrDefault(d => d.FN == 3);
+            if (d5 != null)
+            {
+                if (thresholdLine7 != null)
+                {
+                    WpfPlotA1Last.Plot.Remove(thresholdLine7);
+                }
+                thresholdLine7 = WpfPlotA1Last.Plot.Add.HorizontalLine(y: d5.LTH);
+                thresholdLine7.LineWidth = 0.5f;
+                thresholdLine7.Color = ScottPlot.Colors.Orange;
+
+                if (thresholdLine8 != null)
+                {
+                    WpfPlotA1Last.Plot.Remove(thresholdLine8);
+                }
+                thresholdLine8 = WpfPlotA1Last.Plot.Add.HorizontalLine(y: d5.UTH);
+                thresholdLine8.LineWidth = 0.5f;
+                thresholdLine8.Color = ScottPlot.Colors.Red;
+
+                if (thresholdLine9 != null)
+                {
+                    WpfPlotA1Last.Plot.Remove(thresholdLine9);
+                }
+                thresholdLine9 = WpfPlotA1Last.Plot.Add.HorizontalLine(y: d5.TH);
+                thresholdLine9.LineWidth = 0.5f;
+                thresholdLine9.Color = ScottPlot.Colors.White;
+            }
+
             var t = Ld.Count - 1;
             for (var i = 0; i <= t; i++)
             {
@@ -817,37 +984,7 @@ namespace Eddy
                     AmpF = (DeviceCOM.Factor * d.Amp) / DeviceCOM.MaxValue;
                 }
 
-
-                var d1 = DeviceCOM.Configuration?.Frequency?.FD?.FirstOrDefault(d => d.FN == 1);
-                if (d1 != null)
-                {
-                    if (thresholdLine4 != null)
-                    {
-                        WpfPlot4.Plot.Remove(thresholdLine4);
-                    }
-                    thresholdLine4 = WpfPlot4.Plot.Add.HorizontalLine(y: d1.LTH);
-                    thresholdLine4.LineWidth = 0.5f;
-                    thresholdLine4.Color = ScottPlot.Colors.Orange;
-
-                    if (thresholdLine5 != null)
-                    {
-                        WpfPlot4.Plot.Remove(thresholdLine5);
-                    }
-                    thresholdLine5 = WpfPlot4.Plot.Add.HorizontalLine(y: d1.UTH);
-                    thresholdLine5.LineWidth = 0.5f;
-                    thresholdLine5.Color = ScottPlot.Colors.Red;
-
-                    if (thresholdLine6 != null)
-                    {
-                        WpfPlot4.Plot.Remove(thresholdLine6);
-                    }
-                    thresholdLine6 = WpfPlot4.Plot.Add.HorizontalLine(y: d1.TH);
-                    thresholdLine6.LineWidth = 0.5f;
-                    thresholdLine6.Color = ScottPlot.Colors.White;
-                }
-
                 logger4.Add(AmpF);
-
 
                 var AmpFA1 = 0;
                 if (d.Amp_ABS != 0)
@@ -855,38 +992,8 @@ namespace Eddy
                     AmpFA1 = (DeviceCOM.Factor * d.Amp_ABS) / DeviceCOM.MaxValueABS;
                 }
 
-
-                var d5 = DeviceCOM.Configuration?.Frequency?.FD?.FirstOrDefault(d => d.FN == 3);
-                if (d5 != null)
-                {
-                    if (thresholdLine7 != null)
-                    {
-                        WpfPlotA1Last.Plot.Remove(thresholdLine7);
-                    }
-                    thresholdLine7 = WpfPlotA1Last.Plot.Add.HorizontalLine(y: d5.LTH);
-                    thresholdLine7.LineWidth = 0.5f;
-                    thresholdLine7.Color = ScottPlot.Colors.Orange;
-
-                    if (thresholdLine8 != null)
-                    {
-                        WpfPlotA1Last.Plot.Remove(thresholdLine8);
-                    }
-                    thresholdLine8 = WpfPlotA1Last.Plot.Add.HorizontalLine(y: d5.UTH);
-                    thresholdLine8.LineWidth = 0.5f;
-                    thresholdLine8.Color = ScottPlot.Colors.Red;
-
-                    if (thresholdLine9 != null)
-                    {
-                        WpfPlotA1Last.Plot.Remove(thresholdLine9);
-                    }
-                    thresholdLine9 = WpfPlotA1Last.Plot.Add.HorizontalLine(y: d5.TH);
-                    thresholdLine9.LineWidth = 0.5f;
-                    thresholdLine9.Color = ScottPlot.Colors.White;
-                }
-
                 loggerA1Last.Add(AmpFA1);
             }
-
 
             var d2 = Ld.FirstOrDefault(d => d.IsMarked);
             if (d2 != null)
@@ -907,8 +1014,6 @@ namespace Eddy
                 thresholdLine10.Color = ScottPlot.Colors.Red;
             }
 
-
-
             if (d2 != null)
             {
                 int index = Ld.IndexOf(d2);
@@ -926,11 +1031,8 @@ namespace Eddy
                 thresholdLine10.Color = ScottPlot.Colors.Red;
             }
 
-
             WpfPlot4.Refresh();
             WpfPlotA1Last.Refresh();
-
-
         }
 
         private void LastGraphA1(List<Fdata> Ld)
@@ -945,51 +1047,47 @@ namespace Eddy
             WpfPlotA1Last.Plot.Axes.Rules.Clear();
             WpfPlotA1Last.Plot.Axes.Rules.Add(rule);
 
+            // Add threshold lines once before the sample loop
+            var d1 = DeviceCOM.Configuration?.Frequency?.FD?.FirstOrDefault(d => d.FN == 3);
+            if (d1 != null)
+            {
+                if (thresholdLine7 != null)
+                {
+                    WpfPlotA1Last.Plot.Remove(thresholdLine7);
+                }
+                thresholdLine7 = WpfPlotA1Last.Plot.Add.HorizontalLine(y: d1.LTH);
+                thresholdLine7.LineWidth = 0.5f;
+                thresholdLine7.Color = ScottPlot.Colors.Orange;
+
+                if (thresholdLine8 != null)
+                {
+                    WpfPlotA1Last.Plot.Remove(thresholdLine8);
+                }
+                thresholdLine8 = WpfPlotA1Last.Plot.Add.HorizontalLine(y: d1.UTH);
+                thresholdLine8.LineWidth = 0.5f;
+                thresholdLine8.Color = ScottPlot.Colors.Red;
+
+                if (thresholdLine9 != null)
+                {
+                    WpfPlotA1Last.Plot.Remove(thresholdLine9);
+                }
+                thresholdLine9 = WpfPlotA1Last.Plot.Add.HorizontalLine(y: d1.TH);
+                thresholdLine9.LineWidth = 0.5f;
+                thresholdLine9.Color = ScottPlot.Colors.White;
+            }
+
             var t = Ld.Count - 1;
             for (var i = 0; i <= t; i++)
             {
                 var d = Ld[i];
-                //}
-                //foreach (var d in Ld)
-                //{
                 var AmpF = 0;
                 if (d.Amp != 0)
                 {
                     AmpF = (DeviceCOM.Factor * d.Amp_ABS) / DeviceCOM.MaxValueABS;
                 }
 
-
-                var d1 = DeviceCOM.Configuration?.Frequency?.FD?.FirstOrDefault(d => d.FN == 3);
-                if (d1 != null)
-                {
-                    if (thresholdLine7 != null)
-                    {
-                        WpfPlotA1Last.Plot.Remove(thresholdLine7);
-                    }
-                    thresholdLine7 = WpfPlotA1Last.Plot.Add.HorizontalLine(y: d1.LTH);
-                    thresholdLine7.LineWidth = 0.5f;
-                    thresholdLine7.Color = ScottPlot.Colors.Orange;
-
-                    if (thresholdLine8 != null)
-                    {
-                        WpfPlotA1Last.Plot.Remove(thresholdLine8);
-                    }
-                    thresholdLine8 = WpfPlotA1Last.Plot.Add.HorizontalLine(y: d1.UTH);
-                    thresholdLine8.LineWidth = 0.5f;
-                    thresholdLine8.Color = ScottPlot.Colors.Red;
-
-                    if (thresholdLine9 != null)
-                    {
-                        WpfPlotA1Last.Plot.Remove(thresholdLine9);
-                    }
-                    thresholdLine9 = WpfPlotA1Last.Plot.Add.HorizontalLine(y: d1.TH);
-                    thresholdLine9.LineWidth = 0.5f;
-                    thresholdLine9.Color = ScottPlot.Colors.White;
-                }
-
                 loggerA1Last.Add(AmpF);
             }
-
 
             var d2 = Ld.FirstOrDefault(d => d.IsMarked);
             if (d2 != null)
@@ -1017,46 +1115,71 @@ namespace Eddy
         {
             try
             {
-
                 lblResultStatus.Content = resultStatus;
-                Canvas2.Children.Clear();
 
+                if (!_canvasInitialized)
+                {
+                    Canvas2.Children.Clear();
+                    Canvas2.Children.Add(_elLth);
+                    Canvas2.Children.Add(_elUth);
+                    Canvas2.Children.Add(_dotsHost);
+                    _canvasInitialized = true;
+                }
 
-                if (DeviceCOM.Configuration?.Frequency?.FD != null)
+                if (DeviceCOM.Configuration?.Frequency?.FD != null && DeviceCOM.Factor > 0)
                 {
                     var d1 = DeviceCOM.Configuration.Frequency.FD.FirstOrDefault(f => f.FN == 1);
                     if (d1 != null)
                     {
-                        var elW = (470 * d1.LTH) / DeviceCOM.Factor;
-                        Ellipse el1 = new Ellipse();
-                        el1.Height = elW;
-                        el1.Width = elW;
-                        el1.Stroke = new SolidColorBrush(Colors.Orange);
-                        el1.StrokeThickness = 1; // You can adjust this as needed
-                        Canvas.SetLeft(el1, (-1 * (elW / 2)));
-                        Canvas.SetTop(el1, (-1 * (elW / 2)));
+                        var elW = (470.0 * d1.LTH) / DeviceCOM.Factor;
+                        _elLth.Width = elW;
+                        _elLth.Height = elW;
+                        Canvas.SetLeft(_elLth, -elW / 2.0);
+                        Canvas.SetTop(_elLth, -elW / 2.0);
 
-                        Canvas2.Children.Add(el1);
-
-                        var elW1 = (470 * d1.UTH) / DeviceCOM.Factor;
-                        Ellipse el2 = new Ellipse();
-                        el2.Height = elW1;
-                        el2.Width = elW1;
-                        el2.Stroke = new SolidColorBrush(Colors.Red);
-                        el2.StrokeThickness = 1; // You can adjust this as needed
-                        Canvas.SetLeft(el2, -1 * (elW1 / 2));
-                        Canvas.SetTop(el2, -1 * (elW1 / 2));
-
-                        Canvas2.Children.Add(el2);
+                        var elW1 = (470.0 * d1.UTH) / DeviceCOM.Factor;
+                        _elUth.Width = elW1;
+                        _elUth.Height = elW1;
+                        Canvas.SetLeft(_elUth, -elW1 / 2.0);
+                        Canvas.SetTop(_elUth, -elW1 / 2.0);
                     }
                 }
 
-                var data = DeviceCOM.graphData.AmpD1.ToList();
-                if (data.Count > 0)
+                List<Fdata>? newPoints = null;
+                lock (DeviceCOM.AmpD1Lock)
                 {
-                    var dotsVisual = CreateDotsVisual(data);
-                    var host = new VisualHost(dotsVisual);
-                    Canvas2.Children.Add(host);
+                    int currentCount = DeviceCOM.graphData.AmpD1.Count;
+                    if (currentCount < _lastDrawnCount)
+                    {
+                        _lastDrawnCount = 0;
+                        _dotsHost.Clear();
+                    }
+
+                    int delta = currentCount - _lastDrawnCount;
+                    if (delta > 0)
+                    {
+                        newPoints = DeviceCOM.graphData.AmpD1.GetRange(_lastDrawnCount, delta);
+                        _lastDrawnCount = currentCount;
+                    }
+                }
+
+                if (newPoints != null && newPoints.Count > 0)
+                {
+                    DrawingVisual visual = new DrawingVisual();
+                    using (DrawingContext dc = visual.RenderOpen())
+                    {
+                        foreach (var d in newPoints)
+                        {
+                            double phaseRadians = d.phase * Math.PI / 180.0;
+                            double AmpF1 = (235.0 * d.Amp) / DeviceCOM.MaxValue;
+                            double x1 = AmpF1 * Math.Cos(phaseRadians);
+                            double y1 = AmpF1 * Math.Sin(phaseRadians);
+
+                            // Draw a small blue dot (1.5 radius circle)
+                            dc.DrawEllipse(Brushes.Blue, null, new Point(x1, y1), 1.5, 1.5);
+                        }
+                    }
+                    _dotsHost.AddVisual(visual);
                 }
 
                 if (DeviceCOM.IsTubeSatart)
@@ -1069,7 +1192,6 @@ namespace Eddy
                     btnTestStatus.Background = new SolidColorBrush(Colors.Gray);
                     lblTest.Content = "Test Off";
                 }
-
 
                 if (DeviceCOM.IsCalibarationStart)
                 {
@@ -1088,11 +1210,10 @@ namespace Eddy
                     lblTotal.Content = "Total Count-" + (DeviceCOM.Ok + DeviceCOM.NoOk).ToString();
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-
+                System.Diagnostics.Debug.WriteLine($"UIUpdates Exception: {ex}");
             }
-            //InitialGraphSetting();
         }
 
 
@@ -1130,6 +1251,15 @@ namespace Eddy
         {
             try
             {
+                if (indata == null || indata.Length == 0) return;
+
+                int pType = indata[0];
+                int pStartIdx = indata.Length > 3 ? indata[3] : -1;
+                if (DeviceCOM.EnablePerfLog && (pStartIdx != 2 || pType != 55))
+                {
+                    DeviceCOM.LogStep($"[PROC] Non-stream packet: Type={pType}, StartIdx={pStartIdx}, Len={indata.Length}");
+                }
+
                 //List<string> strings = new List<string>();
                 //strings.Add(indata[3].ToString() + "-" + indata[5].ToString() + "-" + indata.Length);
                 //File.AppendAllLines("DataLog.txt", strings);
@@ -1160,14 +1290,20 @@ namespace Eddy
                         //D1Seeting();
                         DeviceCOM.IsTestOn = true;
                         resultStatus = string.Empty;
-                        DeviceCOM.graphData.AmpD1 = new List<Fdata>();
+                        lock (DeviceCOM.AmpD1Lock)
+                        {
+                            DeviceCOM.graphData.AmpD1 = new List<Fdata>();
+                        }
                     }
                     else if (indata[0] == 56)
                     {
                         DeviceCOM.IsTestOn = false;
                         DeviceCOM.IsTubeSatart = false;
                         resultStatus = string.Empty;
-                        DeviceCOM.graphData.AmpD1 = new List<Fdata>();
+                        lock (DeviceCOM.AmpD1Lock)
+                        {
+                            DeviceCOM.graphData.AmpD1 = new List<Fdata>();
+                        }
                     }
 
                     //if (indata[0] == 52 || indata[0] == 54)
@@ -1207,7 +1343,11 @@ namespace Eddy
                             DeviceCOM.IsTubeSatart = true;
                             //btnTestStatus.Background = new SolidColorBrush(Colors.Orange);
                             resultStatus = string.Empty;
-                            DeviceCOM.graphData.AmpD1 = new List<Fdata>();
+                            lock (DeviceCOM.AmpD1Lock)
+                            {
+                                DeviceCOM.graphData.AmpD1 = new List<Fdata>();
+                            }
+                            if (DeviceCOM.EnablePerfLog) DeviceCOM.LogStep("startIndex == 4 received (Tube Start), AmpD1 reset to 0");
                         }
 
 
@@ -1287,23 +1427,26 @@ namespace Eddy
                                 }
 
 
-                                if (startIndex == 4)
+                                lock (DeviceCOM.AmpD1Lock)
                                 {
-                                    if (i >= indexPrePostState)
+                                    if (startIndex == 4)
                                     {
-                                        DeviceCOM.graphData.AmpD1.Add(new Fdata() { Amp = amp, Amp_ABS = amp_ABS, phase = rPhase, x = x, y = y, IsMarked = IsMark });
+                                        if (i >= indexPrePostState)
+                                        {
+                                            DeviceCOM.graphData.AmpD1.Add(new Fdata() { Amp = amp, Amp_ABS = amp_ABS, phase = rPhase, x = x, y = y, IsMarked = IsMark });
+                                        }
                                     }
-                                }
-                                else if (startIndex == 6)
-                                {
-                                    if (i <= indexPrePostState)
+                                    else if (startIndex == 6)
+                                    {
+                                        if (i <= indexPrePostState)
+                                        {
+                                            DeviceCOM.graphData.AmpD1.Add(new Fdata() { Amp = amp, Amp_ABS = amp_ABS, phase = phase, x = x, y = y, IsMarked = IsMark });
+                                        }
+                                    }
+                                    else if (startIndex == 2)
                                     {
                                         DeviceCOM.graphData.AmpD1.Add(new Fdata() { Amp = amp, Amp_ABS = amp_ABS, phase = phase, x = x, y = y, IsMarked = IsMark });
                                     }
-                                }
-                                else if (startIndex == 2)
-                                {
-                                    DeviceCOM.graphData.AmpD1.Add(new Fdata() { Amp = amp, Amp_ABS = amp_ABS, phase = phase, x = x, y = y, IsMarked = IsMark });
                                 }
                             }
 
@@ -1323,8 +1466,7 @@ namespace Eddy
 
                             logger2.Add(AmpF_ABS);
 
-                            WpfPlot1.Refresh();
-                            WpfPlotA1.Refresh();
+                            _plotDirty = true;
                         }
 
 
@@ -1352,14 +1494,25 @@ namespace Eddy
                         {
                             DeviceCOM.IsTubeSatart = false;
                             //btnTestStatus.Background = new SolidColorBrush(Colors.Gray);
+                            int curCount = 0;
+                            if (DeviceCOM.EnablePerfLog)
+                            {
+                                lock (DeviceCOM.AmpD1Lock)
+                                {
+                                    curCount = DeviceCOM.graphData.AmpD1?.Count ?? 0;
+                                }
+                                DeviceCOM.LogStep($"startIndex == 6 received. indata[8]={indata[8]}, AmpD1.Count={curCount}");
+                            }
                             if (indata[8] == 0 || indata[8] == 1 || indata[8] == 2)
                             {
                                 resultStatus = string.Empty;
+                                if (DeviceCOM.EnablePerfLog) DeviceCOM.LogStep($"Invoking StopTude(result={indata[8] == 0}) with AmpD1.Count={curCount}");
                                 StopTude(indata[8] == 0);
                             }
                             else
                             {
                                 resultStatus = "Invalid Test!!";
+                                if (DeviceCOM.EnablePerfLog) DeviceCOM.LogStep($"startIndex == 6 with invalid indata[8]={indata[8]}, StopTude skipped");
                             }
                         }
                     }
@@ -1368,10 +1521,14 @@ namespace Eddy
                         MessageBox.Show("Something went wrong, kindly restart the full system to resolve the issue!!", "Information");
                     }
                 }
+                else
+                {
+                    if (DeviceCOM.EnablePerfLog) DeviceCOM.LogStep($"[PROC] Unhandled packet Type={indata[0]}, Len={indata.Length}");
+                }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-
+                System.Diagnostics.Debug.WriteLine($"ProcessPortData exception: {ex.Message}");
             }
         }
         HorizontalLine? thresholdLine1;

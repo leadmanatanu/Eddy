@@ -1,5 +1,5 @@
 ﻿MachineInfo
-
+1.0.0.0
 
 winexe
 C#
@@ -12,7 +12,7 @@ TRACE;DEBUG;NET;NET8_0;NETCOREAPP;WINDOWS;WINDOWS7_0;NET5_0_OR_GREATER;NET6_0_OR
 D:\New folder\Eddy\MachineInfo\App.xaml
 11407045341
 
-4-449433802
+6-1768625841
 1991733380664
 MainWindow.xaml;
 

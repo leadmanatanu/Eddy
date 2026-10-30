@@ -431,6 +431,13 @@ namespace _8F
                                     try { part = JsonConvert.DeserializeObject<PartConfiguration>(group.First().PartData ?? "{}"); }
                                     catch { part = null; }
 
+                                    // Determine ONLY the ON (enabled) channels from configuration
+                                    var enabledChannels = fdList.Where(g => g.isEnable).OrderBy(g => g.Id).ToList();
+                                    if (enabledChannels.Count == 0 && (fdList.Count == 0 || fdList.All(g => g.isEnable)))
+                                    {
+                                        enabledChannels = Enumerable.Range(1, 8).Select(i => new GraphData { Id = i, Name = $"D{i}", isEnable = true }).ToList();
+                                    }
+
                                     // Configuration, Threshold, and Part Configuration Card
                                     col.Item().Border(1).BorderColor("#E2E8F0").Background("#FFFFFF").Padding(8).Column(cfgCol =>
                                     {
@@ -464,7 +471,7 @@ namespace _8F
                                                     });
 
                                                     int idx = 0;
-                                                    foreach (var d in fdList)
+                                                    foreach (var d in enabledChannels)
                                                     {
                                                         idx++;
                                                         string bg = idx % 2 == 0 ? "#F8FAFC" : "#FFFFFF";
@@ -506,7 +513,7 @@ namespace _8F
                                                     });
 
                                                     int idx = 0;
-                                                    foreach (var d in fdList)
+                                                    foreach (var d in enabledChannels)
                                                     {
                                                         idx++;
                                                         string bg = idx % 2 == 0 ? "#F8FAFC" : "#FFFFFF";
@@ -564,34 +571,29 @@ namespace _8F
 
                                         resCol.Item().PaddingTop(3).Table(resultTable =>
                                         {
-                                            // Exact 11 columns in specified order
+                                            // Dynamic columns: Sr No., Timestamp, ON channels (X,Y), Result
                                             resultTable.ColumnsDefinition(cols =>
                                             {
                                                 cols.ConstantColumn(36);   // 1. Sr No.
                                                 cols.ConstantColumn(110);  // 2. Timestamp
-                                                cols.RelativeColumn();     // 3. Frequency 1 (X,Y)
-                                                cols.RelativeColumn();     // 4. Frequency 2 (X,Y)
-                                                cols.RelativeColumn();     // 5. Frequency 3 (X,Y)
-                                                cols.RelativeColumn();     // 6. Frequency 4 (X,Y)
-                                                cols.RelativeColumn();     // 7. Frequency 5 (X,Y)
-                                                cols.RelativeColumn();     // 8. Frequency 6 (X,Y)
-                                                cols.RelativeColumn();     // 9. Frequency 7 (X,Y)
-                                                cols.RelativeColumn();     // 10. Frequency 8 (X,Y)
-                                                cols.ConstantColumn(52);   // 11. Result
+                                                foreach (var ch in enabledChannels)
+                                                {
+                                                    cols.RelativeColumn(); // Only ON channels
+                                                }
+                                                cols.ConstantColumn(52);   // Result
                                             });
 
                                             resultTable.Header(h =>
                                             {
                                                 h.Cell().Background("#1B365D").Border(1).BorderColor("#1B365D").Padding(3.5f).AlignCenter().Text("Sr No.").FontSize(7.5f).Bold().FontColor(Colors.White);
                                                 h.Cell().Background("#1B365D").Border(1).BorderColor("#1B365D").Padding(3.5f).AlignLeft().Text("Timestamp").FontSize(7.5f).Bold().FontColor(Colors.White);
-                                                h.Cell().Background("#1B365D").Border(1).BorderColor("#1B365D").Padding(3.5f).AlignCenter().Text("D1 (X,Y)").FontSize(7f).Bold().FontColor(Colors.White);
-                                                h.Cell().Background("#1B365D").Border(1).BorderColor("#1B365D").Padding(3.5f).AlignCenter().Text("D2 (X,Y)").FontSize(7f).Bold().FontColor(Colors.White);
-                                                h.Cell().Background("#1B365D").Border(1).BorderColor("#1B365D").Padding(3.5f).AlignCenter().Text("D3 (X,Y)").FontSize(7f).Bold().FontColor(Colors.White);
-                                                h.Cell().Background("#1B365D").Border(1).BorderColor("#1B365D").Padding(3.5f).AlignCenter().Text("D4 (X,Y)").FontSize(7f).Bold().FontColor(Colors.White);
-                                                h.Cell().Background("#1B365D").Border(1).BorderColor("#1B365D").Padding(3.5f).AlignCenter().Text("D5 (X,Y)").FontSize(7f).Bold().FontColor(Colors.White);
-                                                h.Cell().Background("#1B365D").Border(1).BorderColor("#1B365D").Padding(3.5f).AlignCenter().Text("D6 (X,Y)").FontSize(7f).Bold().FontColor(Colors.White);
-                                                h.Cell().Background("#1B365D").Border(1).BorderColor("#1B365D").Padding(3.5f).AlignCenter().Text("D7 (X,Y)").FontSize(7f).Bold().FontColor(Colors.White);
-                                                h.Cell().Background("#1B365D").Border(1).BorderColor("#1B365D").Padding(3.5f).AlignCenter().Text("D8 (X,Y)").FontSize(7f).Bold().FontColor(Colors.White);
+
+                                                foreach (var ch in enabledChannels)
+                                                {
+                                                    string chName = !string.IsNullOrWhiteSpace(ch.Name) ? ch.Name : $"D{ch.Id}";
+                                                    h.Cell().Background("#1B365D").Border(1).BorderColor("#1B365D").Padding(3.5f).AlignCenter().Text($"{chName} (X,Y)").FontSize(7f).Bold().FontColor(Colors.White);
+                                                }
+
                                                 h.Cell().Background("#1B365D").Border(1).BorderColor("#1B365D").Padding(3.5f).AlignCenter().Text("Result").FontSize(7.5f).Bold().FontColor(Colors.White);
                                             });
 
@@ -620,9 +622,10 @@ namespace _8F
                                                 resultTable.Cell().Background(rowBg).Border(1).BorderColor("#E2E8F0").Padding(3)
                                                     .AlignLeft().Text($"{item.TimeStamp:dd/MM/yyyy HH:mm:ss}").FontSize(7.5f).FontColor("#1E293B");
 
-                                                // 3 to 10. Frequency 1 to 8 (X,Y)
-                                                for (int fn = 1; fn <= 8; fn++)
+                                                // 3 to N. ONLY ON channels (X,Y)
+                                                foreach (var ch in enabledChannels)
                                                 {
+                                                    int fn = ch.Id;
                                                     bool exists = freqMap.TryGetValue(fn, out var fObj);
                                                     string coord = exists && fObj != null ? $"({fObj.X}, {fObj.Y})" : "N/A";
                                                     bool isFailedCell = !item.Result && exists && fObj != null && fObj.R == 0;
@@ -640,7 +643,7 @@ namespace _8F
                                                     }
                                                 }
 
-                                                // 11. Result - Restrained Industrial PASS/FAIL Colors
+                                                // Result - Restrained Industrial PASS/FAIL Colors
                                                 string resultBg = item.Result ? "#ECFDF5" : "#FEF2F2";
                                                 string resultTextColor = item.Result ? "#065F46" : "#991B1B";
                                                 string resultBorderColor = item.Result ? "#A7F3D0" : "#FECACA";

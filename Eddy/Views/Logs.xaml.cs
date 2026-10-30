@@ -57,9 +57,7 @@ namespace Eddy
                
                 if (string.IsNullOrEmpty(DeviceCOM.DBConnection))
                 {
-                    DeviceCOM.DBConnection = Convert.ToString(System.Configuration.ConfigurationManager.AppSettings["DBConnection"])
-                        ?? Convert.ToString(System.Configuration.ConfigurationManager.AppSettings["ConnectionString"])
-                        ?? "";
+                    DeviceCOM.DBConnection = Convert.ToString(System.Configuration.ConfigurationManager.AppSettings["DBConnection"]) ?? "";
                 }
 
                 using (var con = new NpgsqlConnection(DeviceCOM.DBConnection))
@@ -1055,9 +1053,7 @@ namespace Eddy
             {
                 if (string.IsNullOrEmpty(DeviceCOM.DBConnection))
                 {
-                    DeviceCOM.DBConnection = Convert.ToString(System.Configuration.ConfigurationManager.AppSettings["DBConnection"])
-                        ?? Convert.ToString(System.Configuration.ConfigurationManager.AppSettings["ConnectionString"])
-                        ?? "";
+                    DeviceCOM.DBConnection = Convert.ToString(System.Configuration.ConfigurationManager.AppSettings["DBConnection"]) ?? "";
                 }
 
                 using (var con = new NpgsqlConnection(DeviceCOM.DBConnection))
@@ -1127,9 +1123,7 @@ namespace Eddy
             {
                 if (string.IsNullOrEmpty(DeviceCOM.DBConnection))
                 {
-                    DeviceCOM.DBConnection = Convert.ToString(System.Configuration.ConfigurationManager.AppSettings["DBConnection"])
-                        ?? Convert.ToString(System.Configuration.ConfigurationManager.AppSettings["ConnectionString"])
-                        ?? "";
+                    DeviceCOM.DBConnection = Convert.ToString(System.Configuration.ConfigurationManager.AppSettings["DBConnection"]) ?? "";
                 }
 
                 using (var con = new NpgsqlConnection(DeviceCOM.DBConnection))

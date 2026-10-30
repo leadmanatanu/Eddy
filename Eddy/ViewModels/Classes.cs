@@ -1,5 +1,6 @@
 using Newtonsoft.Json;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -16,16 +17,32 @@ namespace Eddy
 {
     public class VisualHost : FrameworkElement
     {
-        private readonly Visual _visual;
+        private readonly VisualCollection _children;
 
-        public VisualHost(Visual visual)
+        public VisualHost()
         {
-            _visual = visual;
+            _children = new VisualCollection(this);
         }
 
-        protected override int VisualChildrenCount => 1;
+        public VisualHost(Visual visual) : this()
+        {
+            _children.Add(visual);
+        }
 
-        protected override Visual GetVisualChild(int index) => _visual;
+        public void AddVisual(Visual visual) => _children.Add(visual);
+
+        public void Clear() => _children.Clear();
+
+        public int VisualCount => _children.Count;
+
+        protected override int VisualChildrenCount => _children.Count;
+
+        protected override Visual GetVisualChild(int index)
+        {
+            if (index < 0 || index >= _children.Count)
+                throw new ArgumentOutOfRangeException(nameof(index));
+            return _children[index];
+        }
     }
     
 
@@ -33,6 +50,7 @@ namespace Eddy
     {
         public UdpClient _udpClient;
         private IPEndPoint _remoteIpEndPoint;
+        public BlockingCollection<byte[]> PacketQueue { get; }
 
         // A structure to hold the state information for the asynchronous operation
         public struct UdpState
@@ -41,12 +59,14 @@ namespace Eddy
             public IPEndPoint e;
         }
 
-        public UdpReceiver(int port)
+        public UdpReceiver(int port, BlockingCollection<byte[]>? queue = null)
         {
             _remoteIpEndPoint = new IPEndPoint(IPAddress.Any, port);
             _udpClient = new UdpClient(_remoteIpEndPoint);
+            _udpClient.Client.ReceiveBufferSize = 4 * 1024 * 1024;
+            PacketQueue = queue ?? new BlockingCollection<byte[]>();
 
-            Console.WriteLine($"Listening for UDP messages on port {port}...");
+            Console.WriteLine($"Listening for UDP messages on port {port} (ReceiveBufferSize=4MB)...");
         }
 
         public void StartReceiving()
@@ -71,7 +91,17 @@ namespace Eddy
             try
             {
                 // Complete the asynchronous receive operation and get the data
-                DeviceCOM.receiveBytes = u.EndReceive(ar, ref e);
+                byte[] received = u.EndReceive(ar, ref e);
+                byte[] packet = new byte[received.Length];
+                Buffer.BlockCopy(received, 0, packet, 0, received.Length);
+
+                DeviceCOM.LogPacket(packet, "SOCK");
+
+                if (!PacketQueue.IsAddingCompleted)
+                {
+                    PacketQueue.Add(packet);
+                }
+                DeviceCOM.receiveBytes = packet;
             }
             catch (ObjectDisposedException)
             {
@@ -85,18 +115,36 @@ namespace Eddy
             }
             finally
             {
-                // Restart listening for the next datagram
-                UdpState s = new UdpState();
-                s.e = e ?? state.e; // Use the updated IPEndPoint for the next receive
-                s.u = u;
-                u.BeginReceive(new AsyncCallback(ReceiveCallback), s);
+                try
+                {
+                    // Restart listening for the next datagram
+                    UdpState s = new UdpState();
+                    s.e = e ?? state.e; // Use the updated IPEndPoint for the next receive
+                    s.u = u;
+                    u.BeginReceive(new AsyncCallback(ReceiveCallback), s);
+                }
+                catch (ObjectDisposedException)
+                {
+                    // UdpClient closed during shutdown
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error restarting receive: {ex.Message}");
+                }
             }
         }
 
         public void StopReceiving()
         {
-            _udpClient.Close();
-            _udpClient.Dispose();
+            try
+            {
+                _udpClient.Close();
+                _udpClient.Dispose();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error stopping UDP receiver: {ex.Message}");
+            }
             Console.WriteLine("UDP receiver stopped.");
         }
     }
