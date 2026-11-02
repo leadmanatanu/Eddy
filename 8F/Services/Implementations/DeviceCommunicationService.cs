@@ -1,1207 +1,3008 @@
 using Newtonsoft.Json;
+
 using Npgsql;
+
 using System;
+
 using System.Collections.Generic;
+
 using System.ComponentModel;
+
 using System.Diagnostics.Metrics;
+
 using System.IO;
+
 using System.IO.Ports;
+
 using System.Linq;
+
 using System.Net;
+
 using System.Net.Sockets;
+
 using System.Net.WebSockets;
+
 using System.Text;
+
 using System.Threading.Tasks;
+
 using System.Windows;
+
 using System.Windows.Media;
+
 using System.Windows.Shapes;
+
 using System.Windows.Threading;
 
+
+
 namespace _8F.Services
+
 {
+
     public class DeviceCOM
+
     {
+
         public SerialPort port = new();
+
         public static List<ChannelData> channelDatas = new();
+
+        public static readonly object ResponsesLock = new();
+
         public static List<Response> responses = new();
+
         public static bool IsResponseRefreshRequired = false;
+
         public static bool IsBalanceAll = false;
+
         public static bool IsBalanceBusyEnable = false;
+
         public static bool IsResponseClearRequired = false;
+
         public static int CommunicationType;
+
         public static string PortName = string.Empty;
+
         public static int BaudRate;
+
         public static string IpAddress = string.Empty;
+
         public static int SPort;
+
         public static int ChannelNo = 4;
+
         public static int DefaultHeight = 0;
+
         public static int DefaultWidth = 0;
+
         public static int DefaultHeight_O = 0;
+
         public static int DefaultWidth_O = 0;
+
         public static int DefaultAngel_O = 0;
+
         public static string ConnectionString = string.Empty;
+
         public static bool IsLogEnable = false;
+
         public static bool IsSystemBusy = false;
+
         public static DateTime busyStamp = System.DateTime.Now; 
+
         public static Part part = new();
+
         public static List<Counter> counter = new();
+
         public static bool IsLogDisable = false;
-        public static bool IsBalanceRequired = false;
+
+        private static readonly Dictionary<int, bool> _balanceRequiredMap = new()
+
+        {
+
+            { 1, false }, { 2, false }, { 3, false }, { 4, false }
+
+        };
+
+
+
+        public static bool GetBalanceRequired(int chId)
+
+        {
+
+            lock (_balanceRequiredMap)
+
+            {
+
+                return _balanceRequiredMap.TryGetValue(chId, out bool req) && req;
+
+            }
+
+        }
+
+
+
+        public static void SetBalanceRequired(int chId, bool req)
+
+        {
+
+            lock (_balanceRequiredMap)
+
+            {
+
+                if (chId <= 0)
+
+                {
+
+                    for (int i = 1; i <= 4; i++) _balanceRequiredMap[i] = req;
+
+                }
+
+                else
+
+                {
+
+                    _balanceRequiredMap[chId] = req;
+
+                }
+
+            }
+
+        }
+
+
+
+        public static bool IsBalanceRequired
+
+        {
+
+            get
+
+            {
+
+                lock (_balanceRequiredMap)
+
+                {
+
+                    return _balanceRequiredMap.Values.Any(v => v);
+
+                }
+
+            }
+
+            set
+
+            {
+
+                lock (_balanceRequiredMap)
+
+                {
+
+                    for (int i = 1; i <= 4; i++) _balanceRequiredMap[i] = value;
+
+                }
+
+            }
+
+        }
+
+
+
+        private static readonly Dictionary<int, bool> _channelRefreshRequired = new()
+
+        {
+
+            { 1, false }, { 2, false }, { 3, false }, { 4, false }
+
+        };
+
+
+
+        public static bool IsChannelRefreshRequired(int chId)
+
+        {
+
+            lock (_channelRefreshRequired)
+
+            {
+
+                return _channelRefreshRequired.TryGetValue(chId, out bool req) && req;
+
+            }
+
+        }
+
+
+
+        public static void SetChannelRefreshRequired(int chId, bool req)
+
+        {
+
+            lock (_channelRefreshRequired)
+
+            {
+
+                if (chId <= 0)
+
+                {
+
+                    for (int i = 1; i <= 4; i++) _channelRefreshRequired[i] = req;
+
+                }
+
+                else
+
+                {
+
+                    _channelRefreshRequired[chId] = req;
+
+                }
+
+            }
+
+            if (req)
+
+            {
+
+                IsResponseRefreshRequired = true;
+
+            }
+
+        }
+
+
+
+        private static readonly Dictionary<int, bool> _channelLogEnabled = new()
+
+        {
+
+            { 1, false }, { 2, false }, { 3, false }, { 4, false }
+
+        };
+
+
+
+        public static bool IsChannelLogEnabled(int chId)
+
+        {
+
+            lock (_channelLogEnabled)
+
+            {
+
+                return _channelLogEnabled.TryGetValue(chId, out bool enabled) && enabled;
+
+            }
+
+        }
+
+
+
+        public static void SetChannelLogEnabled(int chId, bool enabled)
+
+        {
+
+            lock (_channelLogEnabled)
+
+            {
+
+                if (chId <= 0)
+
+                {
+
+                    for (int i = 1; i <= 4; i++) _channelLogEnabled[i] = enabled;
+
+                }
+
+                else
+
+                {
+
+                    _channelLogEnabled[chId] = enabled;
+
+                }
+
+            }
+
+            IsLogEnable = _channelLogEnabled.Values.Any(v => v);
+
+        }
+
         public static bool IsBinRequired = false;
+
         public static int ERRCode = 0;
+
         public static string Code = string.Empty;
+
         public static bool IsJSON = false;
+
         public static bool IsLogRequiredOnBalance = false;
+
         public static bool IsAutoEllipseActive = false;
+
         DispatcherTimer dispatcherTimer = new();
+
         TcpClient? client;
+
         NetworkStream? stream;
+
         public static bool PortAck = false ;
+
         public static string PortData = "";
+
         private ManualResetEvent _ackEvent = new ManualResetEvent(false);
 
+
+
         public const int BalanceTimeoutSeconds = 30;
-        public static int BalancingChannelId = 0;
+
+        private static readonly object _commandLock = new();
+
+        public static bool IsCommandInFlight = false;
+
+        public static int PendingCommandChannelId = 0;
+
+        public static int PendingCommandFC = 0;
+
+        public static DateTime CommandInFlightStamp = DateTime.Now;
+
+
+
+        private static int _legacyBalancingChannelId = 0;
+
+        public static int BalancingChannelId
+
+        {
+
+            get => (PendingCommandFC == 16) ? PendingCommandChannelId : _legacyBalancingChannelId;
+
+            set
+
+            {
+
+                _legacyBalancingChannelId = value;
+
+                if (value > 0)
+
+                {
+
+                    PendingCommandChannelId = value;
+
+                    PendingCommandFC = 16;
+
+                }
+
+            }
+
+        }
+
         public static bool IsBalanceErrorHandled = false;
 
-        public static bool IsChannelBalanced(int chId)
+
+
+        public static bool CheckAndAcquireCommandLock(int channelId, int fc, string source, out string errorMessage)
+
         {
-            if (IsBalanceRequired) return false;
-            var list = responses;
-            if (list == null) return false;
-            try
+
+            errorMessage = string.Empty;
+
+            lock (_commandLock)
+
             {
-                for (int i = 0; i < list.Count; i++)
+
+                int timeoutSec = (PendingCommandFC == 16) ? BalanceTimeoutSeconds : 12;
+
+                if (IsCommandInFlight && (DateTime.Now - CommandInFlightStamp).TotalSeconds > timeoutSec)
+
                 {
-                    var r = list[i];
-                    if (r != null && r.CN == chId && r.IsBalacenced)
-                        return true;
+
+                    System.Diagnostics.Debug.WriteLine($"[{source}] Previous in-flight command (FC={PendingCommandFC}, Ch={PendingCommandChannelId}) timed out. Clearing lock.");
+
+                    IsCommandInFlight = false;
+
+                    PendingCommandChannelId = 0;
+
+                    PendingCommandFC = 0;
+
                 }
-                return false;
+
+
+
+                if (IsCommandInFlight || IsSystemBusy)
+
+                {
+
+                    errorMessage = "System is busy so you can not perform this command, please wait...";
+
+                    System.Diagnostics.Debug.WriteLine($"[{source}] Command (FC={fc}, Ch={channelId}) rejected: in-flight={IsCommandInFlight}, busy={IsSystemBusy}.");
+
+                    return false;
+
+                }
+
+
+
+                IsCommandInFlight = true;
+
+                PendingCommandChannelId = channelId;
+
+                PendingCommandFC = fc;
+
+                CommandInFlightStamp = DateTime.Now;
+
+                return true;
+
             }
-            catch
-            {
-                return false;
-            }
+
         }
+
+
+
+        public static void ReleaseCommandLock()
+
+        {
+
+            lock (_commandLock)
+
+            {
+
+                IsCommandInFlight = false;
+
+                PendingCommandChannelId = 0;
+
+                PendingCommandFC = 0;
+
+            }
+
+        }
+
+
+
+        public static List<Response> GetResponsesSnapshot(int chId = 0)
+
+        {
+
+            lock (ResponsesLock)
+
+            {
+
+                if (chId <= 0)
+
+                    return responses.ToList();
+
+                return responses.Where(r => r.CN == chId).ToList();
+
+            }
+
+        }
+
+
+
+        public static void ClearResponsesForChannel(int chId, bool keepBalanced)
+
+        {
+
+            lock (ResponsesLock)
+
+            {
+
+                if (keepBalanced)
+
+                {
+
+                    responses.RemoveAll(r => r.CN == chId && !r.IsBalacenced);
+
+                }
+
+                else
+
+                {
+
+                    responses.RemoveAll(r => r.CN == chId);
+
+                }
+
+            }
+
+        }
+
+
+
+        public static void InvalidateBalance(int channelId)
+
+        {
+
+            SetBalanceRequired(channelId, true);
+
+            lock (ResponsesLock)
+
+            {
+
+                if (channelId <= 0)
+
+                {
+
+                    responses.RemoveAll(r => r.IsBalacenced);
+
+                    for (int i = 1; i <= 4; i++) SetBalanceRequired(i, true);
+
+                }
+
+                else
+
+                {
+
+                    responses.RemoveAll(r => r.CN == channelId && r.IsBalacenced);
+
+                    SetBalanceRequired(channelId, true);
+
+                }
+
+            }
+
+            if (channelId <= 0)
+
+            {
+
+                SetChannelRefreshRequired(1, true);
+
+                SetChannelRefreshRequired(2, true);
+
+            }
+
+            else
+
+            {
+
+                SetChannelRefreshRequired(channelId, true);
+
+            }
+
+        }
+
+
+
+        public static bool IsChannelBalanced(int chId)
+
+        {
+
+            if (GetBalanceRequired(chId)) return false;
+
+            lock (ResponsesLock)
+
+            {
+
+                if (responses == null) return false;
+
+                try
+
+                {
+
+                    for (int i = 0; i < responses.Count; i++)
+
+                    {
+
+                        var r = responses[i];
+
+                        if (r != null && r.CN == chId && r.IsBalacenced)
+
+                            return true;
+
+                    }
+
+                    return false;
+
+                }
+
+                catch
+
+                {
+
+                    return false;
+
+                }
+
+            }
+
+        }
+
+
 
         public static bool HandleBalanceError()
+
         {
+
             if (ERRCode == 16)
+
             {
+
                 ERRCode = 0;
+
+                ReleaseCommandLock();
+
                 if (!IsBalanceErrorHandled)
+
                 {
+
                     IsBalanceErrorHandled = true;
+
                     MessageBox.Show("Balance Operation failed, please reboot the ECT Instrument.", "Error Information");
+
                     return true;
+
                 }
+
             }
+
             return false;
+
         }
 
-        public bool SendBalanceCommand(int channelId, string source, out string errorMessage)
+
+
+        public bool SendTestCommand(int channelId, string source, out string errorMessage)
+
         {
-            errorMessage = string.Empty;
-            if (IsSystemBusy)
+
+            if (!CheckAndAcquireCommandLock(channelId, 17, source, out errorMessage))
+
             {
-                errorMessage = "System is busy so you can not perform this command, please wait...";
-                System.Diagnostics.Debug.WriteLine($"[{source}] Balance aborted: system is busy.");
+
                 return false;
+
             }
 
-            System.Diagnostics.Debug.WriteLine($"[{source}] Starting balance for Channel {channelId}...");
-            IsBalanceErrorHandled = false;
-            ERRCode = 0;
 
-            bool isBalanceAll = (channelId == 0);
-            BalanceTest balanceTest = new BalanceTest() { FC = 16, CN = channelId };
+
+            System.Diagnostics.Debug.WriteLine($"[{source}] Starting test for Channel {channelId}...");
+
+            IsAutoEllipseActive = false;
+
+            BalanceTest balanceTest = new BalanceTest() { FC = 17, CN = channelId };
+
+
 
             bool rat = false;
+
             try
+
             {
+
                 var isJson = Convert.ToBoolean(System.Configuration.ConfigurationManager.AppSettings["IsJSON"]);
+
                 if (isJson)
+
                 {
+
                     rat = WriteData(JsonConvert.SerializeObject(balanceTest));
+
                 }
+
                 else
+
                 {
-                    byte[] data = new byte[7];
+
+                    byte[] data = new byte[6];
+
                     data[0] = Convert.ToByte(2);
-                    data[1] = Convert.ToByte(16);
-                    data[2] = Convert.ToByte(2);
+
+                    data[1] = Convert.ToByte(17);
+
+                    data[2] = Convert.ToByte(1);
+
                     data[3] = Convert.ToByte(channelId);
-                    data[4] = IsLogRequiredOnBalance ? (IsLogEnable ? Convert.ToByte(1) : Convert.ToByte(2)) : Convert.ToByte(0);
+
+
 
                     rat = WriteDataInBytes(data);
+
                 }
+
             }
+
             catch (Exception ex)
+
             {
-                System.Diagnostics.Debug.WriteLine($"[{source}] Balance communication exception: {ex.Message}");
+
+                System.Diagnostics.Debug.WriteLine($"[{source}] Test communication exception: {ex.Message}");
+
                 rat = false;
+
             }
+
+
 
             if (rat)
+
             {
-                IsBalanceAll = isBalanceAll;
-                BalancingChannelId = channelId;
-                IsBalanceBusyEnable = true;
-                System.Diagnostics.Debug.WriteLine($"[{source}] Balance command sent successfully for Channel {channelId} (All={isBalanceAll}).");
+
+                System.Diagnostics.Debug.WriteLine($"[{source}] Test command sent successfully for Channel {channelId}.");
+
                 return true;
+
             }
+
             else
+
             {
-                BalancingChannelId = 0;
-                errorMessage = "Unable to balance due to the error in the communication!";
-                System.Diagnostics.Debug.WriteLine($"[{source}] Balance command failed for Channel {channelId}.");
+
+                ReleaseCommandLock();
+
+                errorMessage = "Unable to start test due to the error in the communication!";
+
+                System.Diagnostics.Debug.WriteLine($"[{source}] Test command failed for Channel {channelId}.");
+
                 return false;
+
             }
+
         }
+
+
+
+        public bool SendBalanceCommand(int channelId, string source, out string errorMessage)
+
+        {
+
+            if (!CheckAndAcquireCommandLock(channelId, 16, source, out errorMessage))
+
+            {
+
+                return false;
+
+            }
+
+
+
+            System.Diagnostics.Debug.WriteLine($"[{source}] Starting balance for Channel {channelId}...");
+
+            IsBalanceErrorHandled = false;
+
+            ERRCode = 0;
+
+
+
+            bool isBalanceAll = (channelId == 0);
+
+            BalanceTest balanceTest = new BalanceTest() { FC = 16, CN = channelId };
+
+
+
+            bool rat = false;
+
+            try
+
+            {
+
+                var isJson = Convert.ToBoolean(System.Configuration.ConfigurationManager.AppSettings["IsJSON"]);
+
+                if (isJson)
+
+                {
+
+                    rat = WriteData(JsonConvert.SerializeObject(balanceTest));
+
+                }
+
+                else
+
+                {
+
+                    byte[] data = new byte[7];
+
+                    data[0] = Convert.ToByte(2);
+
+                    data[1] = Convert.ToByte(16);
+
+                    data[2] = Convert.ToByte(2);
+
+                    data[3] = Convert.ToByte(channelId);
+
+                    data[4] = IsLogRequiredOnBalance ? (IsLogEnable ? Convert.ToByte(1) : Convert.ToByte(2)) : Convert.ToByte(0);
+
+
+
+                    rat = WriteDataInBytes(data);
+
+                }
+
+            }
+
+            catch (Exception ex)
+
+            {
+
+                System.Diagnostics.Debug.WriteLine($"[{source}] Balance communication exception: {ex.Message}");
+
+                rat = false;
+
+            }
+
+
+
+            if (rat)
+
+            {
+
+                IsBalanceAll = isBalanceAll;
+
+                IsBalanceBusyEnable = true;
+
+                System.Diagnostics.Debug.WriteLine($"[{source}] Balance command sent successfully for Channel {channelId} (All={isBalanceAll}).");
+
+                return true;
+
+            }
+
+            else
+
+            {
+
+                ReleaseCommandLock();
+
+                errorMessage = "Unable to balance due to the error in the communication!";
+
+                System.Diagnostics.Debug.WriteLine($"[{source}] Balance command failed for Channel {channelId}.");
+
+                return false;
+
+            }
+
+        }
+
+
 
         public void InitialPort(int communicationType, string portName, int baudRate, string ipAddress, int sport)
+
         {
+
             CommunicationType = communicationType;
+
             PortName = portName;
+
             BaudRate = baudRate;
+
             IpAddress = ipAddress;
+
             SPort = sport;
 
+
+
             if (CommunicationType == 0)
+
             {
+
                 port = new SerialPort
+
                 {
+
                     BaudRate = BaudRate,
+
                     DataBits = 8,
+
                     Handshake = Handshake.None,
+
                     Parity = Parity.None,
+
                     PortName = portName,
+
                     StopBits = StopBits.One,
+
                     ReadTimeout = 500,
+
                     WriteTimeout = 2000,
+
                     DtrEnable = true,
+
                     RtsEnable = true,
+
                 };
+
                 port.ReceivedBytesThreshold = 1;
+
                 port.DataReceived += serialPort_DataReceived;
+
             }
+
             else if (CommunicationType == 1)
+
             {
+
                 dispatcherTimer = new DispatcherTimer();
+
                 dispatcherTimer.Tick += new EventHandler(dispatcherTimer_Tick);
+
                 dispatcherTimer.Interval = new TimeSpan(10000000);
+
                 dispatcherTimer.Start();
 
+
+
                 client = new TcpClient();
+
             }
+
+
 
             if (counter == null)
+
             {
+
                 counter = new List<Counter>();
+
                 var cnt1 = new Counter();
+
                 cnt1.Id = 1;
+
                 counter.Add(cnt1);
 
+
+
                 var cnt2 = new Counter();
+
                 cnt2.Id = 2;
+
                 counter.Add(cnt2);
 
+
+
                 var cnt3 = new Counter();
+
                 cnt3.Id = 3;
+
                 counter.Add(cnt3);
 
+
+
                 var cnt4 = new Counter();
+
                 cnt4.Id = 4;
+
                 counter.Add(cnt4);
+
             }
 
+
+
         }
+
         private void dispatcherTimer_Tick(object? sender, EventArgs e)
+
         {
+
             if (client == null) return;
+
             client.NoDelay = false;
+
             if (!client.Connected)
+
             {
+
                 client = new TcpClient();
+
                 IPAddress iPAddress = IPAddress.Parse(IpAddress);
+
                 var ipEndPoint = new IPEndPoint(iPAddress, SPort);
+
                 client.Connect(ipEndPoint);
+
             }
+
             if (client.Connected)
+
             {
+
                 stream = client.GetStream();
+
                 if (stream.DataAvailable)
+
                 {
+
                     try
+
                     {
+
                         var buffer = new byte[client.Available];
+
                         int received = stream.Read(buffer);
+
                         var message = Encoding.UTF8.GetString(buffer, 0, received);
+
                         new Thread(() =>
+
                         {
+
                             ProcessPortData(message);
+
                         }).Start();
 
+
+
                     }
+
                     catch (Exception)
+
                     {
+
+
 
                     }
 
+
+
                 }
+
             }
+
         }
+
         private void serialPort_DataReceived(object sender, System.IO.Ports.SerialDataReceivedEventArgs e)
+
         {
+
             try
+
             {
+
                 System.Threading.Thread.Sleep(50);
+
                 SerialPort sp = (SerialPort)sender;
+
                 short[] data;
+
                 string indata = string.Empty;
+
                 
+
                 if (PortAck)
+
                 {
+
                     indata = sp.ReadExisting();
+
                     PortData = indata;
+
                     PortAck = false;
+
                     _ackEvent.Set();  // signal that data is received
+
                 }
+
                 else
+
                 {
+
                     if (IsJSON)
+
                     {
+
                         indata = sp.ReadExisting();
+
                         data = new short[indata.Length];
+
                     }
+
                     else
+
                     {
+
                         byte[] buffer = new byte[sp.BytesToRead];
+
                         sp.Read(buffer, 0, buffer.Length);
 
+
+
                         data = buffer.Select(b => (short)b).ToArray();
+
                     }
+
+
 
                     new Thread(() =>
+
                     {
+
                         if(IsJSON)
+
                         {
+
                             ProcessPortData(indata);
+
                         }
+
                         else
+
                         {
+
                             ProcessPortDataBytpe(data);
+
                         }
+
                             
+
                         
+
                     }).Start();
+
                 }
 
-            }
-            catch (Exception)
-            {
+
 
             }
+
+            catch (Exception)
+
+            {
+
+
+
+            }
+
         }
+
+
 
         public static void Test()
+
         {
+
+
 
             short[] testData = new short[]
+
 {
+
     0x02, 0x14, 0x32, 0x01, 0x00,
 
+
+
     0x01, 0x01, 0x00, 0x00, 0x00, 0x00,
+
     0x02, 0x01, 0x01, 0x00, 0xFF, 0xFF,
+
     0x03, 0x01, 0x02, 0x00, 0xFE, 0xFF,
+
     0x04, 0x01, 0x03, 0x00, 0xFD, 0xFF,
+
     0x05, 0x01, 0x04, 0x00, 0xFC, 0xFF,
+
     0x06, 0x01, 0x05, 0x00, 0xFB, 0xFF,
+
     0x07, 0x01, 0x06, 0x00, 0xFA, 0xFF,
+
     0x08, 0x01, 0x07, 0x00, 0xF9, 0xFF,
 
+
+
     0x38, 0x9A
+
 };
+
                 DeviceCOM deviceCOM = new DeviceCOM();
+
                 deviceCOM.ProcessPortDataBytpe(testData);
+
         }
+
+
 
         private void ProcessPortDataBytpe(short[] indata)
+
         {
+
             try
+
             {
+
                 if (indata.Length>1)
+
                 {
+
                     
 
+
+
                     if (indata[1] == 19)
+
                     {
+
                         IsResponseClearRequired = true;
+
                     }
+
                     else if (indata[1] == 20)
+
                     {
+
                         //var res = JsonConvert.DeserializeObject<Response>(indata);
+
                         Response res = new Response();
+
                         res.CN = indata[3];
+
                         res.OR = indata[4];
+
                         res.FC = 20;
+
                         int length = indata[2]/6;
+
                         res.FD = new List<FreqResult>();
+
                         for (int i = 0; i < length; i++)
+
                         {
+
                             FreqResult fd = new FreqResult();
+
                             fd.FN = indata[5 + (i * 6)];
+
                             fd.R = indata[6 + (i * 6)];
+
                             int offset = 7 + (i * 6);
+
                             short x = (short)((ushort)indata[offset] | ((ushort)indata[offset + 1] << 8));
+
                             short y = (short)((ushort)indata[offset + 2] | ((ushort)indata[offset + 3] << 8));
+
                             fd.X = x;
+
                             fd.Y = y;
+
                             res.FD.Add(fd);
+
                         }
+
+
 
                         if (res != null && ChannelNo >= res.CN)
+
                         {
+
                             if (IsAutoEllipseActive)
+
                             {
+
                                 res.IsAutoEllipseTest = true;
+
                             }
-                            responses.Add(res);
+
+                            lock (ResponsesLock)
+
+                            {
+
+                                responses.Add(res);
+
+                            }
+
+
 
                             if (!IsAutoEllipseActive)
+
                             {
+
                                 List<int> targetIds = new List<int> { res.CN };
+
                                 if (res.CN == 0)
+
                                 {
+
                                     for (int ch = 1; ch <= ChannelNo; ch++)
+
                                     {
+
                                         targetIds.Add(ch);
+
                                     }
+
                                 }
+
                                 else
+
                                 {
+
                                     targetIds.Add(0);
+
                                 }
+
+
 
                                 foreach (int targetId in targetIds)
+
                                 {
+
                                     var cnt = counter.FirstOrDefault(c => c.Id == targetId);
+
                                     if (cnt == null)
+
                                     {
+
                                         cnt = new Counter { Id = targetId };
+
                                         counter.Add(cnt);
+
                                     }
+
+
 
                                     if (res.OR == 1)
+
                                     {
+
                                         cnt.ResultOkCount = cnt.ResultOkCount + 1;
+
                                     }
+
                                     else
+
                                     {
+
                                         cnt.ResultOkNotCount = cnt.ResultOkNotCount + 1;
+
                                     }
+
                                     cnt.ResultCount = cnt.ResultOkCount + cnt.ResultOkNotCount;
+
                                 }
-                                IsResponseRefreshRequired = true;
+
+                                SetChannelRefreshRequired(res.CN, true);
+
+                                lock (_commandLock)
+
+                                {
+
+                                    if (PendingCommandFC == 17) ReleaseCommandLock();
+
+                                }
+
+
 
                                 if (!string.IsNullOrEmpty(Code))
+
                                 {
+
                                     Task.Run(() =>
+
                                     {
+
                                         WriteLogCSV(Convert.ToBoolean(res.OR), DateTime.Now, res);
+
                                     });
+
                                 }
+
+
 
                                 if (!IsLogDisable && IsLogEnable)
+
                                 {
+
                                     Task.Run(() =>
+
                                     {
+
                                         WriteLog(res.CN, Convert.ToBoolean(res.OR), DateTime.Now, res);
+
                                     });
+
                                 }
 
+
+
                                 DeviceCOM.IsLogDisable = false;
+
+                            }
+
+
+
+                        }
+
+                    }
+
+                    else if (indata[1] == 21)
+
+                    {
+
+                        IsSystemBusy = true;
+
+                        busyStamp = System.DateTime.Now;
+
+                    }
+
+                    else if (indata[1] == 22)
+
+                    {
+
+                        IsSystemBusy = false;
+
+                        lock (_commandLock)
+
+                        {
+
+                            ReleaseCommandLock();
+
+                        }
+
+                        if (indata[3] == 0)
+
+                        {                            
+
+                            if (IsBalanceBusyEnable)
+
+                            {
+
+                                IsResponseClearRequired = true;
+
+                                IsBalanceBusyEnable = false;
+
                             }
 
                         }
-                    }
-                    else if (indata[1] == 21)
-                    {
-                        IsSystemBusy = true;
-                        busyStamp = System.DateTime.Now;
-                    }
-                    else if (indata[1] == 22)
-                    {
-                        IsSystemBusy = false;                        
-                        if (indata[3] == 0)
-                        {                            
-                            if (IsBalanceBusyEnable)
-                            {
-                                IsResponseClearRequired = true;
-                                IsBalanceBusyEnable = false;
-                            }
-                        }
+
                         else
+
                         {
+
                             ERRCode = indata[4];
+
                         }
+
                     }
+
                 }
+
                 else
+
                 {
 
+
+
                 }
-            }
-            catch (Exception)
-            {
 
             }
+
+            catch (Exception)
+
+            {
+
+
+
+            }
+
         }
+
+
 
         private void ProcessPortData(string indata)
+
         {
+
             try
+
             {
+
                 if (!string.IsNullOrEmpty(indata))
+
                 {
+
                     var res = JsonConvert.DeserializeObject<Response>(indata);
 
+
+
                     if (res != null && res.FC == 19)
+
                     {
+
                         IsResponseClearRequired = true;
+
                     }
+
                     else if (res != null && res.FC == 20)
+
                     {
+
                         if (res != null && ChannelNo >= res.CN)
+
                         {
+
                             if (IsAutoEllipseActive)
+
                             {
+
                                 res.IsAutoEllipseTest = true;
+
                             }
-                            responses.Add(res);
+
+                            lock (ResponsesLock)
+
+                            {
+
+                                responses.Add(res);
+
+                            }
+
+
 
                             if (!IsAutoEllipseActive)
+
                             {
+
                                 List<int> targetIds = new List<int> { res.CN };
+
                                 if (res.CN == 0)
+
                                 {
+
                                     for (int ch = 1; ch <= ChannelNo; ch++)
+
                                     {
+
                                         targetIds.Add(ch);
+
                                     }
+
                                 }
+
                                 else
+
                                 {
+
                                     targetIds.Add(0);
+
                                 }
+
+
 
                                 foreach (int targetId in targetIds)
+
                                 {
+
                                     var cnt = counter.FirstOrDefault(c => c.Id == targetId);
+
                                     if (cnt == null)
+
                                     {
+
                                         cnt = new Counter { Id = targetId };
+
                                         counter.Add(cnt);
+
                                     }
+
+
 
                                     if (res.OR == 1)
+
                                     {
+
                                         cnt.ResultOkCount = cnt.ResultOkCount + 1;
+
                                     }
+
                                     else
+
                                     {
+
                                         cnt.ResultOkNotCount = cnt.ResultOkNotCount + 1;
+
                                     }
+
                                     cnt.ResultCount = cnt.ResultOkCount + cnt.ResultOkNotCount;
+
                                 }
-                                IsResponseRefreshRequired = true;
+
+                                SetChannelRefreshRequired(res.CN, true);
+
+                                lock (_commandLock)
+
+                                {
+
+                                    if (PendingCommandFC == 17) ReleaseCommandLock();
+
+                                }
+
+
 
                                 if (!string.IsNullOrEmpty(Code))
+
                                 {
+
                                     Task.Run(() =>
+
                                     {
+
                                         WriteLogCSV(Convert.ToBoolean(res.OR), DateTime.Now, res);
+
                                     });
+
                                 }
+
+
 
                                 if (!IsLogDisable && IsLogEnable)
+
                                 {
+
                                     Task.Run(() =>
+
                                     {
+
                                         WriteLog(res.CN, Convert.ToBoolean(res.OR), DateTime.Now, res);                                    
+
                                     });
+
                                 }
 
+
+
                                 DeviceCOM.IsLogDisable = false;
+
+                            }
+
+
+
+                        }
+
+                    }
+
+                    else if (res?.FC == 21)
+
+                    {
+
+                        IsSystemBusy = true;
+
+                        busyStamp = System.DateTime.Now;
+
+                    }
+
+                    else if (res?.FC == 22)
+
+                    {
+
+                        IsSystemBusy = false;
+
+                        lock (_commandLock)
+
+                        {
+
+                            ReleaseCommandLock();
+
+                        }
+
+                        ERRCode = res.ERR;
+
+                        if (res.ERR != 16 & res.ERR != 17)
+
+                        {
+
+                            if (IsBalanceBusyEnable)
+
+                            {
+
+                                IsResponseClearRequired = true;
+
+                                IsBalanceBusyEnable = false;
+
                             }
 
                         }
+
                     }
-                    else if (res?.FC == 21)
-                    {
-                        IsSystemBusy = true;
-                        busyStamp = System.DateTime.Now;
-                    }
-                    else if (res?.FC == 22)
-                    {
-                        IsSystemBusy = false;
-                        ERRCode = res.ERR;
-                        if (res.ERR != 16 & res.ERR != 17)
-                        {
-                            if (IsBalanceBusyEnable)
-                            {
-                                IsResponseClearRequired = true;
-                                IsBalanceBusyEnable = false;
-                            }
-                        }
-                    }
+
                 }
+
                 else
+
                 {
 
+
+
                 }
-            }
-            catch (Exception)
-            {
 
             }
+
+            catch (Exception)
+
+            {
+
+
+
+            }
+
         }
 
+
+
         public void WriteLog(int ChId, bool Result, DateTime TimeStamp, Response res)
+
         {
+
             try
+
             {
+
                 if (res?.FD == null)
+
                     return;
 
+
+
                 var targetCh = DeviceCOM.channelDatas.FirstOrDefault(r => r.Id == ChId);
+
                 if (targetCh == null) return;
 
+
+
                 var enabledChannels = targetCh.graphDatas.Where(g => g.isEnable).ToList();
+
                 var enabledFns = enabledChannels.Select(g => g.Id).ToHashSet();
 
+
+
                 // Validate that all enabled frequency numbers are present before saving
+
                 var uniqueFns = res.FD.Where(f => f != null).Select(f => f.FN).Distinct().ToList();
+
                 if (enabledFns.Count > 0)
+
                 {
+
                     if (!enabledFns.All(fn => uniqueFns.Contains(fn)))
+
                     {
+
                         // Incomplete data for enabled channels - do not fabricate or save
+
                         return;
+
                     }
-                }
-                else
-                {
-                    if (uniqueFns.Count != 8 || !Enumerable.Range(1, 8).All(fn => uniqueFns.Contains(fn)))
-                        return;
+
                 }
 
-                using (var con = new NpgsqlConnection(ConnectionString))
+                else
+
                 {
+
+                    if (uniqueFns.Count != 8 || !Enumerable.Range(1, 8).All(fn => uniqueFns.Contains(fn)))
+
+                        return;
+
+                }
+
+
+
+                using (var con = new NpgsqlConnection(ConnectionString))
+
+                {
+
                     con.Open();
+
                     var fdData = JsonConvert.SerializeObject(targetCh.graphDatas);
+
+
 
                     var partData = JsonConvert.SerializeObject(DeviceCOM.part);
 
+
+
                     // Persist ONLY the ON (enabled) channels in FrequencyData
+
                     var frequencyList = res.FD
+
                         .Where(f => f != null && (enabledFns.Count == 0 || enabledFns.Contains(f.FN)))
+
                         .OrderBy(f => f.FN)
+
                         .ToList();
+
                     var frequencyDataJson = JsonConvert.SerializeObject(frequencyList);
 
+
+
                     if (ChId == 1)
+
                     {
+
                         const string sql = @"
+
                             INSERT INTO public.""Logs"" (
+
                                 ""ChId"", ""Result"", ""FDData"", ""PartData"", ""PartName"", 
+
                                 ""BatchName"", ""SrNo"", ""BatchNo"", ""TimeStamp"", ""FrequencyData"", ""ResultData""
+
                             ) VALUES (
+
                                 @ChId, @Result, @FDData::json, @PartData::json, @PartName, 
+
                                 @BatchName, @SrNo, @BatchNo, @TimeStamp, @FrequencyData::jsonb, @ResultData::jsonb
+
                             );
+
                             SELECT count(1) FROM public.""Logs"" WHERE ""BatchName"" = @BatchName AND ""BatchNo"" = @BatchNo;";
 
+
+
                         using (var cmd = new NpgsqlCommand(sql, con))
+
                         {
+
                             cmd.Parameters.AddWithValue("@ChId", ChId);
+
                             cmd.Parameters.AddWithValue("@Result", Result);
+
                             cmd.Parameters.AddWithValue("@FDData", fdData ?? (object)DBNull.Value);
+
                             cmd.Parameters.AddWithValue("@PartData", partData ?? (object)DBNull.Value);
+
                             cmd.Parameters.AddWithValue("@PartName", (object?)DeviceCOM.part?.Name ?? DBNull.Value);
+
                             cmd.Parameters.AddWithValue("@BatchName", (object?)DeviceCOM.part?.BatchName ?? DBNull.Value);
+
                             cmd.Parameters.AddWithValue("@SrNo", (object?)Code ?? DBNull.Value);
+
                             cmd.Parameters.AddWithValue("@BatchNo", (object?)DeviceCOM.part?.BatchNo ?? DBNull.Value);
+
                             cmd.Parameters.AddWithValue("@TimeStamp", TimeStamp);
+
                             cmd.Parameters.AddWithValue("@FrequencyData", frequencyDataJson);
+
                             cmd.Parameters.AddWithValue("@ResultData", frequencyDataJson);
+
+
 
                             var count = cmd.ExecuteScalar();
 
+
+
                             if (DeviceCOM.part != null && DeviceCOM.part.BatchType == 1)
+
                             {
+
                                 if (Convert.ToInt32(count) == DeviceCOM.part.BatchSize)
+
                                 {
+
                                     // stop the logging 
+
                                 }
 
+
+
                                 DeviceCOM.part.BatchNo = DeviceCOM.part.BatchNo + 1;
+
                             }
+
                         }
+
                     }
+
                     else
+
                     {
+
                         if (!Result)
+
                         {
+
                             const string sql = "UPDATE public.\"Logs\" SET \"Result\" = 'false' WHERE \"Id\" = (SELECT max(\"Id\") FROM public.\"Logs\"); SELECT 1;";
+
                             using (var cmd = new NpgsqlCommand(sql, con))
+
                             {
+
                                 var count = cmd.ExecuteScalar();
+
                             }
+
                         }
+
                     }
+
                 }
-            }
-            catch (Exception)
-            {
 
             }
+
+            catch (Exception)
+
+            {
+
+
+
+            }
+
+
 
             //Code = string.Empty;
+
         }
+
+
+
+        private static readonly object _csvLock = new();
+
+
 
         private static void WriteLogCSV(bool Result, DateTime TimeStamp, Response res)
+
         {
+
             try
+
             {
-                // Write to CSV File
-                var ch = DeviceCOM.channelDatas.FirstOrDefault(c => c.Id == res.CN);
-                if (ch != null)
+
+                lock (_csvLock)
+
                 {
-                    List<string> lines = new List<string>();
-                    var FileName = "EddyLog_" + System.DateTime.Now.ToShortDateString();
-                    string FilePath = System.Configuration.ConfigurationManager.AppSettings["CSVPath"]?.ToString() + FileName + ".csv";
-                    if (!File.Exists(FilePath))
+
+                    // Write to CSV File segregated per channel
+
+                    var ch = DeviceCOM.channelDatas.FirstOrDefault(c => c.Id == res.CN);
+
+                    if (ch != null)
+
                     {
-                        string line = "TimeStamp,Code,Operator Name,Result";
-                        foreach (var fd in ch.graphDatas)
+
+                        List<string> lines = new List<string>();
+
+                        var FileName = "EddyLog_Ch" + res.CN + "_" + DateTime.Now.ToString("yyyyMMdd");
+
+                        string? csvDir = System.Configuration.ConfigurationManager.AppSettings["CSVPath"]?.ToString();
+
+                        if (!string.IsNullOrEmpty(csvDir) && !Directory.Exists(csvDir))
+
                         {
-                            line = line + ",Frequency Result_" + fd.Id.ToString() + ",Frequency_" + fd.Id.ToString() + ",X_" + fd.Id.ToString() + ",Y_" + fd.Id.ToString();
+
+                            try { Directory.CreateDirectory(csvDir); } catch { }
+
                         }
-                        lines.Add(line);
-                    }
 
-                    string data = System.DateTime.Now.ToString() + ","+ Code.Replace("\n", "").Replace("\r","") + "," + DeviceCOM.part.CheckedBy + "," + (Result == true ? "Ok" : "No Ok");
+                        string FilePath = System.IO.Path.Combine(csvDir ?? string.Empty, FileName + ".csv");
 
-                    foreach (var fd in res.FD)
-                    {
-                        var Gdata = ch.graphDatas.FirstOrDefault(d => d.Id == fd.FN);
-                        if (Gdata != null)
+                        if (!File.Exists(FilePath))
+
                         {
-                            data = data + "," + (fd.R == 1 ? "Ok" : "No Ok") + "," + Gdata.freq.ToString() + "," + fd.X + "," + fd.Y;
+
+                            string line = "TimeStamp,Channel,Code,Operator Name,Result";
+
+                            foreach (var fd in ch.graphDatas)
+
+                            {
+
+                                line += ",Frequency Result_" + fd.Id + ",Frequency_" + fd.Id + ",X_" + fd.Id + ",Y_" + fd.Id;
+
+                            }
+
+                            lines.Add(line);
+
                         }
+
+
+
+                        string data = DateTime.Now.ToString() + ",Ch-" + res.CN + "," + Code.Replace("\n", "").Replace("\r", "") + "," + DeviceCOM.part.CheckedBy + "," + (Result ? "Ok" : "No Ok");
+
+
+
+                        foreach (var fd in res.FD)
+
+                        {
+
+                            var Gdata = ch.graphDatas.FirstOrDefault(d => d.Id == fd.FN);
+
+                            if (Gdata != null)
+
+                            {
+
+                                data += "," + (fd.R == 1 ? "Ok" : "No Ok") + "," + Gdata.freq + "," + fd.X + "," + fd.Y;
+
+                            }
+
+                        }
+
+
+
+                        lines.Add(data);
+
+
+
+                        if (lines.Count > 0)
+
+                        {
+
+                            File.AppendAllLines(FilePath, lines);
+
+                        }
+
                     }
 
-                    lines.Add(data);
-
-                    if (lines.Count > 0)
-                    {
-                        File.AppendAllLines(FilePath, lines);
-                    }
                 }
+
             }
-            catch (Exception)
+
+            catch (Exception ex)
+
             {
 
+                System.Diagnostics.Debug.WriteLine($"CSV logging error: {ex.Message}");
+
             }
+
         }
 
+
+
         public bool WriteDataInBytes(byte[] data, bool isFrombak = false)
+
         {
 
+
+
             try
+
             {
+
                 IsBalanceRequired = false;
+
                 if (CommunicationType == 0)
+
                 {
+
                     if (isFrombak)
+
                     {
+
                         if (port.IsOpen)
+
                         {
+
                             port.Close();
+
                         }
+
                     }
+
+
 
                     if (!port.IsOpen)
+
                     {
+
                         port.Open();
+
                         if (isFrombak)
+
                         {
+
                             port.DtrEnable = true;
+
                             port.RtsEnable = true;
+
                             // Optional: short delay to let device recognize the signals
+
                             Thread.Sleep(10);
+
                         }
+
                     }
 
+
+
                     //this.port.ReadExisting();
+
                     PortAck = true;
+
                     PortData = "";
+
+
 
                     ushort crc = ComputeCRC(data, 2);
 
+
+
                     byte crcLow = (byte)(crc & 0xFF);
+
                     byte crcHigh = (byte)(crc >> 8);
 
+
+
                     data[data.Length - 2] = crcLow; 
+
                     data[data.Length - 1] = crcHigh; 
+
+
 
                     this.port.Write(data, 0 , data.Length);
 
+
+
                     if (isFrombak)
+
                     {
+
                         bool received = _ackEvent.WaitOne(1000);
 
+
+
                         if (!received)
+
                         {
+
                             this.port.Write(data, 0, data.Length);
+
                         }
+
+
 
                         received = _ackEvent.WaitOne(1000);
 
-                        if (!received)
-                        {
-                            this.port.Write(data, 0, data.Length);
-                        }
+
 
                         if (!received)
+
                         {
-                            return false;
+
+                            this.port.Write(data, 0, data.Length);
+
                         }
-                    }
-                    else
-                    {
-                        System.DateTime dateTime = DateTime.Now;
-                        while (PortAck)
+
+
+
+                        if (!received)
+
                         {
+
+                            return false;
+
+                        }
+
+                    }
+
+                    else
+
+                    {
+
+                        System.DateTime dateTime = DateTime.Now;
+
+                        while (PortAck)
+
+                        {
+
+
 
                             if ((DateTime.Now - dateTime).TotalMilliseconds > 500)
+
                             {
+
                                 PortAck = false;
+
                             }
+
                         }
+
                     }
+
+
 
                     byte[] result = new byte[1];
+
                     result[0] = Convert.ToByte(PortData[0]);
 
+
+
                     if (result[0] == '0' || result[0] == '2' || result[0] == '3' || result[0] == '4')
+
                     {
+
                         if (result[0] == '2')
+
                         {
+
                             DeviceCOM.IsSystemBusy = true;
+
                             busyStamp = System.DateTime.Now;
+
                         }
+
                         else if (result[0] == '3')
+
                         {
-                            IsBalanceRequired = true;
+
+                            SetBalanceRequired(PendingCommandChannelId, true);
+
                         }
+
                         else if (result[0] == '4')
+
                         {
+
                             IsBinRequired = true;
+
                         }
+
                         return true;
+
                     }
 
+
+
                     return false;
+
                 }                
-                return false;
-            }
-            catch (Exception)
-            {
-                if (CommunicationType == 1)
-                {
-                    dispatcherTimer.Start();
-                }
 
                 return false;
+
             }
+
+            catch (Exception)
+
+            {
+
+                if (CommunicationType == 1)
+
+                {
+
+                    dispatcherTimer.Start();
+
+                }
+
+
+
+                return false;
+
+            }
+
         }
+
+
 
         public bool WriteData(string data, bool isFrombak = false)
+
         {
+
             try
+
             {
+
                 IsBalanceRequired = false;
+
                 if (CommunicationType == 0)
+
                 {
+
                     if (isFrombak)
+
                     {
+
                         if (port.IsOpen)
+
                         {
+
                             port.Close();
+
                         }
+
                     }
+
+
 
                     if (!port.IsOpen)
+
                     {
+
                         port.Open();
+
                         if (isFrombak)
+
                         {
+
                             port.DtrEnable = true;
+
                             port.RtsEnable = true;
+
                             // Optional: short delay to let device recognize the signals
+
                             Thread.Sleep(10);
+
                         }
+
                     }
 
+
+
                     //this.port.ReadExisting();
+
                     PortAck = true;
+
                     PortData = "";                    
+
                     this.port.Write(data);
 
+
+
                     if (isFrombak)
+
                     {
+
                         bool received = _ackEvent.WaitOne(1000);
 
+
+
                         if (!received)
+
                         {
+
                             this.port.Write(data);
+
                         }
+
+
 
                         received = _ackEvent.WaitOne(1000);
 
-                        if (!received)
-                        {
-                            this.port.Write(data);
-                        }
+
 
                         if (!received)
+
                         {
-                            return false;
+
+                            this.port.Write(data);
+
                         }
-                    }
-                    else
-                    {
-                        System.DateTime dateTime = DateTime.Now;
-                        while (PortAck)
+
+
+
+                        if (!received)
+
                         {
+
+                            return false;
+
+                        }
+
+                    }
+
+                    else
+
+                    {
+
+                        System.DateTime dateTime = DateTime.Now;
+
+                        while (PortAck)
+
+                        {
+
+
 
                             if ((DateTime.Now - dateTime).TotalMilliseconds > 500)
+
                             {
+
                                 PortAck = false;
+
                             }
+
                         }
+
                     }
+
                     
+
                     byte[] result = new byte[1];
+
                     result[0] = Convert.ToByte(PortData[0]);
+
+
 
                     if (result[0] == '0' || result[0] == '2' || result[0] == '3' || result[0] == '4')
+
                     {
+
                         if (result[0] == '2')
+
                         {
+
                             DeviceCOM.IsSystemBusy = true;
+
                             busyStamp = System.DateTime.Now;
+
                         }
+
                         else if (result[0] == '3')
+
                         {
-                            IsBalanceRequired = true;
+
+                            SetBalanceRequired(PendingCommandChannelId, true);
+
                         }
+
                         else if (result[0] == '4')
+
                         {
+
                             IsBinRequired = true;
+
                         }
+
                         return true;
+
                     }
 
+
+
                     return false;
+
                 }
+
                 else if (CommunicationType == 1)
+
                 {
+
                     dispatcherTimer?.Stop();
+
                     if (client != null && !client.Connected)
+
                     {
+
                         client = new TcpClient();
+
                         IPAddress iPAddress = IPAddress.Parse(IpAddress);
+
                         var ipEndPoint = new IPEndPoint(iPAddress, SPort);
+
                         client.Connect(ipEndPoint);
+
                     }
+
+
 
                     if (client?.Connected == true)
+
                     {
+
                         var messageBytes = Encoding.UTF8.GetBytes(data);
+
                         stream = client.GetStream();
+
                         stream.Write(messageBytes, 0, messageBytes.Length);
+
                         stream = client.GetStream();
+
                         var buffer = new byte[client.Available];
+
                         int received = stream.Read(buffer);
+
                         stream.Flush();
+
                         if (buffer.Length > 0)
+
                         {
+
                             if (buffer[0] == '0' || buffer[0] == '2')
+
                             {
+
                                 if (buffer[0] == '2')
+
                                 {
+
                                     DeviceCOM.IsSystemBusy = true;
+
                                     busyStamp = System.DateTime.Now;
+
                                 }
+
                                 return true;
+
                             }
+
                         }
+
                         dispatcherTimer?.Start();
+
                         return true;
+
                     }
+
                     dispatcherTimer?.Start();
+
                     return false;
-                }
-                return false;
-            }
-            catch (Exception)
-            {
-                if (CommunicationType == 1)
-                {
-                    dispatcherTimer.Start();
+
                 }
 
                 return false;
+
             }
+
+            catch (Exception)
+
+            {
+
+                if (CommunicationType == 1)
+
+                {
+
+                    dispatcherTimer.Start();
+
+                }
+
+
+
+                return false;
+
+            }
+
         }
+
+
 
         public bool GetSystemStatus(string data)
+
         {
+
             try
+
             {
+
                 if (CommunicationType == 0)
+
                 {
+
                     if (port.IsOpen)
+
                     {
+
                         port.Close();
+
                     }
 
+
+
                     //if (port.IsOpen)
+
                     //{
+
                     //    port.Close();
+
                     //}
+
+
 
                     //InitialPort(CommunicationType, PortName, BaudRate, IpAddress, SPort);
 
+
+
                     if (!port.IsOpen)
+
                     {
+
                         port.Open();
+
                     }
+
                     //this.port.ReadExisting();
+
                     PortAck = true;
+
                     PortData = "";
+
                     System.DateTime dateTime = DateTime.Now;
+
                     this.port.Write(data);
 
+
+
                     while (PortAck)
+
                     {
+
+
 
                         if ((DateTime.Now - dateTime).TotalMilliseconds > 200)
+
                         {
+
                             PortAck = false;
+
                         }
+
                     }
+
+
 
                     byte[] result = new byte[1];
+
                     result[0] = Convert.ToByte(PortData[0]);
 
+
+
                     if (result[0] == 21)
+
                     {
+
                         DeviceCOM.IsSystemBusy = true;
+
                         busyStamp = System.DateTime.Now;
+
                     }
+
                 }
+
                 else if (CommunicationType == 1)
+
                 {
+
                     dispatcherTimer?.Stop();
+
                     if (client != null && !client.Connected)
+
                     {
+
                         client = new TcpClient();
+
                         IPAddress iPAddress = IPAddress.Parse(IpAddress);
+
                         var ipEndPoint = new IPEndPoint(iPAddress, SPort);
+
                         client.Connect(ipEndPoint);
+
                     }
+
+
 
                     if (client?.Connected == true)
+
                     {
+
                         var messageBytes = Encoding.UTF8.GetBytes(data);
+
                         stream = client.GetStream();
+
                         stream.Write(messageBytes, 0, messageBytes.Length);
+
                         stream = client.GetStream();
+
                         var buffer = new byte[client.Available];
+
                         int received = stream.Read(buffer);
+
                         stream.Flush();
+
                         dispatcherTimer?.Start();
+
                         if (buffer[0] == 21)
+
                         {
+
                             DeviceCOM.IsSystemBusy = true;
+
                         }
+
                     }
+
                     dispatcherTimer?.Start();
+
                 }
+
                 return true;
+
             }
+
             catch (Exception)
+
             {
+
                 if (CommunicationType == 1)
+
                 {
+
                     dispatcherTimer?.Start();
+
                 }
+
+
 
                 return false;
+
             }
+
         }
 
+
+
         public bool GetSystemStatusInBytes(byte[] data)
+
         {
+
             try
+
             {
+
                 if (CommunicationType == 0)
+
                 {
+
                     if (port.IsOpen)
+
                     {
+
                         port.Close();
+
                     }
 
+
+
                     //if (port.IsOpen)
+
                     //{
+
                     //    port.Close();
+
                     //}
+
+
 
                     //InitialPort(CommunicationType, PortName, BaudRate, IpAddress, SPort);
 
+
+
                     if (!port.IsOpen)
+
                     {
+
                         port.Open();
+
                     }
+
                     //this.port.ReadExisting();
+
                     PortAck = true;
+
                     PortData = "";
+
                     System.DateTime dateTime = DateTime.Now;
+
+
 
                     ushort crc = ComputeCRC(data, 2);
 
+
+
                     byte crcLow = (byte)(crc & 0xFF);
+
                     byte crcHigh = (byte)(crc >> 8);
 
+
+
                     data[data.Length - 2] = crcLow;
+
                     data[data.Length - 1] = crcHigh;
+
+
 
                     this.port.Write(data, 0, data.Length);
 
+
+
                     while (PortAck)
+
                     {
+
+
 
                         if ((DateTime.Now - dateTime).TotalMilliseconds > 200)
+
                         {
+
                             PortAck = false;
+
                         }
+
                     }
+
+
 
                     byte[] result = new byte[1];
+
                     result[0] = Convert.ToByte(PortData[1]);
 
+
+
                     if (result[0] == 21)
+
                     {
+
                         DeviceCOM.IsSystemBusy = true;
+
                         busyStamp = System.DateTime.Now;
+
                     }
+
                 }              
+
                 return true;
+
             }
+
             catch (Exception)
+
             {
+
                 if (CommunicationType == 1)
+
                 {
+
                     dispatcherTimer.Start();
+
                 }
+
+
 
                 return false;
+
             }
+
         }
 
+
+
         public GetSerialNumber GetSeialNumber()
+
         {
+
             SetSerialNumber setSerialNumber = new SetSerialNumber { FC = 31, S1 = 1234, S2 = 5678};
+
             string data = JsonConvert.SerializeObject(setSerialNumber);
+
             GetSerialNumber getSerialNumber = new GetSerialNumber(); 
+
             try
+
             {
+
                 if (port.IsOpen)
+
                 {
+
                     port.Close();
+
                 }
+
+
 
                 InitialPort(CommunicationType, PortName, BaudRate, IpAddress, SPort);
 
+
+
                 if (!port.IsOpen)
+
                 {
+
                     port.Open();
+
                 }
+
                 this.port.ReadExisting();
+
                 this.port.Write(data);
+
                 Thread.Sleep(100);
+
                 string sData = this.port.ReadExisting();
 
+
+
                 if (port.IsOpen)
+
                 {
+
                     port.Close();
+
                 }
+
+
 
                 port.DataReceived += serialPort_DataReceived;
+
                 if (!port.IsOpen)
+
                 {
+
                     port.Open();
+
                 }
+
                 
+
                 if (!string.IsNullOrEmpty(sData))
+
                 {
+
                     var parsed = JsonConvert.DeserializeObject<GetSerialNumber>(sData);
+
                     if (parsed != null)
+
                     {
+
                         getSerialNumber = parsed;
+
                         getSerialNumber.S1 = setSerialNumber.S1;
+
                         getSerialNumber.S2 = setSerialNumber.S2;
+
                     }
+
                 }
+
             }
+
             catch (Exception)
+
             {
+
                 
+
             }
+
+
 
             return getSerialNumber;
+
         }
+
+
 
         public static ushort ComputeCRC(byte[] data, int length)
+
         {
+
             ushort crc = 0xFFFF;
 
+
+
             for (int pos = 0; pos < length; pos++)
+
             {
+
                 crc ^= data[pos];
 
+
+
                 for (int i = 0; i < 8; i++)
+
                 {
+
                     if ((crc & 0x0001) != 0)
+
                     {
+
                         crc >>= 1;
+
                         crc ^= 0xA001;
+
                     }
+
                     else
+
                     {
+
                         crc >>= 1;
+
                     }
+
                 }
+
             }
 
+
+
             return crc;
+
         }
+
+
 
     }
 
+
+
 }
+

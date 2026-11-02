@@ -1,805 +1,816 @@
-<Window x:Class="_8F.MainWindow"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:_8F"
-        xmlns:vm="clr-namespace:_8F.ViewModels"
-        mc:Ignorable="d"
-        WindowStyle="None"
-        WindowState="Maximized" ResizeMode="NoResize" Closed="Window_Closed" KeyDown="Window_KeyDown"
-        >
-
-    <Grid Background="Black" Margin="2">
-        <Grid.RowDefinitions>
-            <RowDefinition Name="menuHeight" Height=".5*"/>
-            <!--change it from backend-->
-            <RowDefinition Name="chennelHeight" Height=".7*"/>
-            <!--change it from backend-->
-            <RowDefinition Height="7*"/>
-            <RowDefinition Name="buttonBarHeight" Height="0*"/>
-            <!--change it from backend-->
-        </Grid.RowDefinitions>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition/>
-        </Grid.ColumnDefinitions>
-
-        <Grid Background="LightGray"   Grid.Row="0" Grid.Column="0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="9*"/>
-                <ColumnDefinition Name="LogoWidth" Width="0.1*"/>
-                <ColumnDefinition  Width="6*"/>
-            </Grid.ColumnDefinitions>
-            <Menu Background="LightGray"  VerticalAlignment="Center" Height="30" FontSize="18" Grid.Row="0" Grid.Column="0" DockPanel.Dock="Top" ItemsSource="{Binding MenuItems}">
-                <Menu.ItemContainerStyle>
-                    <Style TargetType="{x:Type MenuItem}">
-                        <Setter Property="Command" Value="{Binding Command}" />
-                    </Style>
-                </Menu.ItemContainerStyle>
-                <Menu.ItemTemplate>
-                    <HierarchicalDataTemplate DataType="{x:Type vm:MenuItemViewModel}" ItemsSource="{Binding Path=MenuItems}">
-                        <TextBlock Text="{Binding Header}"/>
-                    </HierarchicalDataTemplate>
-                </Menu.ItemTemplate>
-            </Menu>
-
-            <Image Name="imgLogo" Visibility="Hidden"  Width="180" Panel.ZIndex="999" Grid.Row="0" Grid.Column="1" />
-            <Label Name="lblCode" Content="" VerticalAlignment="Center" HorizontalAlignment="right" FontSize="16" Foreground="red" FontWeight="Bold" Grid.Row="0" Grid.Column="2"></Label>
-        </Grid>
-
-
-        <Grid Grid.Column="0" Grid.Row="1">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="1*"/>
-            </Grid.RowDefinitions>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width=".1*"/>
-                <ColumnDefinition Width=".12*"/>
-            </Grid.ColumnDefinitions>
-            <Grid Grid.Column="0" Grid.Row="0">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="1*"/>
-                </Grid.RowDefinitions>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition/>
-                    <ColumnDefinition/>
-                    <ColumnDefinition/>
-                    <ColumnDefinition/>
-                </Grid.ColumnDefinitions>
-
-                <Border Cursor="Hand" Name="btnCh1"  Tag="1" MouseDown="btnCh_Click" Margin="3" Background="#305371" Grid.Column="0" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
-                    <Label Foreground="Black" FontSize="20" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Channel-1" ></Label>
-                </Border>
-
-                <Border Cursor="Hand" Name="btnCh2"  Tag="2" MouseDown="btnCh_Click" Margin="3" Background="#305371" Grid.Column="1" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
-                    <Label Foreground="Black" FontSize="20" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Channel-2" ></Label>
-                </Border>
-
-                <Border Cursor="Hand" Name="btnCh3"  Tag="3" MouseDown="btnCh_Click" Margin="3" Background="#305371" Grid.Column="2" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
-                    <Label Foreground="Black" FontSize="20" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Channel-3" ></Label>
-                </Border>
-
-                <Border Cursor="Hand" Name="btnCh4"  Tag="4" MouseDown="btnCh_Click" Margin="3" Background="#305371" Grid.Column="3" Grid.Row="0" BorderBrush="#FF000000" BorderThickness=".5" CornerRadius="10">
-                    <Label Foreground="Black" FontSize="20" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Channel-4" ></Label>
-                </Border>
-
-                <!--<Button FontSize="18" FontWeight="Bold" Cursor="Hand" Background="DarkGray" Name="btnCh1" Tag="1" Click="btnCh_Click" Content="Channel-1" Grid.Column="0" Grid.Row="0" />-->
-
-                <!--<Button FontSize="18" FontWeight="Bold" Cursor="Hand" Background="DarkGray" Name="btnCh2" Tag="2" Content="Channel-2" Click="btnCh_Click" Grid.Column="1" Grid.Row="0" />
-                
-                <Button FontSize="18" FontWeight="Bold" Cursor="Hand" Background="DarkGray" Name="btnCh3" Tag="3" Content="Channel-3" Click="btnCh_Click" Grid.Column="2" Grid.Row="0" />
-                
-                <Button FontSize="18" FontWeight="Bold" Cursor="Hand" Background="DarkGray" Name="btnCh4"  Tag="4" Content="Channel-4" Click="btnCh_Click" Grid.Column="3" Grid.Row="0" />-->
-
-            </Grid>
-            <Grid Grid.Column="1" Grid.Row="0">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="1*"/>
-                </Grid.RowDefinitions>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="4.5*"/>
-                    <ColumnDefinition  Width="4.5*"/>
-                    <ColumnDefinition Width="1*"/>
-                </Grid.ColumnDefinitions>
-
-                <Label Name="lblPartLogs" Foreground="White" Content="" HorizontalAlignment="left" FontSize="12" FontWeight="Bold" Grid.Row="0" Grid.Column="0"></Label>
-                <Label Name="lblConfigFileName" Foreground="White" Content="" HorizontalAlignment="Left" FontSize="12" FontWeight="Bold" Grid.Row="0" Grid.Column="1"></Label>
-                <Border Panel.ZIndex="1000"  Name="brStatus" Margin="5"  Background="#305371" Grid.Column="2" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="3">
-                </Border>
-            </Grid>
-        </Grid>
-
-        <Grid Grid.Column="0" Grid.Row="2">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="1*"/>
-                <RowDefinition Height="1*"/>
-            </Grid.RowDefinitions>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Name="FrequencySpace" Width="0*"/>
-                <ColumnDefinition Name="FrequencySpaceCol1"/>
-                <ColumnDefinition Name="FrequencySpaceCol2"/>
-                <ColumnDefinition Name="FrequencySpaceCol3"/>
-                <ColumnDefinition Name="FrequencySpaceCol4"/>
-                <ColumnDefinition Name="buttonBarWidth" Width=".38*"/>
-                <!--change it from backend-->
-            </Grid.ColumnDefinitions>
-
-            <Grid Name="buttonbar2" Visibility="Hidden" Grid.Column="5" Grid.Row="0">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="1*"/>
-                    <RowDefinition Height="1*"/>
-                    <RowDefinition Height="1*"/>
-                    <RowDefinition Height="1*"/>
-                </Grid.RowDefinitions>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition/>
-                    <ColumnDefinition/>
-                </Grid.ColumnDefinitions>
-                <Border Cursor="Hand" Width="150" Height="64" Name="btnBalance2" MouseDown="btnBalance_Click" Margin="8" Background="#305371" Grid.Column="0" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
-                    <Label Foreground="White" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Balance" ></Label>
-                </Border>
-
-                <Border Cursor="Hand" Width="150" Height="64" Name="btnBalance2All" MouseDown="btnBalance_Click" Margin="8" Background="#305371" Grid.Column="1" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
-                    <Label Foreground="White" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Balance All" ></Label>
-                </Border>
-
-                <Border Cursor="Hand" Width="150" Height="64" Name="btnTest2" MouseDown="btnTest_Click" Margin="8" Background="#305371" Grid.Column="0" Grid.Row="1" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
-                    <Label Foreground="White" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Test" ></Label>
-                </Border>
-
-                <Border Cursor="Hand" Width="150" Height="64" Name="btnTest2All" MouseDown="btnTest_Click" Margin="8" Background="#305371" Grid.Column="1" Grid.Row="1" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
-                    <Label Foreground="White" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Test All" ></Label>
-                </Border>
-
-                <Border Cursor="Hand" Width="150" Height="64" Name="btnClear2" MouseDown="btnClear_Click" Margin="8" Background="#305371" Grid.Column="0" Grid.Row="2" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
-                    <Label Foreground="White" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Clear" ></Label>
-                </Border>
-
-                <Border Cursor="Hand" Width="150" Height="64" Name="btnClear2All" MouseDown="btnClear_Click" Margin="8" Background="#305371" Grid.Column="1" Grid.Row="2" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
-                    <Label Foreground="White" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Clear All" ></Label>
-                </Border>
-
-                <Border Visibility="Visible" Cursor="Hand" Width="150" Height="64" Name="btnLog2" MouseDown="btnLog_MouseDown"  Margin="8" Background="#305371" Grid.Column="0" Grid.Row="3" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
-                    <Label Foreground="White" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" Name="lblLog2" HorizontalAlignment="Center" Content="Start Log" ></Label>
-                </Border>
-
-                <Border MouseDown="btnStop_MouseDown" Visibility="Visible" Cursor="Hand" Width="150" Height="64" Name="btnStop" Margin="8" Background="#305371" Grid.Column="1" Grid.Row="3" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
-                    <Label Foreground="White" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" Name="lblStop" HorizontalAlignment="Center" Content="Stop" ></Label>
-                </Border>
-            </Grid>
-
-            <Grid Name="buttonbar1" Grid.Column="5" Grid.Row="0">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="1*"/>
-                    <RowDefinition Height="1*"/>
-                    <RowDefinition Height="1*"/>
-                    <RowDefinition Height="1*"/>
-                    <RowDefinition Height="1*"/>
-                    <RowDefinition Height="1*"/>
-                    <RowDefinition Name="LogHeight" Height="1*"/>
-                    <RowDefinition Height=".0*"/>
-                </Grid.RowDefinitions>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition/>
-                </Grid.ColumnDefinitions>
-                <Border Cursor="Hand" Width="150" Height="64" Name="btnBalance1" MouseDown="btnBalance_Click" Margin="8" Background="#305371" Grid.Column="0" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
-                    <Label Foreground="White" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Balance" ></Label>
-                </Border>
-
-                <Border Cursor="Hand" Width="150" Height="64" Name="btnBalance1All" MouseDown="btnBalance_Click" Margin="8" Background="#305371" Grid.Column="0" Grid.Row="1" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
-                    <Label Foreground="White" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Balance All" ></Label>
-                </Border>
-
-                <Border Cursor="Hand" Width="150" Height="64" Name="btnTest1" MouseDown="btnTest_Click" Margin="8" Background="#305371" Grid.Column="0" Grid.Row="2" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
-                    <Label Foreground="White" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Test" ></Label>
-                </Border>
-
-                <Border Cursor="Hand" Width="150" Height="64" Name="btnTest1All" MouseDown="btnTest_Click" Margin="8" Background="#305371" Grid.Column="0" Grid.Row="3" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
-                    <Label Foreground="White" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Test All" ></Label>
-                </Border>
-
-                <Border Cursor="Hand" Width="150" Height="64" Name="btnClear1" MouseDown="btnClear_Click" Margin="8" Background="#305371" Grid.Column="0" Grid.Row="4" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
-                    <Label Foreground="White" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Clear" ></Label>
-                </Border>
-
-                <Border Cursor="Hand" Width="150" Height="64" Name="btnClear1All" MouseDown="btnClear_Click" Margin="8" Background="#305371" Grid.Column="0" Grid.Row="5" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
-                    <Label Foreground="White" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Clear All" ></Label>
-                </Border>
-
-                <Border Visibility="Visible" Cursor="Hand" Width="150" Height="64" Name="btnLog1" MouseDown="btnLog_MouseDown"  Margin="8" Background="#305371" Grid.Column="0" Grid.Row="6" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
-                    <Label Foreground="White" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" Name="lblLog1" HorizontalAlignment="Center" Content="Start Log" ></Label>
-                </Border>
-            </Grid>
-
-            <Border x:Name="br1" Margin="2,2,2,2" Grid.Row="0" Grid.Column="1" BorderThickness="2" >
-                <Canvas  x:Name="Canvas1" HorizontalAlignment="Left" Margin="0" VerticalAlignment="Top">
-                    <Rectangle Name="br1_rec1" Width="360" Fill="White"
-                        Height="360"
-                        Canvas.Left="0"
-                        Canvas.Top="0" />
-
-                    <TextBlock Name="lblFreq1" Background="LightBlue" FontWeight="Bold" FontSize="14" Panel.ZIndex="1000" >
-
-                    </TextBlock>
-
-                    <Canvas Name="br1_can1" Canvas.Left="360" HorizontalAlignment="Right" VerticalAlignment="Top">
-                        <TextBlock HorizontalAlignment="Right" Canvas.Right="1" Name="lblGraphXY1" Background="LightBlue" FontWeight="Bold" FontSize="14" Panel.ZIndex="1000" >
-                        </TextBlock>
-                    </Canvas>
-
-                    <Rectangle Name="br1_rec2" Width="360"
-                        Height=".5"
-                        Canvas.Left="0"
-                               Fill="Black"
-                        Canvas.Top="180" />
-
-                    <Rectangle Name="br1_rec3" Width=".5"
-                        Height="360"
-                        Canvas.Left="180"
-                        Fill="Black"
-                        Canvas.Top="0" />
-
-                    <Rectangle Width="20" Name="rResult1" Panel.ZIndex="1000"
-                        Height="20"
-                        Canvas.Left="335"
-                        Fill="white"
-                        Canvas.Top="335" />
-
-                    <Canvas Name="cnBr1" Canvas.Left="180" Canvas.Top="180">
-                        <Canvas Name="cn1" Canvas.Left="0" Canvas.Top="0">
-                        </Canvas>
-                        <Ellipse x:Name="el11" HorizontalAlignment="Center" Height="650"  Stroke="Black" VerticalAlignment="Center" Width="650" Canvas.Left="0" Canvas.Top="0" RenderTransformOrigin="0,0">
-                            <Ellipse.RenderTransform>
-                                <TransformGroup>
-                                    <!--<ScaleTransform/>
-                                    <SkewTransform />-->
-                                    <RotateTransform x:Name="rtAngel11" Angle="0"/>
-                                    <TranslateTransform x:Name="tt11" X="-325" Y="-325"/>
-                                </TransformGroup>
-                            </Ellipse.RenderTransform>
-                        </Ellipse>
-                    </Canvas>
-
-                    <!--<Button Content="Setting" Name="D1" Click="D_Click"  Canvas.Left="5" Canvas.Top="225" ></Button>-->
-                    <Border Cursor="Hand" Panel.ZIndex="1000" Width="42" Height="24" Name="D1" MouseDown="D_Click" Canvas.Left="5" Canvas.Top="335" Background="#305371" Grid.Column="5" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="5">
-                        <Label Foreground="White" FontSize="9" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Setting" ></Label>
-                    </Border>
-                </Canvas>
-            </Border>
-
-            <Border x:Name="br2" Margin="2,2,2,2" Grid.Row="0" Grid.Column="2" BorderThickness="2" >
-                <Canvas  x:Name="Canvas2" HorizontalAlignment="Left" Margin="0" VerticalAlignment="Top">
-
-                    <Rectangle Name="br2_rec1" Width="248" Fill="White"
-        Height="250"
-        Canvas.Left="0"
-        Canvas.Top="0" />
-                    <TextBlock Name="lblFreq2" Background="LightBlue" FontWeight="Bold" FontSize="14" Panel.ZIndex="1000" >
-
-                    </TextBlock>
-                    <Canvas Name="br2_can1" Canvas.Left="248" HorizontalAlignment="Right" VerticalAlignment="Top">
-                        <TextBlock HorizontalAlignment="Right" Canvas.Right="1" Name="lblGraphXY2" Background="LightBlue" FontWeight="Bold" FontSize="14" Panel.ZIndex="1000" >
-                        </TextBlock>
-                    </Canvas>
-
-                    <Rectangle Name="br2_rec2" Width="248"
-        Height=".5"
-        Canvas.Left="0"
-               Fill="Black"
-        Canvas.Top="125" />
-
-                    <Rectangle Name="br2_rec3" Width=".5"
-        Height="250"
-        Canvas.Left="124"
-        Fill="Black"
-        Canvas.Top="0" />
-
-                    <Rectangle Width="20" Name="rResult2" Panel.ZIndex="1000"
-        Height="20"
-        Canvas.Left="225"
-        Fill="white"
-        Canvas.Top="227" />
-
-                    <Canvas Name="cnBr2" Canvas.Left="122" Canvas.Top="123">
-                        <!--<Ellipse x:Name="el2" HorizontalAlignment="Center" Height="70"  Stroke="Black" VerticalAlignment="Center" Width="50" Canvas.Left="0" Canvas.Top="0" RenderTransformOrigin="0,0">
-                            <Ellipse.RenderTransform>
-                                <TransformGroup>
-                                    <ScaleTransform/>
-                                    <SkewTransform/>
-                                    <RotateTransform x:Name="rtAngel2" Angle="0"/>
-                                    <TranslateTransform x:Name="tt2" X="-23" Y="-33"/>
-                                </TransformGroup>
-                            </Ellipse.RenderTransform>
-                        </Ellipse>-->
-                        <Canvas Name="cn2" Canvas.Left="0" Canvas.Top="0">
-                        </Canvas>
-                    </Canvas>
-
-                    <Border Cursor="Hand" Panel.ZIndex="1000" Width="42" Height="24" Name="D2" MouseDown="D_Click" Canvas.Left="5" Canvas.Top="225" Background="#305371" Grid.Column="5" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="5">
-                        <Label Foreground="White" FontSize="9" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Setting" ></Label>
-                    </Border>
-                </Canvas>
-            </Border>
-
-            <Border x:Name="br3" Margin="2,2,2,2" Grid.Row="0" Grid.Column="3" BorderThickness="2" >
-                <Canvas  x:Name="Canvas3" HorizontalAlignment="Left" Margin="0" VerticalAlignment="Top">
-
-                    <Rectangle Name="br3_rec1" Width="248" Fill="White"
-Height="250"
-Canvas.Left="0"
-Canvas.Top="0" />
-                    <TextBlock Name="lblFreq3" Background="LightBlue" FontWeight="Bold" FontSize="14" Panel.ZIndex="1000" >
-
-                    </TextBlock>
-
-                    <Canvas Name="br3_can1" Canvas.Left="248" HorizontalAlignment="Right" VerticalAlignment="Top">
-                        <TextBlock HorizontalAlignment="Right" Canvas.Right="1" Name="lblGraphXY3" Background="LightBlue" FontWeight="Bold" FontSize="14" Panel.ZIndex="1000" >
-                        </TextBlock>
-                    </Canvas>
-
-                    <Rectangle Name="br3_rec2" Width="248"
-Height=".5"
-Canvas.Left="0"
-       Fill="Black"
-Canvas.Top="125" />
-
-                    <Rectangle Name="br3_rec3" Width=".5"
-Height="250"
-Canvas.Left="124"
-Fill="Black"
-Canvas.Top="0" />
-
-                    <Rectangle Width="20" Name="rResult3" Panel.ZIndex="1000"
-Height="20"
-Canvas.Left="225"
-Fill="white"
-Canvas.Top="227" />
-
-                    <Canvas Name="cnBr3" Canvas.Left="122" Canvas.Top="123">
-                        <!--<Ellipse x:Name="el3" HorizontalAlignment="Center" Height="70"  Stroke="Black" VerticalAlignment="Center" Width="50" Canvas.Left="0" Canvas.Top="0" RenderTransformOrigin="0,0">
-                            <Ellipse.RenderTransform>
-                                <TransformGroup>
-                                    <ScaleTransform/>
-                                    <SkewTransform/>
-                                    <RotateTransform x:Name="rtAngel3" Angle="0"/>
-                                    <TranslateTransform x:Name="tt3" X="-23" Y="-33"/>
-                                </TransformGroup>
-                            </Ellipse.RenderTransform>
-                        </Ellipse>-->
-                        <Canvas Name="cn3" Canvas.Left="0" Canvas.Top="0">
-                        </Canvas>
-                    </Canvas>
-
-                    <Border Cursor="Hand" Panel.ZIndex="1000" Width="42" Height="24" Name="D3" MouseDown="D_Click" Canvas.Left="5" Canvas.Top="225" Background="#305371" Grid.Column="5" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="5">
-                        <Label Foreground="White" FontSize="9" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Setting" ></Label>
-                    </Border>
-
-                </Canvas>
-            </Border>
-
-            <Border x:Name="br4" Margin="2,2,2,2" Grid.Row="0" Grid.Column="4" BorderThickness="2" >
-                <Canvas  x:Name="Canvas4" HorizontalAlignment="Left" Margin="0" VerticalAlignment="Top">
-
-                    <Rectangle Name="br4_rec1" Width="248" Fill="White"
-Height="250"
-Canvas.Left="0"
-Canvas.Top="0" />
-                    <TextBlock Name="lblFreq4" Background="LightBlue" FontWeight="Bold" FontSize="14" Panel.ZIndex="1000" >
-
-                    </TextBlock>
-
-                    <Canvas Name="br4_can1" Canvas.Left="248" HorizontalAlignment="Right" VerticalAlignment="Top">
-                        <TextBlock HorizontalAlignment="Right" Canvas.Right="1" Name="lblGraphXY4" Background="LightBlue" FontWeight="Bold" FontSize="14" Panel.ZIndex="1000" >
-                        </TextBlock>
-                    </Canvas>
-
-                    <Rectangle Name="br4_rec2" Width="248"
-Height=".5"
-Canvas.Left="0"
-       Fill="Black"
-Canvas.Top="125" />
-
-                    <Rectangle Name="br4_rec3" Width=".5"
-Height="250"
-Canvas.Left="124"
-Fill="Black"
-Canvas.Top="0" />
-
-                    <Rectangle Width="20" Name="rResult4" Panel.ZIndex="1000"
-Height="20"
-Canvas.Left="225"
-Fill="white"
-Canvas.Top="227" />
-
-                    <Canvas Name="cnBr4" Canvas.Left="122" Canvas.Top="123">
-                        <!--<Ellipse x:Name="el4" HorizontalAlignment="Center" Height="70"  Stroke="Black" VerticalAlignment="Center" Width="50" Canvas.Left="0" Canvas.Top="0" RenderTransformOrigin="0,0">
-                            <Ellipse.RenderTransform>
-                                <TransformGroup>
-                                    <ScaleTransform/>
-                                    <SkewTransform/>
-                                    <RotateTransform x:Name="rtAngel4" Angle="0"/>
-                                    <TranslateTransform x:Name="tt4" X="-23" Y="-33"/>
-                                </TransformGroup>
-                            </Ellipse.RenderTransform>
-                        </Ellipse>-->
-                        <Canvas Name="cn4" Canvas.Left="0" Canvas.Top="0">
-                        </Canvas>
-                    </Canvas>
-
-                    <Border Cursor="Hand" Panel.ZIndex="1000" Width="42" Height="24" Name="D4" MouseDown="D_Click" Canvas.Left="5" Canvas.Top="225" Background="#305371" Grid.Column="5" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="5">
-                        <Label Foreground="White" FontSize="9" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Setting" ></Label>
-                    </Border>
-                </Canvas>
-            </Border>
-
-            <Border x:Name="br5" Margin="2,2,2,2" Grid.Row="1" Grid.Column="1" BorderThickness="2" >
-                <Canvas  x:Name="Canvas5" HorizontalAlignment="Left" Margin="0" VerticalAlignment="Top">
-
-                    <Rectangle Name="br5_rec1" Width="360" Fill="White"
-Height="360"
-Canvas.Left="0"
-Canvas.Top="0" />
-
-                    <TextBlock Name="lblFreq5" Background="LightBlue" FontWeight="Bold" FontSize="14" Panel.ZIndex="1000" >
-
-                    </TextBlock>
-                    <Canvas Name="br5_can1" Canvas.Left="248" HorizontalAlignment="Right" VerticalAlignment="Top">
-                        <TextBlock HorizontalAlignment="Right" Canvas.Right="1" Name="lblGraphXY5" Background="LightBlue" FontWeight="Bold" FontSize="14" Panel.ZIndex="1000" >
-                        </TextBlock>
-                    </Canvas>
-
-                    <Rectangle Name="br5_rec2" Width="248"
-Height=".5"
-Canvas.Left="0"
-       Fill="Black"
-Canvas.Top="125" />
-
-                    <Rectangle Name="br5_rec3" Width=".5"
-Height="250"
-Canvas.Left="124"
-Fill="Black"
-Canvas.Top="0" />
-
-                    <Rectangle Width="20" Name="rResult5" Panel.ZIndex="1000"
-Height="20"
-Canvas.Left="225"
-Fill="white"
-Canvas.Top="227" />
-
-                    <Canvas Name="cnBr5" Canvas.Left="122" Canvas.Top="123">
-                        <!--<Ellipse x:Name="el5" HorizontalAlignment="Center" Height="70"  Stroke="Black" VerticalAlignment="Center" Width="50" Canvas.Left="0" Canvas.Top="0" RenderTransformOrigin="0,0">
-                            <Ellipse.RenderTransform>
-                                <TransformGroup>
-                                    <ScaleTransform/>
-                                    <SkewTransform/>
-                                    <RotateTransform x:Name="rtAngel5" Angle="0"/>
-                                    <TranslateTransform x:Name="tt5" X="-23" Y="-33"/>
-                                </TransformGroup>
-                            </Ellipse.RenderTransform>
-                        </Ellipse>-->
-                        <Canvas Name="cn5" Canvas.Left="0" Canvas.Top="0">
-                        </Canvas>
-                    </Canvas>
-                    <Border Cursor="Hand" Panel.ZIndex="1000" Width="42" Height="24" Name="D5" MouseDown="D_Click" Canvas.Left="5" Canvas.Top="225" Background="#305371" Grid.Column="5" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="5">
-                        <Label Foreground="White" FontSize="9" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Setting" ></Label>
-                    </Border>
-                </Canvas>
-            </Border>
-
-            <Border x:Name="br6" Margin="2,2,2,2" Grid.Row="1" Grid.Column="2" BorderThickness="2" >
-                <Canvas  x:Name="Canvas6" HorizontalAlignment="Left" Margin="0" VerticalAlignment="Top">
-
-                    <Rectangle Name="br6_rec1" Width="248" Fill="White"
-Height="250"
-Canvas.Left="0"
-Canvas.Top="0" />
-                    <TextBlock Name="lblFreq6" Background="LightBlue" FontWeight="Bold" FontSize="14" Panel.ZIndex="1000" >
-
-                    </TextBlock>
-
-                    <Canvas Name="br6_can1" Canvas.Left="248" HorizontalAlignment="Right" VerticalAlignment="Top">
-                        <TextBlock HorizontalAlignment="Right" Canvas.Right="1" Name="lblGraphXY6" Background="LightBlue" FontWeight="Bold" FontSize="14" Panel.ZIndex="1000" >
-                        </TextBlock>
-                    </Canvas>
-
-                    <Rectangle Name="br6_rec2" Width="248"
-Height=".5"
-Canvas.Left="0"
-       Fill="Black"
-Canvas.Top="125" />
-
-                    <Rectangle Name="br6_rec3" Width=".5"
-Height="250"
-Canvas.Left="124"
-Fill="Black"
-Canvas.Top="0" />
-
-                    <Rectangle Width="20" Name="rResult6" Panel.ZIndex="1000"
-Height="20"
-Canvas.Left="225"
-Fill="white"
-Canvas.Top="227" />
-
-                    <Canvas Name="cnBr6" Canvas.Left="122" Canvas.Top="123">
-                        <!--<Ellipse x:Name="el6" HorizontalAlignment="Center" Height="70"  Stroke="Black" VerticalAlignment="Center" Width="50" Canvas.Left="0" Canvas.Top="0" RenderTransformOrigin="0,0">
-                            <Ellipse.RenderTransform>
-                                <TransformGroup>
-                                    <ScaleTransform/>
-                                    <SkewTransform/>
-                                    <RotateTransform x:Name="rtAngel6" Angle="0"/>
-                                    <TranslateTransform x:Name="tt6" X="-23" Y="-33"/>
-                                </TransformGroup>
-                            </Ellipse.RenderTransform>
-                        </Ellipse>-->
-                        <Canvas Name="cn6" Canvas.Left="0" Canvas.Top="0">
-                        </Canvas>
-                    </Canvas>
-                    <Border Cursor="Hand" Panel.ZIndex="1000" Width="42" Height="24" Name="D6" MouseDown="D_Click" Canvas.Left="5" Canvas.Top="225" Background="#305371" Grid.Column="5" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="5">
-                        <Label Foreground="White" FontSize="9" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Setting" ></Label>
-                    </Border>
-                </Canvas>
-            </Border>
-
-            <Border x:Name="br7" Margin="2,2,2,2" Grid.Row="1" Grid.Column="3" BorderThickness="2" >
-                <Canvas  x:Name="Canvas7" HorizontalAlignment="Left" Margin="0" VerticalAlignment="Top">
-
-                    <Rectangle Name="br7_rec1" Width="248" Fill="White"
-Height="250"
-Canvas.Left="0"
-Canvas.Top="0" />
-                    <TextBlock Name="lblFreq7" Background="LightBlue" FontWeight="Bold" FontSize="14" Panel.ZIndex="1000" >
-
-                    </TextBlock>
-
-                    <Canvas Name="br7_can1" Canvas.Left="248" HorizontalAlignment="Right" VerticalAlignment="Top">
-                        <TextBlock HorizontalAlignment="Right" Canvas.Right="1" Name="lblGraphXY7" Background="LightBlue" FontWeight="Bold" FontSize="14" Panel.ZIndex="1000" >
-                        </TextBlock>
-                    </Canvas>
-
-                    <Rectangle Name="br7_rec2" Width="248"
-Height=".5"
-Canvas.Left="0"
-       Fill="Black"
-Canvas.Top="125" />
-
-                    <Rectangle  Name="br7_rec3" Width=".5"
-Height="250"
-Canvas.Left="124"
-Fill="Black"
-Canvas.Top="0" />
-
-                    <Rectangle Width="20" Name="rResult7" Panel.ZIndex="1000"
-Height="20"
-Canvas.Left="225"
-Fill="white"
-Canvas.Top="227" />
-
-                    <Canvas Name="cnBr7" Canvas.Left="122" Canvas.Top="123">
-                        <!--<Ellipse x:Name="el7" HorizontalAlignment="Center" Height="70"  Stroke="Black" VerticalAlignment="Center" Width="50" Canvas.Left="0" Canvas.Top="0" RenderTransformOrigin="0,0">
-                            <Ellipse.RenderTransform>
-                                <TransformGroup>
-                                    <ScaleTransform/>
-                                    <SkewTransform/>
-                                    <RotateTransform x:Name="rtAngel7" Angle="0"/>
-                                    <TranslateTransform x:Name="tt7" X="-23" Y="-33"/>
-                                </TransformGroup>
-                            </Ellipse.RenderTransform>
-                        </Ellipse>-->
-                        <Canvas Name="cn7" Canvas.Left="0" Canvas.Top="0">
-                        </Canvas>
-                    </Canvas>
-                    <Border Cursor="Hand" Panel.ZIndex="1000" Width="42" Height="24" Name="D7" MouseDown="D_Click" Canvas.Left="5" Canvas.Top="225" Background="#305371" Grid.Column="5" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="5">
-                        <Label Foreground="White" FontSize="9" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Setting" ></Label>
-                    </Border>
-                </Canvas>
-            </Border>
-
-            <Border x:Name="br8" Margin="2,2,2,2" Grid.Row="1" Grid.Column="4" BorderThickness="2" >
-                <Canvas  x:Name="Canvas8" HorizontalAlignment="Left" Margin="0" VerticalAlignment="Top">
-
-                    <Rectangle Name="br8_rec1" Width="248" Fill="White"
-Height="250"
-Canvas.Left="0"
-Canvas.Top="0" />
-                    <TextBlock Name="lblFreq8" Background="LightBlue" FontWeight="Bold" FontSize="14" Panel.ZIndex="1000" >
-
-                    </TextBlock>
-
-                    <Canvas Name="br8_can1" Canvas.Left="248" HorizontalAlignment="Right" VerticalAlignment="Top">
-                        <TextBlock HorizontalAlignment="Right" Canvas.Right="1" Name="lblGraphXY8" Background="LightBlue" FontWeight="Bold" FontSize="14" Panel.ZIndex="1000" >
-                        </TextBlock>
-                    </Canvas>
-
-                    <Rectangle Name="br8_rec2" Width="248"
-Height=".5"
-Canvas.Left="0"
-       Fill="Black"
-Canvas.Top="125" />
-
-                    <Rectangle Name="br8_rec3" Width=".5"
-Height="250"
-Canvas.Left="124"
-Fill="Black"
-Canvas.Top="0" />
-
-                    <Rectangle Width="20" Name="rResult8" Panel.ZIndex="1000"
-Height="20"
-Canvas.Left="225"
-Fill="white"
-Canvas.Top="227" />
-
-                    <Canvas Name="cnBr8" Canvas.Left="122" Canvas.Top="123">
-                        <!--<Ellipse x:Name="el8" HorizontalAlignment="Center" Height="70"  Stroke="Black" VerticalAlignment="Center" Width="50" Canvas.Left="0" Canvas.Top="0" RenderTransformOrigin="0,0">
-                            <Ellipse.RenderTransform>
-                                <TransformGroup>
-                                    <ScaleTransform/>
-                                    <SkewTransform/>
-                                    <RotateTransform x:Name="rtAngel8" Angle="0"/>
-                                    <TranslateTransform x:Name="tt8" X="-23" Y="-33"/>
-                                </TransformGroup>
-                            </Ellipse.RenderTransform>
-                        </Ellipse>-->
-                        <Canvas Name="cn8" Canvas.Left="0" Canvas.Top="0">
-                        </Canvas>
-                    </Canvas>
-                    <Border Cursor="Hand" Panel.ZIndex="1000" Width="42" Height="24" Name="D8" MouseDown="D_Click" Canvas.Left="5" Canvas.Top="225" Background="#305371" Grid.Column="5" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="5">
-                        <Label Foreground="White" FontSize="9" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Setting" ></Label>
-                    </Border>
-                </Canvas>
-            </Border>
-
-            <Grid Name="counterbar1"  Grid.Column="5" Grid.Row="1">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height=".5*"/>
-                    <RowDefinition Height="2*"/>
-                    <RowDefinition Height="1.5*"/>
-                    <RowDefinition Height="1.5*"/>
-                </Grid.RowDefinitions>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition/>
-                </Grid.ColumnDefinitions>
-
-                <Border Cursor="Hand" Width="150" Height="70" Name="btnResetCounter1" MouseDown="btnResetCounter_Click" Margin="8" Background="#305371" Grid.Column="0" Grid.Row="2" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
-                    <Label Foreground="White" FontSize="20" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Reset Count" ></Label>
-                </Border>
-
-                <StackPanel Grid.Column="0" Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center">
-                    <Border Cursor="Hand" HorizontalAlignment="Center" Width="150" Height="40" Margin="4" Background="Brown" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
-                        <Label Foreground="White" FontSize="16" Name="lblTCount1" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Total Count - 0" ></Label>
-                    </Border>
-                    <Border Cursor="Hand" HorizontalAlignment="Center" Width="150" Height="40" Margin="4" Background="Green" BorderBrush="Green" BorderThickness="1" CornerRadius="10">
-                        <Label Foreground="White" FontSize="16" Name="lblOkCount1" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="OK Count - 0" ></Label>
-                    </Border>
-                    <Border Cursor="Hand" HorizontalAlignment="Center" Width="150" Height="40" Margin="4" Background="Red" BorderBrush="Red" BorderThickness="1" CornerRadius="10">
-                        <Label Foreground="White" FontSize="16" Name="lblNotOkCount1" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Not Ok Count - 0" ></Label>
-                    </Border>
-                </StackPanel>
-
-                <Border Width="150" Height="85" Name="btnOverallResult1" Margin="2" Background="LightBlue" Grid.Column="0" Grid.Row="3" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
-                    <Label Foreground="White" FontSize="18" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Overall Result" ></Label>
-                </Border>
-            </Grid>
-
-            <Grid Name="counterbar2" Visibility="Hidden" Grid.Column="5" Grid.Row="1">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="2*"/>
-                    <RowDefinition Height="1.5*"/>
-                    <RowDefinition Height="1.5*"/>
-                    <RowDefinition Height=".1*"/>
-                </Grid.RowDefinitions>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition/>
-                </Grid.ColumnDefinitions>
-
-
-                <Grid Grid.Column="0" Grid.Row="1">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="1*"/>
-                        <RowDefinition Height="1*"/>
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition/>
-                        <ColumnDefinition/>
-                    </Grid.ColumnDefinitions>
-                    <Border Cursor="Hand" HorizontalAlignment="Center" Width="150" Height="40" Margin="4" Background="Brown" Grid.Column="0" Grid.Row="0" Grid.ColumnSpan="2" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
-                        <Label Foreground="White" FontSize="16" Name="lblTCount2" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Total Count - 0" ></Label>
-                    </Border>
-                    <Border Cursor="Hand" HorizontalAlignment="Center" Width="150" Height="40" Margin="4" Background="Green" Grid.Column="0" Grid.Row="1" BorderBrush="Green" BorderThickness="1" CornerRadius="10">
-                        <Label Foreground="White" FontSize="16" Name="lblOkCount2" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="OK Count - 0" ></Label>
-                    </Border>
-                    <Border Cursor="Hand" HorizontalAlignment="Center" Width="150" Height="40" Margin="4" Background="Red" Grid.Column="1" Grid.Row="1" BorderBrush="Red" BorderThickness="1" CornerRadius="10">
-                        <Label Foreground="White" FontSize="16" Name="lblNotOkCount2" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Not Ok Count - 0" ></Label>
-                    </Border>
-                </Grid>
-
-                <Grid Grid.Column="0" Grid.Row="2">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height=".5*"/>
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition/>
-                        <ColumnDefinition/>
-                    </Grid.ColumnDefinitions>
-
-                    <Border Cursor="Hand" Width="150" Height="70" Name="btnResetCounter2" MouseDown="btnResetCounter_Click" Margin="8" Background="#305371" Grid.Column="0" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
-                        <Label Foreground="White" FontSize="20" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Reset Count" ></Label>
-                    </Border>
-
-                    <Border Width="150" Height="70" Name="btnOverallResult2" Margin="2" Background="LightBlue" Grid.Column="1" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
-                        <Label Foreground="White" FontSize="18" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Overall Result" ></Label>
-                    </Border>
-                </Grid>
-            </Grid>
-        </Grid>
-
-        <Grid Grid.Column="0" Grid.Row="3">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="1*"/>
-            </Grid.RowDefinitions>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="1*"/>
-                <ColumnDefinition Width="1*"/>
-                <ColumnDefinition Width="1*"/>
-                <ColumnDefinition Width="1*"/>
-                <ColumnDefinition Width="1*"/>
-                <ColumnDefinition Width="1*"/>
-                <ColumnDefinition Width="1*" Name="LogWidth"/>
-                <ColumnDefinition Width="1*"/>
-                <ColumnDefinition Width="1.2*"/>
-                <ColumnDefinition Width="1*" />
-            </Grid.ColumnDefinitions>
-
-            <Border Cursor="Hand" Height="80" Name="btnBalance" MouseDown="btnBalance_Click" Margin="8" Background="#305371" Grid.Column="0" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
-                <Label Foreground="White" FontSize="18" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Balance" ></Label>
-            </Border>
-
-            <Border Cursor="Hand" Height="80" Name="btnBalanceAll" MouseDown="btnBalance_Click" Margin="8" Background="#305371" Grid.Column="1" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
-                <Label Foreground="White" FontSize="16" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Balance&#x0a;All" ></Label>
-            </Border>
-
-            <Border Cursor="Hand" Height="80" Name="btnTest" MouseDown="btnTest_Click" Margin="8" Background="#305371" Grid.Column="2" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
-                <Label Foreground="White" FontSize="18" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Test" ></Label>
-            </Border>
-
-            <Border Cursor="Hand" Height="80" Name="btnTestAll" MouseDown="btnTest_Click" Margin="8" Background="#305371" Grid.Column="3" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
-                <Label Foreground="White" FontSize="18" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Test All" ></Label>
-            </Border>
-
-            <Border Cursor="Hand"  Height="80" Name="btnClear" MouseDown="btnClear_Click" Margin="8" Background="#305371" Grid.Column="4" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
-                <Label Foreground="White" FontSize="18" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Clear" ></Label>
-            </Border>
-
-            <Border Cursor="Hand" Height="80" Name="btnClearAll" MouseDown="btnClear_Click" Margin="8" Background="#305371" Grid.Column="5" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
-                <Label Foreground="White" FontSize="18" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Clear All" ></Label>
-            </Border>
-
-            <Border Visibility="Visible" Cursor="Hand" Height="80" Name="btnLog" MouseDown="btnLog_MouseDown"  Margin="8" Background="#305371" Grid.Column="6" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
-                <Label Foreground="White" FontSize="18" FontWeight="Bold" VerticalAlignment="Center" Name="lblLog" HorizontalAlignment="Center" Content="Start&#x0a;Log" ></Label>
-            </Border>
-
-            <Border Cursor="Hand" Height="80" Name="btnResetCounter" MouseDown="btnResetCounter_Click" Margin="8" Background="#305371" Grid.Column="7" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
-                <Label Foreground="White" FontSize="14" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Reset&#x0a;Count" ></Label>
-            </Border>
-
-            <StackPanel Grid.Column="8" Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center">
-                <Border Cursor="Hand" HorizontalAlignment="Center" Height="32" Margin="2" Background="#305371" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
-                    <Label Foreground="White" FontSize="12" Name="lblTCount" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Total Count - 0" ></Label>
-                </Border>
-                <Border Cursor="Hand" HorizontalAlignment="Center" Height="32" Margin="2" Background="Green" BorderBrush="Green" BorderThickness="1" CornerRadius="10">
-                    <Label Foreground="White" FontSize="12" Name="lblOkCount" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="OK Count - 0" ></Label>
-                </Border>
-                <Border Cursor="Hand" HorizontalAlignment="Center" Height="32" Margin="2" Background="Red" BorderBrush="Red" BorderThickness="1" CornerRadius="10">
-                    <Label Foreground="White" FontSize="12" Name="lblNotOkCount" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Not Ok Count - 0" ></Label>
-                </Border>
-            </StackPanel>
-
-            <Border  Height="105" Name="btnOverallResult" Margin="2" Background="LightBlue" Grid.Column="9   " Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
-                <Label Foreground="White" FontSize="18" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Overall&#x0a;Result" ></Label>
-            </Border>
-
-
-
-        </Grid>
-
-    </Grid>
-</Window>
+<Window x:Class="_8F.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:_8F"
+        xmlns:vm="clr-namespace:_8F.ViewModels"
+        xmlns:views="clr-namespace:_8F.Views"
+        mc:Ignorable="d"
+        WindowStyle="None"
+        WindowState="Maximized" ResizeMode="NoResize" Closed="Window_Closed" KeyDown="Window_KeyDown"
+        >
+
+    <Grid Background="Black" Margin="2">
+        <Grid.RowDefinitions>
+            <RowDefinition Name="menuHeight" Height=".5*"/>
+            <!--change it from backend-->
+            <RowDefinition Name="chennelHeight" Height=".7*"/>
+            <!--change it from backend-->
+            <RowDefinition Height="7*"/>
+            <RowDefinition Name="buttonBarHeight" Height="0*"/>
+            <!--change it from backend-->
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition/>
+        </Grid.ColumnDefinitions>
+
+        <Grid Background="LightGray"   Grid.Row="0" Grid.Column="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="9*"/>
+                <ColumnDefinition Name="LogoWidth" Width="0.1*"/>
+                <ColumnDefinition  Width="6*"/>
+            </Grid.ColumnDefinitions>
+            <Menu Background="LightGray"  VerticalAlignment="Center" Height="30" FontSize="18" Grid.Row="0" Grid.Column="0" DockPanel.Dock="Top" ItemsSource="{Binding MenuItems}">
+                <Menu.ItemContainerStyle>
+                    <Style TargetType="{x:Type MenuItem}">
+                        <Setter Property="Command" Value="{Binding Command}" />
+                    </Style>
+                </Menu.ItemContainerStyle>
+                <Menu.ItemTemplate>
+                    <HierarchicalDataTemplate DataType="{x:Type vm:MenuItemViewModel}" ItemsSource="{Binding Path=MenuItems}">
+                        <TextBlock Text="{Binding Header}"/>
+                    </HierarchicalDataTemplate>
+                </Menu.ItemTemplate>
+            </Menu>
+
+            <Image Name="imgLogo" Visibility="Hidden"  Width="180" Panel.ZIndex="999" Grid.Row="0" Grid.Column="1" />
+            <Label Name="lblCode" Content="" VerticalAlignment="Center" HorizontalAlignment="right" FontSize="16" Foreground="red" FontWeight="Bold" Grid.Row="0" Grid.Column="2"></Label>
+        </Grid>
+
+
+        <Grid Grid.Column="0" Grid.Row="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="1*"/>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width=".1*"/>
+                <ColumnDefinition Width=".12*"/>
+            </Grid.ColumnDefinitions>
+            <Grid Grid.Column="0" Grid.Row="0" x:Name="gridTabs">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="1*"/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition/>
+                    <ColumnDefinition/>
+                    <ColumnDefinition/>
+                    <ColumnDefinition/>
+                </Grid.ColumnDefinitions>
+
+                <Border Cursor="Hand" Name="btnCh1"  Tag="1" MouseDown="btnCh_Click" Margin="3" Background="#305371" Grid.Column="0" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
+                    <Label Foreground="Black" FontSize="20" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Channel-1" ></Label>
+                </Border>
+
+                <Border Cursor="Hand" Name="btnCh2"  Tag="2" MouseDown="btnCh_Click" Margin="3" Background="#305371" Grid.Column="1" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
+                    <Label Foreground="Black" FontSize="20" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Channel-2" ></Label>
+                </Border>
+
+                <Border Cursor="Hand" Name="btnCh3"  Tag="3" MouseDown="btnCh_Click" Margin="3" Background="#305371" Grid.Column="2" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
+                    <Label Foreground="Black" FontSize="20" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Channel-3" ></Label>
+                </Border>
+
+                <Border Cursor="Hand" Name="btnCh4"  Tag="4" MouseDown="btnCh_Click" Margin="3" Background="#305371" Grid.Column="3" Grid.Row="0" BorderBrush="#FF000000" BorderThickness=".5" CornerRadius="10">
+                    <Label Foreground="Black" FontSize="20" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Channel-4" ></Label>
+                </Border>
+
+                <!--<Button FontSize="18" FontWeight="Bold" Cursor="Hand" Background="DarkGray" Name="btnCh1" Tag="1" Click="btnCh_Click" Content="Channel-1" Grid.Column="0" Grid.Row="0" />-->
+
+                <!--<Button FontSize="18" FontWeight="Bold" Cursor="Hand" Background="DarkGray" Name="btnCh2" Tag="2" Content="Channel-2" Click="btnCh_Click" Grid.Column="1" Grid.Row="0" />
+                
+                <Button FontSize="18" FontWeight="Bold" Cursor="Hand" Background="DarkGray" Name="btnCh3" Tag="3" Content="Channel-3" Click="btnCh_Click" Grid.Column="2" Grid.Row="0" />
+                
+                <Button FontSize="18" FontWeight="Bold" Cursor="Hand" Background="DarkGray" Name="btnCh4"  Tag="4" Content="Channel-4" Click="btnCh_Click" Grid.Column="3" Grid.Row="0" />-->
+
+            </Grid>
+            <Grid Grid.Column="1" Grid.Row="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="1*"/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="4.5*"/>
+                    <ColumnDefinition  Width="4.5*"/>
+                    <ColumnDefinition Width="1*"/>
+                </Grid.ColumnDefinitions>
+
+                <Label Name="lblPartLogs" Foreground="White" Content="" HorizontalAlignment="left" FontSize="12" FontWeight="Bold" Grid.Row="0" Grid.Column="0"></Label>
+                <Label Name="lblConfigFileName" Foreground="White" Content="" HorizontalAlignment="Left" FontSize="12" FontWeight="Bold" Grid.Row="0" Grid.Column="1"></Label>
+                <Border Panel.ZIndex="1000"  Name="brStatus" Margin="5"  Background="#305371" Grid.Column="2" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="3">
+                </Border>
+            </Grid>
+        </Grid>
+
+        <Grid Grid.Column="0" Grid.Row="2" x:Name="gridPlotsLegacy">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="1*"/>
+                <RowDefinition Height="1*"/>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Name="FrequencySpace" Width="0*"/>
+                <ColumnDefinition Name="FrequencySpaceCol1"/>
+                <ColumnDefinition Name="FrequencySpaceCol2"/>
+                <ColumnDefinition Name="FrequencySpaceCol3"/>
+                <ColumnDefinition Name="FrequencySpaceCol4"/>
+                <ColumnDefinition Name="buttonBarWidth" Width=".38*"/>
+                <!--change it from backend-->
+            </Grid.ColumnDefinitions>
+
+            <Grid Name="buttonbar2" Visibility="Hidden" Grid.Column="5" Grid.Row="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="1*"/>
+                    <RowDefinition Height="1*"/>
+                    <RowDefinition Height="1*"/>
+                    <RowDefinition Height="1*"/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition/>
+                    <ColumnDefinition/>
+                </Grid.ColumnDefinitions>
+                <Border Cursor="Hand" Width="150" Height="64" Name="btnBalance2" MouseDown="btnBalance_Click" Margin="8" Background="#305371" Grid.Column="0" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
+                    <Label Foreground="White" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Balance" ></Label>
+                </Border>
+
+                <Border Cursor="Hand" Width="150" Height="64" Name="btnBalance2All" MouseDown="btnBalance_Click" Margin="8" Background="#305371" Grid.Column="1" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
+                    <Label Foreground="White" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Balance All" ></Label>
+                </Border>
+
+                <Border Cursor="Hand" Width="150" Height="64" Name="btnTest2" MouseDown="btnTest_Click" Margin="8" Background="#305371" Grid.Column="0" Grid.Row="1" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
+                    <Label Foreground="White" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Test" ></Label>
+                </Border>
+
+                <Border Cursor="Hand" Width="150" Height="64" Name="btnTest2All" MouseDown="btnTest_Click" Margin="8" Background="#305371" Grid.Column="1" Grid.Row="1" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
+                    <Label Foreground="White" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Test All" ></Label>
+                </Border>
+
+                <Border Cursor="Hand" Width="150" Height="64" Name="btnClear2" MouseDown="btnClear_Click" Margin="8" Background="#305371" Grid.Column="0" Grid.Row="2" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
+                    <Label Foreground="White" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Clear" ></Label>
+                </Border>
+
+                <Border Cursor="Hand" Width="150" Height="64" Name="btnClear2All" MouseDown="btnClear_Click" Margin="8" Background="#305371" Grid.Column="1" Grid.Row="2" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
+                    <Label Foreground="White" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Clear All" ></Label>
+                </Border>
+
+                <Border Visibility="Visible" Cursor="Hand" Width="150" Height="64" Name="btnLog2" MouseDown="btnLog_MouseDown"  Margin="8" Background="#305371" Grid.Column="0" Grid.Row="3" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
+                    <Label Foreground="White" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" Name="lblLog2" HorizontalAlignment="Center" Content="Start Log" ></Label>
+                </Border>
+
+                <Border MouseDown="btnStop_MouseDown" Visibility="Visible" Cursor="Hand" Width="150" Height="64" Name="btnStop" Margin="8" Background="#305371" Grid.Column="1" Grid.Row="3" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
+                    <Label Foreground="White" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" Name="lblStop" HorizontalAlignment="Center" Content="Stop" ></Label>
+                </Border>
+            </Grid>
+
+            <Grid Name="buttonbar1" Grid.Column="5" Grid.Row="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="1*"/>
+                    <RowDefinition Height="1*"/>
+                    <RowDefinition Height="1*"/>
+                    <RowDefinition Height="1*"/>
+                    <RowDefinition Height="1*"/>
+                    <RowDefinition Height="1*"/>
+                    <RowDefinition Name="LogHeight" Height="1*"/>
+                    <RowDefinition Height=".0*"/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition/>
+                </Grid.ColumnDefinitions>
+                <Border Cursor="Hand" Width="150" Height="64" Name="btnBalance1" MouseDown="btnBalance_Click" Margin="8" Background="#305371" Grid.Column="0" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
+                    <Label Foreground="White" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Balance" ></Label>
+                </Border>
+
+                <Border Cursor="Hand" Width="150" Height="64" Name="btnBalance1All" MouseDown="btnBalance_Click" Margin="8" Background="#305371" Grid.Column="0" Grid.Row="1" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
+                    <Label Foreground="White" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Balance All" ></Label>
+                </Border>
+
+                <Border Cursor="Hand" Width="150" Height="64" Name="btnTest1" MouseDown="btnTest_Click" Margin="8" Background="#305371" Grid.Column="0" Grid.Row="2" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
+                    <Label Foreground="White" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Test" ></Label>
+                </Border>
+
+                <Border Cursor="Hand" Width="150" Height="64" Name="btnTest1All" MouseDown="btnTest_Click" Margin="8" Background="#305371" Grid.Column="0" Grid.Row="3" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
+                    <Label Foreground="White" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Test All" ></Label>
+                </Border>
+
+                <Border Cursor="Hand" Width="150" Height="64" Name="btnClear1" MouseDown="btnClear_Click" Margin="8" Background="#305371" Grid.Column="0" Grid.Row="4" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
+                    <Label Foreground="White" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Clear" ></Label>
+                </Border>
+
+                <Border Cursor="Hand" Width="150" Height="64" Name="btnClear1All" MouseDown="btnClear_Click" Margin="8" Background="#305371" Grid.Column="0" Grid.Row="5" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
+                    <Label Foreground="White" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Clear All" ></Label>
+                </Border>
+
+                <Border Visibility="Visible" Cursor="Hand" Width="150" Height="64" Name="btnLog1" MouseDown="btnLog_MouseDown"  Margin="8" Background="#305371" Grid.Column="0" Grid.Row="6" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
+                    <Label Foreground="White" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" Name="lblLog1" HorizontalAlignment="Center" Content="Start Log" ></Label>
+                </Border>
+            </Grid>
+
+            <Border x:Name="br1" Margin="2,2,2,2" Grid.Row="0" Grid.Column="1" BorderThickness="2" >
+                <Canvas  x:Name="Canvas1" HorizontalAlignment="Left" Margin="0" VerticalAlignment="Top">
+                    <Rectangle Name="br1_rec1" Width="360" Fill="White"
+                        Height="360"
+                        Canvas.Left="0"
+                        Canvas.Top="0" />
+
+                    <TextBlock Name="lblFreq1" Background="LightBlue" FontWeight="Bold" FontSize="14" Panel.ZIndex="1000" >
+
+                    </TextBlock>
+
+                    <Canvas Name="br1_can1" Canvas.Left="360" HorizontalAlignment="Right" VerticalAlignment="Top">
+                        <TextBlock HorizontalAlignment="Right" Canvas.Right="1" Name="lblGraphXY1" Background="LightBlue" FontWeight="Bold" FontSize="14" Panel.ZIndex="1000" >
+                        </TextBlock>
+                    </Canvas>
+
+                    <Rectangle Name="br1_rec2" Width="360"
+                        Height=".5"
+                        Canvas.Left="0"
+                               Fill="Black"
+                        Canvas.Top="180" />
+
+                    <Rectangle Name="br1_rec3" Width=".5"
+                        Height="360"
+                        Canvas.Left="180"
+                        Fill="Black"
+                        Canvas.Top="0" />
+
+                    <Rectangle Width="20" Name="rResult1" Panel.ZIndex="1000"
+                        Height="20"
+                        Canvas.Left="335"
+                        Fill="white"
+                        Canvas.Top="335" />
+
+                    <Canvas Name="cnBr1" Canvas.Left="180" Canvas.Top="180">
+                        <Canvas Name="cn1" Canvas.Left="0" Canvas.Top="0">
+                        </Canvas>
+                        <Ellipse x:Name="el11" HorizontalAlignment="Center" Height="650"  Stroke="Black" VerticalAlignment="Center" Width="650" Canvas.Left="0" Canvas.Top="0" RenderTransformOrigin="0,0">
+                            <Ellipse.RenderTransform>
+                                <TransformGroup>
+                                    <!--<ScaleTransform/>
+                                    <SkewTransform />-->
+                                    <RotateTransform x:Name="rtAngel11" Angle="0"/>
+                                    <TranslateTransform x:Name="tt11" X="-325" Y="-325"/>
+                                </TransformGroup>
+                            </Ellipse.RenderTransform>
+                        </Ellipse>
+                    </Canvas>
+
+                    <!--<Button Content="Setting" Name="D1" Click="D_Click"  Canvas.Left="5" Canvas.Top="225" ></Button>-->
+                    <Border Cursor="Hand" Panel.ZIndex="1000" Width="42" Height="24" Name="D1" MouseDown="D_Click" Canvas.Left="5" Canvas.Top="335" Background="#305371" Grid.Column="5" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="5">
+                        <Label Foreground="White" FontSize="9" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Setting" ></Label>
+                    </Border>
+                </Canvas>
+            </Border>
+
+            <Border x:Name="br2" Margin="2,2,2,2" Grid.Row="0" Grid.Column="2" BorderThickness="2" >
+                <Canvas  x:Name="Canvas2" HorizontalAlignment="Left" Margin="0" VerticalAlignment="Top">
+
+                    <Rectangle Name="br2_rec1" Width="248" Fill="White"
+        Height="250"
+        Canvas.Left="0"
+        Canvas.Top="0" />
+                    <TextBlock Name="lblFreq2" Background="LightBlue" FontWeight="Bold" FontSize="14" Panel.ZIndex="1000" >
+
+                    </TextBlock>
+                    <Canvas Name="br2_can1" Canvas.Left="248" HorizontalAlignment="Right" VerticalAlignment="Top">
+                        <TextBlock HorizontalAlignment="Right" Canvas.Right="1" Name="lblGraphXY2" Background="LightBlue" FontWeight="Bold" FontSize="14" Panel.ZIndex="1000" >
+                        </TextBlock>
+                    </Canvas>
+
+                    <Rectangle Name="br2_rec2" Width="248"
+        Height=".5"
+        Canvas.Left="0"
+               Fill="Black"
+        Canvas.Top="125" />
+
+                    <Rectangle Name="br2_rec3" Width=".5"
+        Height="250"
+        Canvas.Left="124"
+        Fill="Black"
+        Canvas.Top="0" />
+
+                    <Rectangle Width="20" Name="rResult2" Panel.ZIndex="1000"
+        Height="20"
+        Canvas.Left="225"
+        Fill="white"
+        Canvas.Top="227" />
+
+                    <Canvas Name="cnBr2" Canvas.Left="122" Canvas.Top="123">
+                        <!--<Ellipse x:Name="el2" HorizontalAlignment="Center" Height="70"  Stroke="Black" VerticalAlignment="Center" Width="50" Canvas.Left="0" Canvas.Top="0" RenderTransformOrigin="0,0">
+                            <Ellipse.RenderTransform>
+                                <TransformGroup>
+                                    <ScaleTransform/>
+                                    <SkewTransform/>
+                                    <RotateTransform x:Name="rtAngel2" Angle="0"/>
+                                    <TranslateTransform x:Name="tt2" X="-23" Y="-33"/>
+                                </TransformGroup>
+                            </Ellipse.RenderTransform>
+                        </Ellipse>-->
+                        <Canvas Name="cn2" Canvas.Left="0" Canvas.Top="0">
+                        </Canvas>
+                    </Canvas>
+
+                    <Border Cursor="Hand" Panel.ZIndex="1000" Width="42" Height="24" Name="D2" MouseDown="D_Click" Canvas.Left="5" Canvas.Top="225" Background="#305371" Grid.Column="5" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="5">
+                        <Label Foreground="White" FontSize="9" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Setting" ></Label>
+                    </Border>
+                </Canvas>
+            </Border>
+
+            <Border x:Name="br3" Margin="2,2,2,2" Grid.Row="0" Grid.Column="3" BorderThickness="2" >
+                <Canvas  x:Name="Canvas3" HorizontalAlignment="Left" Margin="0" VerticalAlignment="Top">
+
+                    <Rectangle Name="br3_rec1" Width="248" Fill="White"
+Height="250"
+Canvas.Left="0"
+Canvas.Top="0" />
+                    <TextBlock Name="lblFreq3" Background="LightBlue" FontWeight="Bold" FontSize="14" Panel.ZIndex="1000" >
+
+                    </TextBlock>
+
+                    <Canvas Name="br3_can1" Canvas.Left="248" HorizontalAlignment="Right" VerticalAlignment="Top">
+                        <TextBlock HorizontalAlignment="Right" Canvas.Right="1" Name="lblGraphXY3" Background="LightBlue" FontWeight="Bold" FontSize="14" Panel.ZIndex="1000" >
+                        </TextBlock>
+                    </Canvas>
+
+                    <Rectangle Name="br3_rec2" Width="248"
+Height=".5"
+Canvas.Left="0"
+       Fill="Black"
+Canvas.Top="125" />
+
+                    <Rectangle Name="br3_rec3" Width=".5"
+Height="250"
+Canvas.Left="124"
+Fill="Black"
+Canvas.Top="0" />
+
+                    <Rectangle Width="20" Name="rResult3" Panel.ZIndex="1000"
+Height="20"
+Canvas.Left="225"
+Fill="white"
+Canvas.Top="227" />
+
+                    <Canvas Name="cnBr3" Canvas.Left="122" Canvas.Top="123">
+                        <!--<Ellipse x:Name="el3" HorizontalAlignment="Center" Height="70"  Stroke="Black" VerticalAlignment="Center" Width="50" Canvas.Left="0" Canvas.Top="0" RenderTransformOrigin="0,0">
+                            <Ellipse.RenderTransform>
+                                <TransformGroup>
+                                    <ScaleTransform/>
+                                    <SkewTransform/>
+                                    <RotateTransform x:Name="rtAngel3" Angle="0"/>
+                                    <TranslateTransform x:Name="tt3" X="-23" Y="-33"/>
+                                </TransformGroup>
+                            </Ellipse.RenderTransform>
+                        </Ellipse>-->
+                        <Canvas Name="cn3" Canvas.Left="0" Canvas.Top="0">
+                        </Canvas>
+                    </Canvas>
+
+                    <Border Cursor="Hand" Panel.ZIndex="1000" Width="42" Height="24" Name="D3" MouseDown="D_Click" Canvas.Left="5" Canvas.Top="225" Background="#305371" Grid.Column="5" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="5">
+                        <Label Foreground="White" FontSize="9" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Setting" ></Label>
+                    </Border>
+
+                </Canvas>
+            </Border>
+
+            <Border x:Name="br4" Margin="2,2,2,2" Grid.Row="0" Grid.Column="4" BorderThickness="2" >
+                <Canvas  x:Name="Canvas4" HorizontalAlignment="Left" Margin="0" VerticalAlignment="Top">
+
+                    <Rectangle Name="br4_rec1" Width="248" Fill="White"
+Height="250"
+Canvas.Left="0"
+Canvas.Top="0" />
+                    <TextBlock Name="lblFreq4" Background="LightBlue" FontWeight="Bold" FontSize="14" Panel.ZIndex="1000" >
+
+                    </TextBlock>
+
+                    <Canvas Name="br4_can1" Canvas.Left="248" HorizontalAlignment="Right" VerticalAlignment="Top">
+                        <TextBlock HorizontalAlignment="Right" Canvas.Right="1" Name="lblGraphXY4" Background="LightBlue" FontWeight="Bold" FontSize="14" Panel.ZIndex="1000" >
+                        </TextBlock>
+                    </Canvas>
+
+                    <Rectangle Name="br4_rec2" Width="248"
+Height=".5"
+Canvas.Left="0"
+       Fill="Black"
+Canvas.Top="125" />
+
+                    <Rectangle Name="br4_rec3" Width=".5"
+Height="250"
+Canvas.Left="124"
+Fill="Black"
+Canvas.Top="0" />
+
+                    <Rectangle Width="20" Name="rResult4" Panel.ZIndex="1000"
+Height="20"
+Canvas.Left="225"
+Fill="white"
+Canvas.Top="227" />
+
+                    <Canvas Name="cnBr4" Canvas.Left="122" Canvas.Top="123">
+                        <!--<Ellipse x:Name="el4" HorizontalAlignment="Center" Height="70"  Stroke="Black" VerticalAlignment="Center" Width="50" Canvas.Left="0" Canvas.Top="0" RenderTransformOrigin="0,0">
+                            <Ellipse.RenderTransform>
+                                <TransformGroup>
+                                    <ScaleTransform/>
+                                    <SkewTransform/>
+                                    <RotateTransform x:Name="rtAngel4" Angle="0"/>
+                                    <TranslateTransform x:Name="tt4" X="-23" Y="-33"/>
+                                </TransformGroup>
+                            </Ellipse.RenderTransform>
+                        </Ellipse>-->
+                        <Canvas Name="cn4" Canvas.Left="0" Canvas.Top="0">
+                        </Canvas>
+                    </Canvas>
+
+                    <Border Cursor="Hand" Panel.ZIndex="1000" Width="42" Height="24" Name="D4" MouseDown="D_Click" Canvas.Left="5" Canvas.Top="225" Background="#305371" Grid.Column="5" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="5">
+                        <Label Foreground="White" FontSize="9" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Setting" ></Label>
+                    </Border>
+                </Canvas>
+            </Border>
+
+            <Border x:Name="br5" Margin="2,2,2,2" Grid.Row="1" Grid.Column="1" BorderThickness="2" >
+                <Canvas  x:Name="Canvas5" HorizontalAlignment="Left" Margin="0" VerticalAlignment="Top">
+
+                    <Rectangle Name="br5_rec1" Width="360" Fill="White"
+Height="360"
+Canvas.Left="0"
+Canvas.Top="0" />
+
+                    <TextBlock Name="lblFreq5" Background="LightBlue" FontWeight="Bold" FontSize="14" Panel.ZIndex="1000" >
+
+                    </TextBlock>
+                    <Canvas Name="br5_can1" Canvas.Left="248" HorizontalAlignment="Right" VerticalAlignment="Top">
+                        <TextBlock HorizontalAlignment="Right" Canvas.Right="1" Name="lblGraphXY5" Background="LightBlue" FontWeight="Bold" FontSize="14" Panel.ZIndex="1000" >
+                        </TextBlock>
+                    </Canvas>
+
+                    <Rectangle Name="br5_rec2" Width="248"
+Height=".5"
+Canvas.Left="0"
+       Fill="Black"
+Canvas.Top="125" />
+
+                    <Rectangle Name="br5_rec3" Width=".5"
+Height="250"
+Canvas.Left="124"
+Fill="Black"
+Canvas.Top="0" />
+
+                    <Rectangle Width="20" Name="rResult5" Panel.ZIndex="1000"
+Height="20"
+Canvas.Left="225"
+Fill="white"
+Canvas.Top="227" />
+
+                    <Canvas Name="cnBr5" Canvas.Left="122" Canvas.Top="123">
+                        <!--<Ellipse x:Name="el5" HorizontalAlignment="Center" Height="70"  Stroke="Black" VerticalAlignment="Center" Width="50" Canvas.Left="0" Canvas.Top="0" RenderTransformOrigin="0,0">
+                            <Ellipse.RenderTransform>
+                                <TransformGroup>
+                                    <ScaleTransform/>
+                                    <SkewTransform/>
+                                    <RotateTransform x:Name="rtAngel5" Angle="0"/>
+                                    <TranslateTransform x:Name="tt5" X="-23" Y="-33"/>
+                                </TransformGroup>
+                            </Ellipse.RenderTransform>
+                        </Ellipse>-->
+                        <Canvas Name="cn5" Canvas.Left="0" Canvas.Top="0">
+                        </Canvas>
+                    </Canvas>
+                    <Border Cursor="Hand" Panel.ZIndex="1000" Width="42" Height="24" Name="D5" MouseDown="D_Click" Canvas.Left="5" Canvas.Top="225" Background="#305371" Grid.Column="5" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="5">
+                        <Label Foreground="White" FontSize="9" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Setting" ></Label>
+                    </Border>
+                </Canvas>
+            </Border>
+
+            <Border x:Name="br6" Margin="2,2,2,2" Grid.Row="1" Grid.Column="2" BorderThickness="2" >
+                <Canvas  x:Name="Canvas6" HorizontalAlignment="Left" Margin="0" VerticalAlignment="Top">
+
+                    <Rectangle Name="br6_rec1" Width="248" Fill="White"
+Height="250"
+Canvas.Left="0"
+Canvas.Top="0" />
+                    <TextBlock Name="lblFreq6" Background="LightBlue" FontWeight="Bold" FontSize="14" Panel.ZIndex="1000" >
+
+                    </TextBlock>
+
+                    <Canvas Name="br6_can1" Canvas.Left="248" HorizontalAlignment="Right" VerticalAlignment="Top">
+                        <TextBlock HorizontalAlignment="Right" Canvas.Right="1" Name="lblGraphXY6" Background="LightBlue" FontWeight="Bold" FontSize="14" Panel.ZIndex="1000" >
+                        </TextBlock>
+                    </Canvas>
+
+                    <Rectangle Name="br6_rec2" Width="248"
+Height=".5"
+Canvas.Left="0"
+       Fill="Black"
+Canvas.Top="125" />
+
+                    <Rectangle Name="br6_rec3" Width=".5"
+Height="250"
+Canvas.Left="124"
+Fill="Black"
+Canvas.Top="0" />
+
+                    <Rectangle Width="20" Name="rResult6" Panel.ZIndex="1000"
+Height="20"
+Canvas.Left="225"
+Fill="white"
+Canvas.Top="227" />
+
+                    <Canvas Name="cnBr6" Canvas.Left="122" Canvas.Top="123">
+                        <!--<Ellipse x:Name="el6" HorizontalAlignment="Center" Height="70"  Stroke="Black" VerticalAlignment="Center" Width="50" Canvas.Left="0" Canvas.Top="0" RenderTransformOrigin="0,0">
+                            <Ellipse.RenderTransform>
+                                <TransformGroup>
+                                    <ScaleTransform/>
+                                    <SkewTransform/>
+                                    <RotateTransform x:Name="rtAngel6" Angle="0"/>
+                                    <TranslateTransform x:Name="tt6" X="-23" Y="-33"/>
+                                </TransformGroup>
+                            </Ellipse.RenderTransform>
+                        </Ellipse>-->
+                        <Canvas Name="cn6" Canvas.Left="0" Canvas.Top="0">
+                        </Canvas>
+                    </Canvas>
+                    <Border Cursor="Hand" Panel.ZIndex="1000" Width="42" Height="24" Name="D6" MouseDown="D_Click" Canvas.Left="5" Canvas.Top="225" Background="#305371" Grid.Column="5" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="5">
+                        <Label Foreground="White" FontSize="9" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Setting" ></Label>
+                    </Border>
+                </Canvas>
+            </Border>
+
+            <Border x:Name="br7" Margin="2,2,2,2" Grid.Row="1" Grid.Column="3" BorderThickness="2" >
+                <Canvas  x:Name="Canvas7" HorizontalAlignment="Left" Margin="0" VerticalAlignment="Top">
+
+                    <Rectangle Name="br7_rec1" Width="248" Fill="White"
+Height="250"
+Canvas.Left="0"
+Canvas.Top="0" />
+                    <TextBlock Name="lblFreq7" Background="LightBlue" FontWeight="Bold" FontSize="14" Panel.ZIndex="1000" >
+
+                    </TextBlock>
+
+                    <Canvas Name="br7_can1" Canvas.Left="248" HorizontalAlignment="Right" VerticalAlignment="Top">
+                        <TextBlock HorizontalAlignment="Right" Canvas.Right="1" Name="lblGraphXY7" Background="LightBlue" FontWeight="Bold" FontSize="14" Panel.ZIndex="1000" >
+                        </TextBlock>
+                    </Canvas>
+
+                    <Rectangle Name="br7_rec2" Width="248"
+Height=".5"
+Canvas.Left="0"
+       Fill="Black"
+Canvas.Top="125" />
+
+                    <Rectangle  Name="br7_rec3" Width=".5"
+Height="250"
+Canvas.Left="124"
+Fill="Black"
+Canvas.Top="0" />
+
+                    <Rectangle Width="20" Name="rResult7" Panel.ZIndex="1000"
+Height="20"
+Canvas.Left="225"
+Fill="white"
+Canvas.Top="227" />
+
+                    <Canvas Name="cnBr7" Canvas.Left="122" Canvas.Top="123">
+                        <!--<Ellipse x:Name="el7" HorizontalAlignment="Center" Height="70"  Stroke="Black" VerticalAlignment="Center" Width="50" Canvas.Left="0" Canvas.Top="0" RenderTransformOrigin="0,0">
+                            <Ellipse.RenderTransform>
+                                <TransformGroup>
+                                    <ScaleTransform/>
+                                    <SkewTransform/>
+                                    <RotateTransform x:Name="rtAngel7" Angle="0"/>
+                                    <TranslateTransform x:Name="tt7" X="-23" Y="-33"/>
+                                </TransformGroup>
+                            </Ellipse.RenderTransform>
+                        </Ellipse>-->
+                        <Canvas Name="cn7" Canvas.Left="0" Canvas.Top="0">
+                        </Canvas>
+                    </Canvas>
+                    <Border Cursor="Hand" Panel.ZIndex="1000" Width="42" Height="24" Name="D7" MouseDown="D_Click" Canvas.Left="5" Canvas.Top="225" Background="#305371" Grid.Column="5" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="5">
+                        <Label Foreground="White" FontSize="9" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Setting" ></Label>
+                    </Border>
+                </Canvas>
+            </Border>
+
+            <Border x:Name="br8" Margin="2,2,2,2" Grid.Row="1" Grid.Column="4" BorderThickness="2" >
+                <Canvas  x:Name="Canvas8" HorizontalAlignment="Left" Margin="0" VerticalAlignment="Top">
+
+                    <Rectangle Name="br8_rec1" Width="248" Fill="White"
+Height="250"
+Canvas.Left="0"
+Canvas.Top="0" />
+                    <TextBlock Name="lblFreq8" Background="LightBlue" FontWeight="Bold" FontSize="14" Panel.ZIndex="1000" >
+
+                    </TextBlock>
+
+                    <Canvas Name="br8_can1" Canvas.Left="248" HorizontalAlignment="Right" VerticalAlignment="Top">
+                        <TextBlock HorizontalAlignment="Right" Canvas.Right="1" Name="lblGraphXY8" Background="LightBlue" FontWeight="Bold" FontSize="14" Panel.ZIndex="1000" >
+                        </TextBlock>
+                    </Canvas>
+
+                    <Rectangle Name="br8_rec2" Width="248"
+Height=".5"
+Canvas.Left="0"
+       Fill="Black"
+Canvas.Top="125" />
+
+                    <Rectangle Name="br8_rec3" Width=".5"
+Height="250"
+Canvas.Left="124"
+Fill="Black"
+Canvas.Top="0" />
+
+                    <Rectangle Width="20" Name="rResult8" Panel.ZIndex="1000"
+Height="20"
+Canvas.Left="225"
+Fill="white"
+Canvas.Top="227" />
+
+                    <Canvas Name="cnBr8" Canvas.Left="122" Canvas.Top="123">
+                        <!--<Ellipse x:Name="el8" HorizontalAlignment="Center" Height="70"  Stroke="Black" VerticalAlignment="Center" Width="50" Canvas.Left="0" Canvas.Top="0" RenderTransformOrigin="0,0">
+                            <Ellipse.RenderTransform>
+                                <TransformGroup>
+                                    <ScaleTransform/>
+                                    <SkewTransform/>
+                                    <RotateTransform x:Name="rtAngel8" Angle="0"/>
+                                    <TranslateTransform x:Name="tt8" X="-23" Y="-33"/>
+                                </TransformGroup>
+                            </Ellipse.RenderTransform>
+                        </Ellipse>-->
+                        <Canvas Name="cn8" Canvas.Left="0" Canvas.Top="0">
+                        </Canvas>
+                    </Canvas>
+                    <Border Cursor="Hand" Panel.ZIndex="1000" Width="42" Height="24" Name="D8" MouseDown="D_Click" Canvas.Left="5" Canvas.Top="225" Background="#305371" Grid.Column="5" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="5">
+                        <Label Foreground="White" FontSize="9" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Setting" ></Label>
+                    </Border>
+                </Canvas>
+            </Border>
+
+            <Grid Name="counterbar1"  Grid.Column="5" Grid.Row="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height=".5*"/>
+                    <RowDefinition Height="2*"/>
+                    <RowDefinition Height="1.5*"/>
+                    <RowDefinition Height="1.5*"/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition/>
+                </Grid.ColumnDefinitions>
+
+                <Border Cursor="Hand" Width="150" Height="70" Name="btnResetCounter1" MouseDown="btnResetCounter_Click" Margin="8" Background="#305371" Grid.Column="0" Grid.Row="2" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
+                    <Label Foreground="White" FontSize="20" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Reset Count" ></Label>
+                </Border>
+
+                <StackPanel Grid.Column="0" Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <Border Cursor="Hand" HorizontalAlignment="Center" Width="150" Height="40" Margin="4" Background="Brown" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
+                        <Label Foreground="White" FontSize="16" Name="lblTCount1" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Total Count - 0" ></Label>
+                    </Border>
+                    <Border Cursor="Hand" HorizontalAlignment="Center" Width="150" Height="40" Margin="4" Background="Green" BorderBrush="Green" BorderThickness="1" CornerRadius="10">
+                        <Label Foreground="White" FontSize="16" Name="lblOkCount1" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="OK Count - 0" ></Label>
+                    </Border>
+                    <Border Cursor="Hand" HorizontalAlignment="Center" Width="150" Height="40" Margin="4" Background="Red" BorderBrush="Red" BorderThickness="1" CornerRadius="10">
+                        <Label Foreground="White" FontSize="16" Name="lblNotOkCount1" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Not Ok Count - 0" ></Label>
+                    </Border>
+                </StackPanel>
+
+                <Border Width="150" Height="85" Name="btnOverallResult1" Margin="2" Background="LightBlue" Grid.Column="0" Grid.Row="3" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
+                    <Label Foreground="White" FontSize="18" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Overall Result" ></Label>
+                </Border>
+            </Grid>
+
+            <Grid Name="counterbar2" Visibility="Hidden" Grid.Column="5" Grid.Row="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="2*"/>
+                    <RowDefinition Height="1.5*"/>
+                    <RowDefinition Height="1.5*"/>
+                    <RowDefinition Height=".1*"/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition/>
+                </Grid.ColumnDefinitions>
+
+
+                <Grid Grid.Column="0" Grid.Row="1">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="1*"/>
+                        <RowDefinition Height="1*"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition/>
+                        <ColumnDefinition/>
+                    </Grid.ColumnDefinitions>
+                    <Border Cursor="Hand" HorizontalAlignment="Center" Width="150" Height="40" Margin="4" Background="Brown" Grid.Column="0" Grid.Row="0" Grid.ColumnSpan="2" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
+                        <Label Foreground="White" FontSize="16" Name="lblTCount2" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Total Count - 0" ></Label>
+                    </Border>
+                    <Border Cursor="Hand" HorizontalAlignment="Center" Width="150" Height="40" Margin="4" Background="Green" Grid.Column="0" Grid.Row="1" BorderBrush="Green" BorderThickness="1" CornerRadius="10">
+                        <Label Foreground="White" FontSize="16" Name="lblOkCount2" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="OK Count - 0" ></Label>
+                    </Border>
+                    <Border Cursor="Hand" HorizontalAlignment="Center" Width="150" Height="40" Margin="4" Background="Red" Grid.Column="1" Grid.Row="1" BorderBrush="Red" BorderThickness="1" CornerRadius="10">
+                        <Label Foreground="White" FontSize="16" Name="lblNotOkCount2" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Not Ok Count - 0" ></Label>
+                    </Border>
+                </Grid>
+
+                <Grid Grid.Column="0" Grid.Row="2">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height=".5*"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition/>
+                        <ColumnDefinition/>
+                    </Grid.ColumnDefinitions>
+
+                    <Border Cursor="Hand" Width="150" Height="70" Name="btnResetCounter2" MouseDown="btnResetCounter_Click" Margin="8" Background="#305371" Grid.Column="0" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
+                        <Label Foreground="White" FontSize="20" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Reset Count" ></Label>
+                    </Border>
+
+                    <Border Width="150" Height="70" Name="btnOverallResult2" Margin="2" Background="LightBlue" Grid.Column="1" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
+                        <Label Foreground="White" FontSize="18" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Overall Result" ></Label>
+                    </Border>
+                </Grid>
+            </Grid>
+        </Grid>
+
+        <Grid Grid.Column="0" Grid.Row="3" x:Name="gridBottomBarLegacy">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="1*"/>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1*"/>
+                <ColumnDefinition Width="1*"/>
+                <ColumnDefinition Width="1*"/>
+                <ColumnDefinition Width="1*"/>
+                <ColumnDefinition Width="1*"/>
+                <ColumnDefinition Width="1*"/>
+                <ColumnDefinition Width="1*" Name="LogWidth"/>
+                <ColumnDefinition Width="1*"/>
+                <ColumnDefinition Width="1.2*"/>
+                <ColumnDefinition Width="1*" />
+            </Grid.ColumnDefinitions>
+
+            <Border Cursor="Hand" Height="80" Name="btnBalance" MouseDown="btnBalance_Click" Margin="8" Background="#305371" Grid.Column="0" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
+                <Label Foreground="White" FontSize="18" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Balance" ></Label>
+            </Border>
+
+            <Border Cursor="Hand" Height="80" Name="btnBalanceAll" MouseDown="btnBalance_Click" Margin="8" Background="#305371" Grid.Column="1" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
+                <Label Foreground="White" FontSize="16" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Balance&#x0a;All" ></Label>
+            </Border>
+
+            <Border Cursor="Hand" Height="80" Name="btnTest" MouseDown="btnTest_Click" Margin="8" Background="#305371" Grid.Column="2" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
+                <Label Foreground="White" FontSize="18" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Test" ></Label>
+            </Border>
+
+            <Border Cursor="Hand" Height="80" Name="btnTestAll" MouseDown="btnTest_Click" Margin="8" Background="#305371" Grid.Column="3" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
+                <Label Foreground="White" FontSize="18" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Test All" ></Label>
+            </Border>
+
+            <Border Cursor="Hand"  Height="80" Name="btnClear" MouseDown="btnClear_Click" Margin="8" Background="#305371" Grid.Column="4" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
+                <Label Foreground="White" FontSize="18" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Clear" ></Label>
+            </Border>
+
+            <Border Cursor="Hand" Height="80" Name="btnClearAll" MouseDown="btnClear_Click" Margin="8" Background="#305371" Grid.Column="5" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
+                <Label Foreground="White" FontSize="18" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Clear All" ></Label>
+            </Border>
+
+            <Border Visibility="Visible" Cursor="Hand" Height="80" Name="btnLog" MouseDown="btnLog_MouseDown"  Margin="8" Background="#305371" Grid.Column="6" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
+                <Label Foreground="White" FontSize="18" FontWeight="Bold" VerticalAlignment="Center" Name="lblLog" HorizontalAlignment="Center" Content="Start&#x0a;Log" ></Label>
+            </Border>
+
+            <Border Cursor="Hand" Height="80" Name="btnResetCounter" MouseDown="btnResetCounter_Click" Margin="8" Background="#305371" Grid.Column="7" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
+                <Label Foreground="White" FontSize="14" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Reset&#x0a;Count" ></Label>
+            </Border>
+
+            <StackPanel Grid.Column="8" Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center">
+                <Border Cursor="Hand" HorizontalAlignment="Center" Height="32" Margin="2" Background="#305371" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
+                    <Label Foreground="White" FontSize="12" Name="lblTCount" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Total Count - 0" ></Label>
+                </Border>
+                <Border Cursor="Hand" HorizontalAlignment="Center" Height="32" Margin="2" Background="Green" BorderBrush="Green" BorderThickness="1" CornerRadius="10">
+                    <Label Foreground="White" FontSize="12" Name="lblOkCount" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="OK Count - 0" ></Label>
+                </Border>
+                <Border Cursor="Hand" HorizontalAlignment="Center" Height="32" Margin="2" Background="Red" BorderBrush="Red" BorderThickness="1" CornerRadius="10">
+                    <Label Foreground="White" FontSize="12" Name="lblNotOkCount" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Not Ok Count - 0" ></Label>
+                </Border>
+            </StackPanel>
+
+            <Border  Height="105" Name="btnOverallResult" Margin="2" Background="LightBlue" Grid.Column="9   " Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
+                <Label Foreground="White" FontSize="18" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Overall&#x0a;Result" ></Label>
+            </Border>
+
+
+
+        </Grid>
+
+        <!-- DUAL CHANNEL SIDE-BY-SIDE VIEW (Channel = 2) -->
+        <Grid x:Name="gridDualChannel" Grid.Row="2" Grid.RowSpan="2" Grid.Column="0" Visibility="Collapsed">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" x:Name="colChannel1"/>
+                <ColumnDefinition Width="*" x:Name="colChannel2"/>
+            </Grid.ColumnDefinitions>
+            <views:ChannelPanel x:Name="panelChannel1" Grid.Column="0" Margin="2"/>
+            <views:ChannelPanel x:Name="panelChannel2" Grid.Column="1" Margin="2"/>
+        </Grid>
+
+    </Grid>
+</Window>

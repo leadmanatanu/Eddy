@@ -1,6 +1,9 @@
 using System;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using _8F.Models;
+using _8F.Services;
 using _8F.ViewModels;
 
 namespace _8F
@@ -30,6 +33,11 @@ namespace _8F
 
             Loaded += (s, e) =>
             {
+                var selCh = DeviceCOM.channelDatas?.FirstOrDefault(c => c.IsSeleted);
+                int chId = selCh?.Id ?? 1;
+                lblTitle.Content = $"Threshold Setting - Channel-{chId}";
+                Title = $"Threshold Setting - Channel-{chId}";
+
                 ViewModel.OwnerWindow = Owner;
                 gdFreq.ItemsSource = ViewModel.Ellipses;
             };
@@ -63,10 +71,6 @@ namespace _8F
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            if (ViewModel.IsSaved)
-            {
-                ViewModel.SaveConfigCommand.Execute(null);
-            }
         }
     }
 }

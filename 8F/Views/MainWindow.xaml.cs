@@ -446,6 +446,11 @@ namespace _8F
             {
                 var ratval = ImplementChanges(0);
             }
+
+            if (chNo == 2)
+            {
+                InitDualChannelView();
+            }
         }
 
         private bool ValidateMachine()
@@ -988,91 +993,160 @@ namespace _8F
                 brStatus.Background = new SolidColorBrush(Colors.Green);
             }
 
-            if (DeviceCOM.IsResponseRefreshRequired)
+            // Command in-flight timeout check (15 seconds)
+            if (DeviceCOM.IsCommandInFlight && DeviceCOM.CommandInFlightStamp.AddSeconds(15) < DateTime.Now)
             {
-                RefreshResponse();
+                DeviceCOM.ReleaseCommandLock();
+            }
 
-                var SChId = DeviceCOM.channelDatas.FirstOrDefault(c => c.IsSeleted)?.Id;
-
-                var cnt = DeviceCOM.counter.FirstOrDefault(c => c.Id == SChId) ?? DeviceCOM.counter.FirstOrDefault(c => c.Id == 0);
-                if (cnt != null)
+            if (chNo == 2)
+            {
+                if (DeviceCOM.IsResponseClearRequired)
                 {
-                    lblTCount.Content = "Total Count - " + cnt.ResultCount.ToString();
-                    lblOkCount.Content = "OK Count - " + cnt.ResultOkCount.ToString();
-                    lblNotOkCount.Content = "Not Ok Count - " + cnt.ResultOkNotCount.ToString();
+                    int targetChId = DeviceCOM.PendingCommandChannelId > 0
+                        ? DeviceCOM.PendingCommandChannelId
+                        : (DeviceCOM.BalancingChannelId > 0 ? DeviceCOM.BalancingChannelId : activeDualChannelId);
 
-                    lblTCount1.Content = "Total Count - " + cnt.ResultCount.ToString();
-                    lblOkCount1.Content = "OK Count - " + cnt.ResultOkCount.ToString();
-                    lblNotOkCount1.Content = "Not Ok Count - " + cnt.ResultOkNotCount.ToString();
+                    DeviceCOM.ClearResponsesForChannel(targetChId, keepBalanced: false);
 
-                    lblTCount2.Content = "Total Count - " + cnt.ResultCount.ToString();
-                    lblOkCount2.Content = "OK Count - " + cnt.ResultOkCount.ToString();
-                    lblNotOkCount2.Content = "Not Ok Count - " + cnt.ResultOkNotCount.ToString();
+                    var rData = "{\"FC\":20,\"CN\":1,\"OR\":0,\"FD\":[{\"FN\":1,\"R\":0,\"X\":0,\"Y\":0},{\"FN\":2,\"R\":0,\"X\":0,\"Y\":0},{\"FN\":3,\"R\":0,\"X\":0,\"Y\":0},{\"FN\":4,\"R\":0,\"X\":0,\"Y\":0},{\"FN\":5,\"R\":0,\"X\":0,\"Y\":0},{\"FN\":6,\"R\":0,\"X\":0,\"Y\":0},{\"FN\":7,\"R\":0,\"X\":0,\"Y\":0},{\"FN\":8,\"R\":0,\"X\":0,\"Y\":0}]}";
+                    var res = JsonConvert.DeserializeObject<Response>(rData);
+                    if (res != null)
+                    {
+                        res.CN = targetChId;
+                        res.IsBalacenced = true;
+                        lock (DeviceCOM.ResponsesLock)
+                        {
+                            DeviceCOM.responses.Add(res);
+                        }
+                    }
+
+                    DeviceCOM.BalancingChannelId = 0;
+                    DeviceCOM.ReleaseCommandLock();
+                    DeviceCOM.IsResponseClearRequired = false;
+
+                    if (targetChId == 1)
+                    {
+                        panelChannel1.ClearPlotData(false);
+                        panelChannel1.RefreshPlotData();
+                    }
+                    else if (targetChId == 2)
+                    {
+                        panelChannel2.ClearPlotData(false);
+                        panelChannel2.RefreshPlotData();
+                    }
+                }
+
+                if (DeviceCOM.IsChannelRefreshRequired(1) || DeviceCOM.IsResponseRefreshRequired)
+                {
+                    panelChannel1.UpdateCounters();
+                    if (panelChannel1.Visibility == Visibility.Visible)
+                    {
+                        panelChannel1.RefreshPlotData();
+                    }
+                    DeviceCOM.SetChannelRefreshRequired(1, false);
+                }
+
+                if (DeviceCOM.IsChannelRefreshRequired(2) || DeviceCOM.IsResponseRefreshRequired)
+                {
+                    panelChannel2.UpdateCounters();
+                    if (panelChannel2.Visibility == Visibility.Visible)
+                    {
+                        panelChannel2.RefreshPlotData();
+                    }
+                    DeviceCOM.SetChannelRefreshRequired(2, false);
                 }
 
                 DeviceCOM.IsResponseRefreshRequired = false;
 
-                lblCode.Content = "";
+                if (panelChannel1.ViewModel.IsMaximized)
+                {
+                    panelChannel2.GetStatusSummary(out string sText, out Brush sBrush);
+                    panelChannel1.SetMaximized(true, sText, sBrush);
+                }
+                else if (panelChannel2.ViewModel.IsMaximized)
+                {
+                    panelChannel1.GetStatusSummary(out string sText, out Brush sBrush);
+                    panelChannel2.SetMaximized(true, sText, sBrush);
+                }
             }
-
-            if (DeviceCOM.IsResponseClearRequired)
+            else
             {
-                //ClearGraphData();
-
-                //foreach (var ch in DeviceCOM.channelDatas)
-                //{
-                //    var rData = "{\"FC\":20,\"CN\":1,\"OR\":0,\"FD\":[{\"FN\":1,\"R\":0,\"X\":0,\"Y\":0},{\"FN\":2,\"R\":0,\"X\":0,\"Y\":0},{\"FN\":3,\"R\":0,\"X\":0,\"Y\":0},{\"FN\":4,\"R\":0,\"X\":0,\"Y\":0},{\"FN\":5,\"R\":0,\"X\":0,\"Y\":0},{\"FN\":6,\"R\":0,\"X\":0,\"Y\":0},{\"FN\":7,\"R\":0,\"X\":0,\"Y\":0},{\"FN\":8,\"R\":0,\"X\":0,\"Y\":0}]}";
-                //    var res = JsonConvert.DeserializeObject<Response>(rData);
-                //    res.CN = ch.Id;
-                //    res.IsBalacenced = true;
-                //    DeviceCOM.responses.Add(res);
-                //}
-
-                var SChId = DeviceCOM.BalancingChannelId > 0
-                    ? DeviceCOM.BalancingChannelId
-                    : (DeviceCOM.channelDatas.FirstOrDefault(c => c.IsSeleted)?.Id ?? 1);
-                int targetChId = Convert.ToInt32(SChId);
-                if (DeviceCOM.IsBalanceAll || targetChId == 0)
+                if (DeviceCOM.IsResponseRefreshRequired)
                 {
-                    ClearGraphData();
-                }
-                else
-                {
-                    ClearGraphDataByChId(targetChId);
-                }
+                    RefreshResponse();
 
-                foreach (var ch in DeviceCOM.channelDatas)
-                {
-                    if (DeviceCOM.IsBalanceAll || targetChId == 0 || ch.Id == targetChId)
+                    var SChId = DeviceCOM.channelDatas.FirstOrDefault(c => c.IsSeleted)?.Id;
+
+                    var cnt = DeviceCOM.counter.FirstOrDefault(c => c.Id == SChId) ?? DeviceCOM.counter.FirstOrDefault(c => c.Id == 0);
+                    if (cnt != null)
                     {
-                        var rData = "{\"FC\":20,\"CN\":1,\"OR\":0,\"FD\":[{\"FN\":1,\"R\":0,\"X\":0,\"Y\":0},{\"FN\":2,\"R\":0,\"X\":0,\"Y\":0},{\"FN\":3,\"R\":0,\"X\":0,\"Y\":0},{\"FN\":4,\"R\":0,\"X\":0,\"Y\":0},{\"FN\":5,\"R\":0,\"X\":0,\"Y\":0},{\"FN\":6,\"R\":0,\"X\":0,\"Y\":0},{\"FN\":7,\"R\":0,\"X\":0,\"Y\":0},{\"FN\":8,\"R\":0,\"X\":0,\"Y\":0}]}";
-                        var res = JsonConvert.DeserializeObject<Response>(rData);
-                        if (res != null)
+                        lblTCount.Content = "Total Count - " + cnt.ResultCount.ToString();
+                        lblOkCount.Content = "OK Count - " + cnt.ResultOkCount.ToString();
+                        lblNotOkCount.Content = "Not Ok Count - " + cnt.ResultOkNotCount.ToString();
+
+                        lblTCount1.Content = "Total Count - " + cnt.ResultCount.ToString();
+                        lblOkCount1.Content = "OK Count - " + cnt.ResultOkCount.ToString();
+                        lblNotOkCount1.Content = "Not Ok Count - " + cnt.ResultOkNotCount.ToString();
+
+                        lblTCount2.Content = "Total Count - " + cnt.ResultCount.ToString();
+                        lblOkCount2.Content = "OK Count - " + cnt.ResultOkCount.ToString();
+                        lblNotOkCount2.Content = "Not Ok Count - " + cnt.ResultOkNotCount.ToString();
+                    }
+
+                    DeviceCOM.IsResponseRefreshRequired = false;
+
+                    lblCode.Content = "";
+                }
+
+                if (DeviceCOM.IsResponseClearRequired)
+                {
+                    var SChId = DeviceCOM.BalancingChannelId > 0
+                        ? DeviceCOM.BalancingChannelId
+                        : (DeviceCOM.channelDatas.FirstOrDefault(c => c.IsSeleted)?.Id ?? 1);
+                    int targetChId = Convert.ToInt32(SChId);
+                    if (DeviceCOM.IsBalanceAll || targetChId == 0)
+                    {
+                        ClearGraphData();
+                    }
+                    else
+                    {
+                        ClearGraphDataByChId(targetChId);
+                    }
+
+                    foreach (var ch in DeviceCOM.channelDatas)
+                    {
+                        if (DeviceCOM.IsBalanceAll || targetChId == 0 || ch.Id == targetChId)
                         {
-                            res.CN = ch.Id;
-                            res.IsBalacenced = true;
-                            DeviceCOM.responses.Add(res);
+                            var rData = "{\"FC\":20,\"CN\":1,\"OR\":0,\"FD\":[{\"FN\":1,\"R\":0,\"X\":0,\"Y\":0},{\"FN\":2,\"R\":0,\"X\":0,\"Y\":0},{\"FN\":3,\"R\":0,\"X\":0,\"Y\":0},{\"FN\":4,\"R\":0,\"X\":0,\"Y\":0},{\"FN\":5,\"R\":0,\"X\":0,\"Y\":0},{\"FN\":6,\"R\":0,\"X\":0,\"Y\":0},{\"FN\":7,\"R\":0,\"X\":0,\"Y\":0},{\"FN\":8,\"R\":0,\"X\":0,\"Y\":0}]}";
+                            var res = JsonConvert.DeserializeObject<Response>(rData);
+                            if (res != null)
+                            {
+                                res.CN = ch.Id;
+                                res.IsBalacenced = true;
+                                lock (DeviceCOM.ResponsesLock)
+                                {
+                                    DeviceCOM.responses.Add(res);
+                                }
+                            }
                         }
                     }
+
+                    DeviceCOM.BalancingChannelId = 0;
+                    DeviceCOM.ReleaseCommandLock();
+                    DeviceCOM.IsResponseRefreshRequired = true;
+                    DeviceCOM.IsResponseClearRequired = false;
+
                 }
-
-                DeviceCOM.BalancingChannelId = 0;
-                DeviceCOM.IsResponseRefreshRequired = true;
-                DeviceCOM.IsResponseClearRequired = false;
-
             }
 
             if (DeviceCOM.ERRCode == 16)
             {
                 DeviceCOM.HandleBalanceError();
             }
-            else if (DeviceCOM.ERRCode == 17)
+            else if (DeviceCOM.ERRCode == 17 || DeviceCOM.ERRCode == 19)
             {
-                DeviceCOM.ERRCode = 0;
-                MessageBox.Show("Test failed, please reconfigure and rebalance the ECT Instrument.", "Error Information");
-            }
-            else if (DeviceCOM.ERRCode == 19)
-            {
+                DeviceCOM.ReleaseCommandLock();
                 DeviceCOM.ERRCode = 0;
                 MessageBox.Show("Test failed, please reconfigure and rebalance the ECT Instrument.", "Error Information");
             }
@@ -1781,6 +1855,11 @@ namespace _8F
                 }
             }
 
+            if (chNo == 2)
+            {
+                UpdateDualChannelThresholds();
+            }
+
             return rat;
         }
 
@@ -1951,9 +2030,212 @@ namespace _8F
             }
         }
 
+        public int activeDualChannelId = 1;
+
+        private void InitDualChannelView()
+        {
+            chennelHeight.Height = new GridLength(28, GridUnitType.Pixel);
+
+            gridPlotsLegacy.Visibility = Visibility.Collapsed;
+            gridBottomBarLegacy.Visibility = Visibility.Collapsed;
+            btnCh1.Visibility = Visibility.Collapsed;
+            btnCh2.Visibility = Visibility.Collapsed;
+            btnCh3.Visibility = Visibility.Collapsed;
+            btnCh4.Visibility = Visibility.Collapsed;
+
+            gridDualChannel.Visibility = Visibility.Visible;
+
+            panelChannel1.Initialize(1, "Channel-1", factor);
+            panelChannel2.Initialize(2, "Channel-2", factor);
+
+            panelChannel1.PanelActivated += (s, e) => SetActiveChannel(1);
+            panelChannel2.PanelActivated += (s, e) => SetActiveChannel(2);
+
+            panelChannel1.MaximizeToggled += (s, isMax) => ToggleMaximize(1, isMax);
+            panelChannel2.MaximizeToggled += (s, isMax) => ToggleMaximize(2, isMax);
+
+            panelChannel1.SettingRequested += (s, plotIndex) => OpenChannelSetting(1, plotIndex);
+            panelChannel2.SettingRequested += (s, plotIndex) => OpenChannelSetting(2, plotIndex);
+
+            panelChannel1.BalanceRequested += (s, e) => BalanceChannel(1);
+            panelChannel2.BalanceRequested += (s, e) => BalanceChannel(2);
+
+            panelChannel1.TestRequested += (s, e) => TestChannel(1);
+            panelChannel2.TestRequested += (s, e) => TestChannel(2);
+
+            panelChannel1.ClearRequested += (s, e) => ClearChannel(1);
+            panelChannel2.ClearRequested += (s, e) => ClearChannel(2);
+
+            panelChannel1.LogRequested += (s, e) => ToggleLogChannel(1);
+            panelChannel2.LogRequested += (s, e) => ToggleLogChannel(2);
+
+            panelChannel1.ResetCountRequested += (s, e) => ResetCountChannel(1);
+            panelChannel2.ResetCountRequested += (s, e) => ResetCountChannel(2);
+
+            SetActiveChannel(1);
+            UpdateDualChannelThresholds();
+        }
+
+        public void SetActiveChannel(int chId)
+        {
+            activeDualChannelId = chId;
+            if (chNo == 2)
+            {
+                panelChannel1.ViewModel.IsActive = (chId == 1);
+                panelChannel2.ViewModel.IsActive = (chId == 2);
+            }
+            if (DeviceCOM.channelDatas != null)
+            {
+                foreach (var ch in DeviceCOM.channelDatas)
+                {
+                    ch.IsSeleted = (ch.Id == chId);
+                }
+            }
+        }
+
+        public void ToggleMaximize(int chId, bool isMax)
+        {
+            if (chId == 1)
+            {
+                if (isMax)
+                {
+                    colChannel2.Width = new GridLength(0);
+                    panelChannel2.Visibility = Visibility.Collapsed;
+                    panelChannel2.GetStatusSummary(out string statusText, out Brush statusBrush);
+                    panelChannel1.SetMaximized(true, statusText, statusBrush);
+                }
+                else
+                {
+                    colChannel2.Width = new GridLength(1, GridUnitType.Star);
+                    panelChannel2.Visibility = Visibility.Visible;
+                    panelChannel1.SetMaximized(false);
+                    panelChannel2.FullRedraw();
+                }
+            }
+            else if (chId == 2)
+            {
+                if (isMax)
+                {
+                    colChannel1.Width = new GridLength(0);
+                    panelChannel1.Visibility = Visibility.Collapsed;
+                    panelChannel1.GetStatusSummary(out string statusText, out Brush statusBrush);
+                    panelChannel2.SetMaximized(true, statusText, statusBrush);
+                }
+                else
+                {
+                    colChannel1.Width = new GridLength(1, GridUnitType.Star);
+                    panelChannel1.Visibility = Visibility.Visible;
+                    panelChannel2.SetMaximized(false);
+                    panelChannel1.FullRedraw();
+                }
+            }
+        }
+
+        public void OpenChannelSetting(int chId, int plotIdx)
+        {
+            SetActiveChannel(chId);
+            ellipsesPop = new CircleSetting($"D{plotIdx}");
+            ellipsesPop.Closing += ellipsesPop_Closing;
+            ellipsesPop.portCOM = portCOM;
+            ellipsesPop.Owner = this;
+            ellipsesPop.ShowDialog();
+        }
+
+        public void BalanceChannel(int chId)
+        {
+            if (portCOM == null) return;
+            if (DeviceCOM.IsSystemBusy)
+            {
+                MessageBox.Show("System is busy, please wait...", "Information");
+                return;
+            }
+            string errorMsg;
+            bool sent = portCOM.SendBalanceCommand(chId, "UI", out errorMsg);
+            if (!sent && !string.IsNullOrEmpty(errorMsg))
+            {
+                MessageBox.Show(errorMsg, "Error Information");
+            }
+        }
+
+        public void TestChannel(int chId)
+        {
+            if (portCOM == null) return;
+            if (DeviceCOM.IsSystemBusy)
+            {
+                MessageBox.Show("System is busy, please wait...", "Information");
+                return;
+            }
+            if (DeviceCOM.GetBalanceRequired(chId))
+            {
+                MessageBox.Show($"Balance is required for Channel-{chId}!", "Information");
+                return;
+            }
+            string errorMsg;
+            bool sent = portCOM.SendTestCommand(chId, "UI", out errorMsg);
+            if (!sent && !string.IsNullOrEmpty(errorMsg))
+            {
+                MessageBox.Show(errorMsg, "Error Information");
+            }
+        }
+
+        public void ClearChannel(int chId)
+        {
+            DeviceCOM.ClearResponsesForChannel(chId, keepBalanced: true);
+            if (chId == 1)
+            {
+                panelChannel1.ClearPlotData(true);
+                panelChannel1.RefreshPlotData();
+            }
+            else if (chId == 2)
+            {
+                panelChannel2.ClearPlotData(true);
+                panelChannel2.RefreshPlotData();
+            }
+        }
+
+        public void ResetCountChannel(int chId)
+        {
+            var cnt = DeviceCOM.counter.FirstOrDefault(c => c.Id == chId);
+            if (cnt != null)
+            {
+                cnt.ResultCount = 0;
+                cnt.ResultOkCount = 0;
+                cnt.ResultOkNotCount = 0;
+            }
+            if (chId == 1) panelChannel1.UpdateCounters();
+            else if (chId == 2) panelChannel2.UpdateCounters();
+        }
+
+        public void ToggleLogChannel(int chId)
+        {
+            bool current = DeviceCOM.IsChannelLogEnabled(chId);
+            bool next = !current;
+            DeviceCOM.SetChannelLogEnabled(chId, next);
+            if (chId == 1)
+            {
+                panelChannel1.ViewModel.IsLogging = next;
+            }
+            else if (chId == 2)
+            {
+                panelChannel2.ViewModel.IsLogging = next;
+            }
+        }
+
+        public void UpdateDualChannelThresholds()
+        {
+            if (chNo == 2)
+            {
+                panelChannel1.UpdateThresholds();
+                panelChannel2.UpdateThresholds();
+            }
+        }
+
         public void SelectCh1()
         {
-
+            if (chNo == 2)
+            {
+                SetActiveChannel(1);
+            }
 
             var currentChannel = DeviceCOM.channelDatas.FirstOrDefault(c => c.IsSeleted == true);
             if (currentChannel?.Id != 1)
@@ -2613,6 +2895,44 @@ namespace _8F
         private void Window_KeyDown(object sender, KeyEventArgs e)
         {
             if (portCOM == null) return;
+
+            if (chNo == 2)
+            {
+                if (e.Key == Key.Escape)
+                {
+                    if (panelChannel1.ViewModel.IsMaximized)
+                    {
+                        ToggleMaximize(1, false);
+                        e.Handled = true;
+                        return;
+                    }
+                    if (panelChannel2.ViewModel.IsMaximized)
+                    {
+                        ToggleMaximize(2, false);
+                        e.Handled = true;
+                        return;
+                    }
+                }
+                else if (e.Key == Key.B)
+                {
+                    BalanceChannel(activeDualChannelId);
+                    e.Handled = true;
+                    return;
+                }
+                else if (e.Key == Key.Space)
+                {
+                    TestChannel(activeDualChannelId);
+                    e.Handled = true;
+                    return;
+                }
+                else if (e.Key == Key.R)
+                {
+                    ResetCountChannel(activeDualChannelId);
+                    e.Handled = true;
+                    return;
+                }
+            }
+
             if (e.Key == Key.B || e.Key == Key.Space || e.Key == Key.R)
             {
                 if (e.Key == Key.B)
@@ -2724,8 +3044,14 @@ namespace _8F
                     if (dbChannels != null && dbChannels.Count > 0)
                     {
                         DeviceCOM.channelDatas = dbChannels;
+                        DeviceCOM.InvalidateBalance(0);
                         SelectCh1();
                         ClearGraphData();
+                        if (chNo == 2)
+                        {
+                            panelChannel1.ClearPlotData(false);
+                            panelChannel2.ClearPlotData(false);
+                        }
                         var rat = ImplementChanges(0);
                         if (!rat)
                         {

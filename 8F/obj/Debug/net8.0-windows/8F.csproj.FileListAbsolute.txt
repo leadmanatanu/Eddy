@@ -280,3 +280,5 @@ D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\Views\TestWindow.baml
 d:\New folder\Eddy\8F\bin\Debug\net8.0-windows\NModbus.dll
 D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\Views\ModbusTestPanel.baml
 D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\Views\ModbusTestPanel.g.cs
+D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\Views\ChannelPanel.baml
+D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\Views\ChannelPanel.g.cs

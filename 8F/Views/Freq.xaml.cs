@@ -1,6 +1,8 @@
 using System;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using _8F.Services;
 using _8F.ViewModels;
 
 namespace _8F
@@ -30,6 +32,11 @@ namespace _8F
 
             Loaded += (s, e) =>
             {
+                var selCh = DeviceCOM.channelDatas?.FirstOrDefault(c => c.IsSeleted);
+                int chId = selCh?.Id ?? 1;
+                lblTitle.Content = $"System Configuration - Channel-{chId}";
+                Title = $"System Configuration - Channel-{chId}";
+
                 ViewModel.OwnerWindow = Owner;
                 lblTxStrength.Visibility = ViewModel.TxStrengthVisibility;
                 txtTxStrength.Visibility = ViewModel.TxStrengthVisibility;
