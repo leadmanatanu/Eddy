@@ -2,6 +2,7 @@ using NModbus;
 using NModbus.Data;
 using NModbus.Device;
 using System;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -10,6 +11,14 @@ using _8F.Services.Interfaces;
 
 namespace _8F.Services.Implementations
 {
+    /// <summary>
+    /// Modbus TCP Slave Service.
+    /// 
+    /// Holding Register Map:
+    /// - Register 0 (Address 0): Profile ID (R/W, 0 = unassigned / invalid)
+    /// - Register 1 (Address 1): Heartbeat Counter (R/W, auto-incremented every HeartbeatIntervalMs)
+    /// - Register 2 (Address 2): Profile Load Status (R, 0=Idle, 1=Loading, 2=Loaded OK, 3=Failed, 4=Rejected Busy, 5=Rejected Invalid ID)
+    /// </summary>
     public class ModbusSlaveService : IModbusSlaveService
     {
         private TcpListener? _tcpListener;
@@ -18,6 +27,7 @@ namespace _8F.Services.Implementations
         private Timer? _heartbeatTimer;
         private ushort _heartbeatValue = 0;
         private readonly object _lock = new();
+        private volatile bool _suppressNotification = false;
 
         public bool IsRunning { get; private set; }
         public int Port { get; private set; } = 502;
@@ -56,15 +66,27 @@ namespace _8F.Services.Implementations
                     _slave.DataStore.HoldingRegisters.WritePoints(address, new ushort[] { value });
                 }
             }
+        }
 
-            if (address == 0)
+        /// <summary>
+        /// Writes to a holding register without raising application events (used for write-backs and status updates).
+        /// </summary>
+        public void WriteRegisterSilent(ushort address, ushort value)
+        {
+            lock (_lock)
             {
-                RegisterValueChanged?.Invoke(this, value);
-            }
-            else if (address == 1)
-            {
-                _heartbeatValue = value;
-                HeartbeatValueChanged?.Invoke(this, value);
+                if (_slave?.DataStore?.HoldingRegisters != null)
+                {
+                    _suppressNotification = true;
+                    try
+                    {
+                        _slave.DataStore.HoldingRegisters.WritePoints(address, new ushort[] { value });
+                    }
+                    finally
+                    {
+                        _suppressNotification = false;
+                    }
+                }
             }
         }
 
@@ -83,27 +105,66 @@ namespace _8F.Services.Implementations
                 _slaveNetwork = factory.CreateSlaveNetwork(_tcpListener);
 
                 byte unitId = 1;
-                _slave = factory.CreateSlave(unitId);
+                var dataStore = new SlaveDataStore();
+                _slave = factory.CreateSlave(unitId, dataStore);
 
-                // Initialize holding registers: Address 0 = Profile ID (0), Address 1 = Heartbeat (0)
-                _slave.DataStore.HoldingRegisters.WritePoints(0, new ushort[] { 0, 0 });
+                // Initialize holding registers:
+                // Address 0 = Profile ID (0)
+                // Address 1 = Heartbeat (0)
+                // Address 2 = Profile Load Status (0 - Idle)
+                _slave.DataStore.HoldingRegisters.WritePoints(0, new ushort[] { 0, 0, 0 });
 
                 if (_slave.DataStore.HoldingRegisters is PointSource<ushort> ps)
                 {
-                    ps.AfterWrite += (s, e) =>
+                    ps.BeforeWrite += (s, e) =>
                     {
-                        if (e.StartAddress == 0)
+                        if (_suppressNotification) return;
+
+                        ushort[] written = e.Points.ToArray();
+                        ushort start = e.StartAddress;
+
+                        // Check if Address 0 (Profile ID) was in the written range
+                        if (start == 0 && written.Length > 0)
                         {
-                            ushort val = ReadRegister(0);
-                            RegisterValueChanged?.Invoke(this, val);
+                            ushort val = written[0];
+                            ModbusLogger.Info($"[Modbus TCP Slave] Register 0 (Profile ID) write received: {val} (StartAddress={start}, Count={written.Length})");
+                            Task.Run(() =>
+                            {
+                                try
+                                {
+                                    RegisterValueChanged?.Invoke(this, val);
+                                }
+                                catch (Exception ex)
+                                {
+                                    ModbusLogger.Error("[Modbus TCP Slave] Error executing RegisterValueChanged handler", ex);
+                                }
+                            });
                         }
-                        else if (e.StartAddress == 1)
+
+                        // Check if Address 1 (Heartbeat) was in the written range
+                        if (start <= 1 && (start + written.Length) > 1)
                         {
-                            ushort val = ReadRegister(1);
+                            ushort val = written[1 - start];
                             _heartbeatValue = val;
-                            HeartbeatValueChanged?.Invoke(this, val);
+                            Task.Run(() =>
+                            {
+                                try
+                                {
+                                    HeartbeatValueChanged?.Invoke(this, val);
+                                }
+                                catch (Exception ex)
+                                {
+                                    ModbusLogger.Error("[Modbus TCP Slave] Error executing HeartbeatValueChanged handler", ex);
+                                }
+                            });
                         }
                     };
+                }
+                else
+                {
+                    string fatalError = "FATAL: Modbus data store HoldingRegisters is not PointSource<ushort>. Event hooks cannot attach!";
+                    ModbusLogger.Error(fatalError);
+                    throw new InvalidOperationException(fatalError);
                 }
 
                 _slaveNetwork.AddSlave(_slave);
@@ -114,7 +175,10 @@ namespace _8F.Services.Implementations
                     {
                         await _slaveNetwork.ListenAsync();
                     }
-                    catch { }
+                    catch (Exception ex)
+                    {
+                        ModbusLogger.Error("[Modbus TCP Slave] Slave listener encountered an exception", ex);
+                    }
                 });
 
                 // Start heartbeat timer
@@ -122,11 +186,13 @@ namespace _8F.Services.Implementations
                 _heartbeatTimer = new Timer(OnHeartbeatTick, null, HeartbeatIntervalMs, HeartbeatIntervalMs);
 
                 IsRunning = true;
+                ModbusLogger.Info($"[Modbus TCP Slave] Started listening on TCP Port {Port}, Heartbeat interval {HeartbeatIntervalMs}ms.");
             }
             catch (Exception ex)
             {
                 IsRunning = false;
                 Stop();
+                ModbusLogger.Error($"[Modbus TCP Slave] Failed to start on port {port}: {ex.Message}", ex);
                 throw new InvalidOperationException($"Failed to start Modbus TCP Slave on port {port}: {ex.Message}", ex);
             }
         }
@@ -135,15 +201,11 @@ namespace _8F.Services.Implementations
         {
             if (!IsRunning || _slave?.DataStore?.HoldingRegisters == null) return;
 
-            ushort newVal;
             lock (_lock)
             {
                 _heartbeatValue = (ushort)((_heartbeatValue + 1) % 65536);
-                newVal = _heartbeatValue;
-                _slave.DataStore.HoldingRegisters.WritePoints(1, new ushort[] { newVal });
+                _slave.DataStore.HoldingRegisters.WritePoints(1, new ushort[] { _heartbeatValue });
             }
-
-            HeartbeatValueChanged?.Invoke(this, newVal);
         }
 
         public void Stop()
@@ -153,8 +215,12 @@ namespace _8F.Services.Implementations
                 _heartbeatTimer?.Dispose();
                 _slaveNetwork?.Dispose();
                 _tcpListener?.Stop();
+                ModbusLogger.Info("[Modbus TCP Slave] Stopped.");
             }
-            catch { }
+            catch (Exception ex)
+            {
+                ModbusLogger.Error("[Modbus TCP Slave] Error while stopping", ex);
+            }
             finally
             {
                 _heartbeatTimer = null;

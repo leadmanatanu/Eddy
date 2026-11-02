@@ -10,6 +10,7 @@ namespace _8F.Services.Interfaces
         ushort ReadRegister(ushort address = 0);
         void WriteRegister(ushort address, ushort value);
         void WriteRegister(ushort value);
+        void WriteRegisterSilent(ushort address, ushort value);
         void Start(int port = 502, int heartbeatIntervalMs = 1000);
         void Stop();
         event EventHandler<ushort>? RegisterValueChanged;

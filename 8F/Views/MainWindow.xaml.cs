@@ -1,4 +1,4 @@
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using System;
 using System.Collections.ObjectModel;
 using System.Configuration;
@@ -2766,38 +2766,253 @@ namespace _8F
             }
         }
 
-        private void OnModbusRegisterIdReceived(object? sender, ushort profileId)
-        {
-            if (profileId == 0) return;
+        private readonly object _profileQueueLock = new();
+        private bool _isLoadingProfile = false;
+        private ushort? _pendingProfileId = null;
+        private bool _pendingIsUnattended = true;
+        private ushort _loadedProfileId = 0;
 
-            Dispatcher.Invoke(async () =>
+        /// <summary>
+        /// Status codes for Holding Register 2 (Profile Load Status):
+        /// 0 = Idle / None
+        /// 1 = Loading
+        /// 2 = Loaded OK
+        /// 3 = Failed (Profile not found / Database error)
+        /// 4 = Rejected (System busy / Inspection logging active)
+        /// 5 = Rejected (Invalid Profile ID)
+        /// </summary>
+        public const ushort MODBUS_STATUS_IDLE = 0;
+        public const ushort MODBUS_STATUS_LOADING = 1;
+        public const ushort MODBUS_STATUS_LOADED_OK = 2;
+        public const ushort MODBUS_STATUS_FAILED = 3;
+        public const ushort MODBUS_STATUS_REJECTED_BUSY = 4;
+        public const ushort MODBUS_STATUS_REJECTED_INVALID = 5;
+
+        private void SetModbusStatus(ushort status)
+        {
+            try
             {
-                try
+                modbusSlaveService?.WriteRegisterSilent(2, status);
+            }
+            catch (Exception ex)
+            {
+                ModbusLogger.Error($"[Modbus Auto-Load] Failed to update Status Register 2 to {status}", ex);
+            }
+        }
+
+        private void RestoreModbusRegister0()
+        {
+            try
+            {
+                modbusSlaveService?.WriteRegisterSilent(0, _loadedProfileId);
+            }
+            catch (Exception ex)
+            {
+                ModbusLogger.Error($"[Modbus Auto-Load] Failed to restore Register 0 to {_loadedProfileId}", ex);
+            }
+        }
+
+        /// <summary>
+        /// Synchronous helper to open a configuration profile by ID (e.g. from UI buttons).
+        /// </summary>
+        public void OpenProfileById(ushort profileId)
+        {
+            _ = OpenProfileByIdAsync(profileId, isUnattended: false);
+        }
+
+        /// <summary>
+        /// Loads and applies the configuration profile corresponding to the given Profile ID.
+        /// Hardened with last-write-wins queue, timeout protection, status reporting, and write-back.
+        /// </summary>
+        public async Task<bool> OpenProfileByIdAsync(ushort profileId, bool isUnattended = true)
+        {
+            lock (_profileQueueLock)
+            {
+                if (_isLoadingProfile)
                 {
-                    IConfigProfileRepository repo = new InspectionLogRepository();
-                    var dbChannels = await repo.GetConfigProfileAsync(profileId);
-                    if (dbChannels != null && dbChannels.Count > 0)
+                    _pendingProfileId = profileId;
+                    _pendingIsUnattended = isUnattended;
+                    SetModbusStatus(MODBUS_STATUS_LOADING);
+                    ModbusLogger.Info($"[Modbus Auto-Load] Profile load in progress. Queued pending Profile ID #{profileId}.");
+                    return false;
+                }
+                _isLoadingProfile = true;
+            }
+
+            ushort currentId = profileId;
+            bool currentUnattended = isUnattended;
+            bool lastResult = false;
+
+            try
+            {
+                while (true)
+                {
+                    lastResult = await ExecuteProfileLoadAsync(currentId, currentUnattended);
+
+                    lock (_profileQueueLock)
                     {
-                        DeviceCOM.channelDatas = dbChannels;
-                        SelectCh1();
-                        ClearGraphData();
-                        var rat = ImplementChanges(0);
-                        if (!rat)
+                        if (_pendingProfileId.HasValue)
                         {
-                            System.Diagnostics.Debug.WriteLine($"Modbus Auto-Load Profile #{profileId}: Configuration loaded, but no response from ECT instrument.");
+                            currentId = _pendingProfileId.Value;
+                            currentUnattended = _pendingIsUnattended;
+                            _pendingProfileId = null;
+                            ModbusLogger.Info($"[Modbus Auto-Load] Processing queued pending Profile ID #{currentId}...");
+                            continue;
                         }
-                        lblConfigFileName.Content = $"DB: Profile #{profileId}";
-                    }
-                    else
-                    {
-                        System.Diagnostics.Debug.WriteLine($"Modbus Auto-Load Profile #{profileId}: Profile #{profileId} not found in database.");
+                        _isLoadingProfile = false;
+                        break;
                     }
                 }
-                catch (Exception ex)
+            }
+            finally
+            {
+                lock (_profileQueueLock)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Error auto-loading Modbus DB Profile #{profileId}: {ex.Message}");
+                    _isLoadingProfile = false;
                 }
+            }
+
+            return lastResult;
+        }
+
+        private async Task<bool> ExecuteProfileLoadAsync(ushort profileId, bool isUnattended)
+        {
+            ModbusLogger.Info($"[Modbus Auto-Load] Request to open Profile ID #{profileId} (Unattended={isUnattended}).");
+
+            // Guard 1: Invalid ID (e.g. 0)
+            if (profileId == 0)
+            {
+                ModbusLogger.Warn("[Modbus Auto-Load] Warning: Profile ID 0 is invalid/unassigned. Loaded profile unchanged.");
+                SetModbusStatus(MODBUS_STATUS_REJECTED_INVALID);
+                RestoreModbusRegister0();
+
+                if (!isUnattended)
+                {
+                    await Dispatcher.InvokeAsync(() =>
+                    {
+                        MessageBox.Show("Profile ID 0 is invalid. Please enter a valid profile ID greater than 0.", "Invalid Profile ID", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    });
+                }
+                return false;
+            }
+
+            // Guard 2: System busy or logging active
+            if (DeviceCOM.IsLogEnable || DeviceCOM.IsSystemBusy)
+            {
+                string busyMsg = $"Cannot load Profile ID #{profileId}: System is busy (IsSystemBusy={DeviceCOM.IsSystemBusy}) or inspection logging is active (IsLogEnable={DeviceCOM.IsLogEnable}).";
+                ModbusLogger.Warn($"[Modbus Auto-Load] Warning: {busyMsg}");
+                SetModbusStatus(MODBUS_STATUS_REJECTED_BUSY);
+                RestoreModbusRegister0();
+
+                if (!isUnattended)
+                {
+                    await Dispatcher.InvokeAsync(() =>
+                    {
+                        MessageBox.Show("Cannot change profile while system is busy or inspection logging is active. Please stop logging first.", "System Busy", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    });
+                }
+                return false;
+            }
+
+            // Signal loading status
+            SetModbusStatus(MODBUS_STATUS_LOADING);
+
+            // 1. Database fetch on background thread
+            List<ChannelData>? dbChannels = null;
+            try
+            {
+                IConfigProfileRepository repo = new InspectionLogRepository();
+                dbChannels = await Task.Run(() => repo.GetConfigProfileAsync(profileId));
+            }
+            catch (Exception ex)
+            {
+                ModbusLogger.Error($"[Modbus Auto-Load] Error fetching Profile #{profileId} from database", ex);
+                SetModbusStatus(MODBUS_STATUS_FAILED);
+                RestoreModbusRegister0();
+
+                if (!isUnattended)
+                {
+                    await Dispatcher.InvokeAsync(() =>
+                    {
+                        MessageBox.Show($"Error loading profile from database: {ex.Message}", "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    });
+                }
+                return false;
+            }
+
+            if (dbChannels == null || dbChannels.Count == 0)
+            {
+                ModbusLogger.Warn($"[Modbus Auto-Load] Warning: Profile #{profileId} not found in database. Loaded profile unchanged.");
+                SetModbusStatus(MODBUS_STATUS_FAILED);
+                RestoreModbusRegister0();
+
+                if (!isUnattended)
+                {
+                    await Dispatcher.InvokeAsync(() =>
+                    {
+                        MessageBox.Show($"Profile #{profileId} was not found in the database.", "Profile Not Found", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    });
+                }
+                return false;
+            }
+
+            // 2. Apply channel data and UI view state on UI dispatcher
+            await Dispatcher.InvokeAsync(() =>
+            {
+                DeviceCOM.channelDatas = dbChannels;
+                filename = $"DB: Profile #{profileId}";
+                SelectCh1();
+                ClearGraphData();
+                lblConfigFileName.Content = $"DB: Profile #{profileId}";
             });
+
+            // 3. ECT Hardware instrument call with 5-second timeout protection
+            bool rat = false;
+            try
+            {
+                var implementTask = Task.Run(() =>
+                {
+                    return Dispatcher.Invoke(() => ImplementChanges(0));
+                });
+
+                if (await Task.WhenAny(implementTask, Task.Delay(5000)) == implementTask)
+                {
+                    rat = await implementTask;
+                }
+                else
+                {
+                    ModbusLogger.Warn($"[Modbus Auto-Load] Timeout (5s) waiting for ECT instrument response on Profile #{profileId}. UI remaining responsive.");
+                }
+            }
+            catch (Exception ex)
+            {
+                ModbusLogger.Error($"[Modbus Auto-Load] Error applying changes to ECT instrument for Profile #{profileId}", ex);
+            }
+
+            if (!rat)
+            {
+                ModbusLogger.Warn($"[Modbus Auto-Load] Profile #{profileId}: Configuration loaded into app, but no response from ECT instrument.");
+            }
+
+            // Mark success
+            _loadedProfileId = profileId;
+            SetModbusStatus(MODBUS_STATUS_LOADED_OK);
+            ModbusLogger.Info($"[Modbus Auto-Load] Successfully loaded Profile #{profileId}. Status set to 2 (Loaded OK).");
+
+            if (!isUnattended)
+            {
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    MessageBox.Show($"Profile #{profileId} loaded successfully!", "Profile Loaded", MessageBoxButton.OK, MessageBoxImage.Information);
+                });
+            }
+
+            return true;
+        }
+
+        private async void OnModbusRegisterIdReceived(object? sender, ushort profileId)
+        {
+            await OpenProfileByIdAsync(profileId, isUnattended: true);
         }
     }
 

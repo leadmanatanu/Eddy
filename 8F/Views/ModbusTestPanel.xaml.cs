@@ -34,12 +34,12 @@ namespace _8F.Views
 
         private void ModbusService_RegisterValueChanged(object? sender, ushort e)
         {
-            Dispatcher.Invoke(RefreshRegisterDisplays);
+            Dispatcher.BeginInvoke(RefreshRegisterDisplays);
         }
 
         private void ModbusService_HeartbeatValueChanged(object? sender, ushort e)
         {
-            Dispatcher.Invoke(RefreshRegisterDisplays);
+            Dispatcher.BeginInvoke(RefreshRegisterDisplays);
         }
 
         private void UpdateServerStatus()
@@ -65,6 +65,31 @@ namespace _8F.Views
 
                 ushort val1 = _modbusService.ReadRegister(1);
                 lblHeartbeatValue.Text = val1.ToString();
+
+                ushort val2 = _modbusService.ReadRegister(2);
+                if (lblStatusRegisterValue != null)
+                {
+                    lblStatusRegisterValue.Text = val2 switch
+                    {
+                        0 => "0 - Idle",
+                        1 => "1 - Loading",
+                        2 => "2 - Loaded OK",
+                        3 => "3 - Failed",
+                        4 => "4 - Rejected (Busy)",
+                        5 => "5 - Rejected (Invalid ID)",
+                        _ => val2.ToString()
+                    };
+
+                    lblStatusRegisterValue.Foreground = val2 switch
+                    {
+                        1 => System.Windows.Media.Brushes.Orange,
+                        2 => System.Windows.Media.Brushes.Green,
+                        3 => System.Windows.Media.Brushes.Red,
+                        4 => System.Windows.Media.Brushes.DarkGoldenrod,
+                        5 => System.Windows.Media.Brushes.Crimson,
+                        _ => System.Windows.Media.Brushes.Gray
+                    };
+                }
             }
         }
 
@@ -78,7 +103,12 @@ namespace _8F.Views
             RefreshRegisterDisplays();
         }
 
-        private void btnWrite0_Click(object sender, RoutedEventArgs e)
+        private void btnRefresh2_Click(object sender, RoutedEventArgs e)
+        {
+            RefreshRegisterDisplays();
+        }
+
+        private async void btnWrite0_Click(object sender, RoutedEventArgs e)
         {
             if (_modbusService == null || !_modbusService.IsRunning)
             {
@@ -88,9 +118,18 @@ namespace _8F.Views
 
             if (ushort.TryParse(txtWriteValue0.Text.Trim(), out ushort val))
             {
-                _modbusService.WriteRegister(0, val);
+                _modbusService.WriteRegisterSilent(0, val);
                 RefreshRegisterDisplays();
-                MessageBox.Show($"Holding register 0 updated to {val}!", "Modbus Write", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                if (Owner is MainWindow mainWin)
+                {
+                    await mainWin.OpenProfileByIdAsync(val, isUnattended: false);
+                    RefreshRegisterDisplays();
+                }
+                else
+                {
+                    MessageBox.Show($"Holding register 0 updated to {val}!", "Modbus Write", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
             }
             else
             {
@@ -125,13 +164,13 @@ namespace _8F.Views
 
         protected override void OnClosed(EventArgs e)
         {
+            base.OnClosed(e);
             _timer.Stop();
             if (_modbusService != null)
             {
                 _modbusService.RegisterValueChanged -= ModbusService_RegisterValueChanged;
                 _modbusService.HeartbeatValueChanged -= ModbusService_HeartbeatValueChanged;
             }
-            base.OnClosed(e);
         }
     }
 }
