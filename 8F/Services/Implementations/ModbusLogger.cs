@@ -4,11 +4,6 @@ using System.IO;
 
 namespace _8F.Services.Implementations
 {
-    /// <summary>
-    /// Thread-safe logger for Modbus communications and profile auto-load audit trail.
-    /// Writes timestamped entries to Logs/modbus.log and forwards to System.Diagnostics.
-    /// Features automatic 5 MB roll-over check to keep disk usage bounded.
-    /// </summary>
     public static class ModbusLogger
     {
         private static readonly object _lock = new();

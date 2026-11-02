@@ -1,6 +1,8 @@
 using System;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
+using _8F.Services.Implementations;
 using _8F.Services.Interfaces;
 
 namespace _8F.Views
@@ -28,6 +30,12 @@ namespace _8F.Views
                 _modbusService.HeartbeatValueChanged += ModbusService_HeartbeatValueChanged;
             }
 
+            int chCount = _modbusService?.ChannelCount ?? 1;
+            cardChannel1.Visibility = chCount >= 1 ? Visibility.Visible : Visibility.Collapsed;
+            cardChannel2.Visibility = chCount >= 2 ? Visibility.Visible : Visibility.Collapsed;
+            cardChannel3.Visibility = chCount >= 3 ? Visibility.Visible : Visibility.Collapsed;
+            cardChannel4.Visibility = chCount >= 4 ? Visibility.Visible : Visibility.Collapsed;
+
             UpdateServerStatus();
             RefreshRegisterDisplays();
         }
@@ -46,7 +54,10 @@ namespace _8F.Views
         {
             if (_modbusService != null && _modbusService.IsRunning)
             {
-                lblStatus.Text = $"Active (Listening on TCP Port {_modbusService.Port}, Heartbeat {_modbusService.HeartbeatIntervalMs}ms)";
+                string fallbackSuffix = _modbusService.IsChannelCountFallback
+                    ? $" (Fallback: {_modbusService.ChannelCountConfigError})"
+                    : "";
+                lblStatus.Text = $"Active (Port {_modbusService.Port}, Heartbeat {_modbusService.HeartbeatIntervalMs}ms, Channels: {_modbusService.ChannelCount}{fallbackSuffix})";
                 lblStatus.Foreground = System.Windows.Media.Brushes.Green;
             }
             else
@@ -60,55 +71,74 @@ namespace _8F.Views
         {
             if (_modbusService != null)
             {
-                ushort val0 = _modbusService.ReadRegister(0);
-                lblRegister0Value.Text = val0.ToString();
-
-                ushort val1 = _modbusService.ReadRegister(1);
-                lblHeartbeatValue.Text = val1.ToString();
-
-                ushort val2 = _modbusService.ReadRegister(2);
-                if (lblStatusRegisterValue != null)
+                // Address 0: Heartbeat
+                ushort valHb = _modbusService.ReadRegister(ModbusSlaveService.HeartbeatAddress);
+                lblHeartbeatValue.Text = valHb.ToString();
+                if (!txtWriteValueHeartbeat.IsKeyboardFocused && !txtWriteValueHeartbeat.IsFocused)
                 {
-                    lblStatusRegisterValue.Text = val2 switch
-                    {
-                        0 => "0 - Idle",
-                        1 => "1 - Loading",
-                        2 => "2 - Loaded OK",
-                        3 => "3 - Failed",
-                        4 => "4 - Rejected (Busy)",
-                        5 => "5 - Rejected (Invalid ID)",
-                        _ => val2.ToString()
-                    };
+                    txtWriteValueHeartbeat.Text = valHb.ToString();
+                }
 
-                    lblStatusRegisterValue.Foreground = val2 switch
+                int chCount = _modbusService.ChannelCount;
+
+                // Address 1: Channel 1 Profile ID
+                if (chCount >= 1)
+                {
+                    ushort val1 = _modbusService.ReadRegister(ModbusSlaveService.ChannelIndexToAddress(0));
+                    lblRegister1Value.Text = val1.ToString();
+                    if (!txtWriteValue1.IsKeyboardFocused && !txtWriteValue1.IsFocused)
                     {
-                        1 => System.Windows.Media.Brushes.Orange,
-                        2 => System.Windows.Media.Brushes.Green,
-                        3 => System.Windows.Media.Brushes.Red,
-                        4 => System.Windows.Media.Brushes.DarkGoldenrod,
-                        5 => System.Windows.Media.Brushes.Crimson,
-                        _ => System.Windows.Media.Brushes.Gray
-                    };
+                        txtWriteValue1.Text = val1.ToString();
+                    }
+                }
+
+                // Address 2: Channel 2 Profile ID
+                if (chCount >= 2)
+                {
+                    ushort val2 = _modbusService.ReadRegister(ModbusSlaveService.ChannelIndexToAddress(1));
+                    lblRegister2Value.Text = val2.ToString();
+                    if (!txtWriteValue2.IsKeyboardFocused && !txtWriteValue2.IsFocused)
+                    {
+                        txtWriteValue2.Text = val2.ToString();
+                    }
+                }
+
+                // Address 3: Channel 3 Profile ID
+                if (chCount >= 3)
+                {
+                    ushort val3 = _modbusService.ReadRegister(ModbusSlaveService.ChannelIndexToAddress(2));
+                    lblRegister3Value.Text = val3.ToString();
+                    if (!txtWriteValue3.IsKeyboardFocused && !txtWriteValue3.IsFocused)
+                    {
+                        txtWriteValue3.Text = val3.ToString();
+                    }
+                }
+
+                // Address 4: Channel 4 Profile ID
+                if (chCount >= 4)
+                {
+                    ushort val4 = _modbusService.ReadRegister(ModbusSlaveService.ChannelIndexToAddress(3));
+                    lblRegister4Value.Text = val4.ToString();
+                    if (!txtWriteValue4.IsKeyboardFocused && !txtWriteValue4.IsFocused)
+                    {
+                        txtWriteValue4.Text = val4.ToString();
+                    }
                 }
             }
         }
 
-        private void btnRefresh0_Click(object sender, RoutedEventArgs e)
-        {
-            RefreshRegisterDisplays();
-        }
+        private void btnRefreshHeartbeat_Click(object sender, RoutedEventArgs e) => RefreshRegisterDisplays();
+        private void btnRefresh1_Click(object sender, RoutedEventArgs e) => RefreshRegisterDisplays();
+        private void btnRefresh2_Click(object sender, RoutedEventArgs e) => RefreshRegisterDisplays();
+        private void btnRefresh3_Click(object sender, RoutedEventArgs e) => RefreshRegisterDisplays();
+        private void btnRefresh4_Click(object sender, RoutedEventArgs e) => RefreshRegisterDisplays();
 
-        private void btnRefresh1_Click(object sender, RoutedEventArgs e)
-        {
-            RefreshRegisterDisplays();
-        }
+        private async void btnWrite1_Click(object sender, RoutedEventArgs e) => await WriteChannelRegister(0, txtWriteValue1.Text);
+        private async void btnWrite2_Click(object sender, RoutedEventArgs e) => await WriteChannelRegister(1, txtWriteValue2.Text);
+        private async void btnWrite3_Click(object sender, RoutedEventArgs e) => await WriteChannelRegister(2, txtWriteValue3.Text);
+        private async void btnWrite4_Click(object sender, RoutedEventArgs e) => await WriteChannelRegister(3, txtWriteValue4.Text);
 
-        private void btnRefresh2_Click(object sender, RoutedEventArgs e)
-        {
-            RefreshRegisterDisplays();
-        }
-
-        private async void btnWrite0_Click(object sender, RoutedEventArgs e)
+        private async Task WriteChannelRegister(int channelIndex, string input)
         {
             if (_modbusService == null || !_modbusService.IsRunning)
             {
@@ -116,19 +146,26 @@ namespace _8F.Views
                 return;
             }
 
-            if (ushort.TryParse(txtWriteValue0.Text.Trim(), out ushort val))
+            if (channelIndex >= _modbusService.ChannelCount)
             {
-                _modbusService.WriteRegisterSilent(0, val);
+                MessageBox.Show($"Channel {channelIndex + 1} is not active in current configuration.", "Channel Inactive", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (ushort.TryParse(input.Trim(), out ushort val))
+            {
+                ushort address = ModbusSlaveService.ChannelIndexToAddress(channelIndex);
+                _modbusService.WriteRegister(address, val);
                 RefreshRegisterDisplays();
 
                 if (Owner is MainWindow mainWin)
                 {
-                    await mainWin.OpenProfileByIdAsync(val, isUnattended: false);
+                    await mainWin.OpenProfileForChannelAsync(channelIndex, val, isUnattended: false);
                     RefreshRegisterDisplays();
                 }
                 else
                 {
-                    MessageBox.Show($"Holding register 0 updated to {val}!", "Modbus Write", MessageBoxButton.OK, MessageBoxImage.Information);
+                    MessageBox.Show($"Holding register {address} (Channel {channelIndex + 1}) updated to {val}!", "Modbus Write", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
             }
             else
@@ -137,7 +174,7 @@ namespace _8F.Views
             }
         }
 
-        private void btnWrite1_Click(object sender, RoutedEventArgs e)
+        private void btnWriteHeartbeat_Click(object sender, RoutedEventArgs e)
         {
             if (_modbusService == null || !_modbusService.IsRunning)
             {
@@ -145,11 +182,12 @@ namespace _8F.Views
                 return;
             }
 
-            if (ushort.TryParse(txtWriteValue1.Text.Trim(), out ushort val))
+            if (ushort.TryParse(txtWriteValueHeartbeat.Text.Trim(), out ushort val))
             {
-                _modbusService.WriteRegister(1, val);
+                ushort address = ModbusSlaveService.HeartbeatAddress;
+                _modbusService.WriteRegister(address, val);
                 RefreshRegisterDisplays();
-                MessageBox.Show($"Holding register 1 (Heartbeat) manually updated to {val}!\n(Note: Will be overwritten by next automatic timer tick)", "Modbus Write", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show($"Holding register {address} (Heartbeat) manually updated to {val}!\n(Note: Will be overwritten by next automatic timer tick)", "Modbus Write", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             else
             {
@@ -164,13 +202,13 @@ namespace _8F.Views
 
         protected override void OnClosed(EventArgs e)
         {
-            base.OnClosed(e);
             _timer.Stop();
             if (_modbusService != null)
             {
                 _modbusService.RegisterValueChanged -= ModbusService_RegisterValueChanged;
                 _modbusService.HeartbeatValueChanged -= ModbusService_HeartbeatValueChanged;
             }
+            base.OnClosed(e);
         }
     }
 }
