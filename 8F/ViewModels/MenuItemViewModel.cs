@@ -645,6 +645,7 @@ namespace _8F.ViewModels
             }
 
             mainWindow.lblConfigFileName.Content = sourceName;
+            _8F.Services.Implementations.ModbusLogger.Info($"[ChannelDatas Dump] {_8F.Services.ConfigurationImporter.DumpChannelDatas(DeviceCOM.channelDatas)}");
         }
 
 

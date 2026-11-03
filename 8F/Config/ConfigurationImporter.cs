@@ -39,6 +39,8 @@ namespace _8F.Services
                         var targetChannel = resultChannels.FirstOrDefault(c => c.Id == targetId);
                         if (targetChannel != null)
                         {
+                            targetChannel.IsSeleted = srcChannel.IsSeleted;
+                            targetChannel.TxStrength = srcChannel.TxStrength;
                             CopyChannelFrequencySettings(srcChannel, targetChannel);
                         }
                     }
@@ -227,6 +229,24 @@ namespace _8F.Services
             public double Width { get; set; }
             public double Height { get; set; }
             public double RotationAngle { get; set; }
+        }
+        public static string DumpChannelDatas(List<ChannelData>? channels)
+        {
+            if (channels == null) return "null";
+            var sb = new StringBuilder();
+            foreach (var ch in channels.OrderBy(c => c.Id))
+            {
+                sb.Append($"[Ch{ch.Id}:Sel={ch.IsSeleted}:Tx={ch.TxStrength}:Graphs=(");
+                if (ch.graphDatas != null)
+                {
+                    foreach (var g in ch.graphDatas.OrderBy(x => x.Id))
+                    {
+                        sb.Append($"D{g.Id}:F={g.freq}:G={g.gain}:P={g.phase}:En={g.isEnable};");
+                    }
+                }
+                sb.Append(")] ");
+            }
+            return sb.ToString().Trim();
         }
     }
 }

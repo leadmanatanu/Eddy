@@ -1,4 +1,4 @@
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using System;
 using System.Collections.ObjectModel;
 using System.Configuration;
@@ -268,13 +268,18 @@ namespace _8F
             {
                 try
                 {
-                    modbusSlaveService.RegisterValueChanged += OnModbusRegisterIdReceived;
+                    modbusSlaveService.ChannelProfilesReceivedAsync += OnModbusChannelProfilesBatchReceivedAsync;
                     modbusSlaveService.Start(modbusServerPort, modbusHeartbeatIntervalMs);
                 }
                 catch (Exception ex)
                 {
                     System.Diagnostics.Debug.WriteLine($"Modbus TCP Slave start notice: {ex.Message}");
+                    ModbusLogger.Error($"Modbus TCP Slave start failure: {ex.Message}", ex);
                 }
+            }
+            else
+            {
+                ModbusLogger.Info("[Modbus TCP Slave] Server is NOT started: 'IsModbusServerEnable' is set to false in App.config.");
             }
 
             factor = Convert.ToDouble(System.Configuration.ConfigurationManager.AppSettings["Factor"]);
@@ -309,7 +314,8 @@ namespace _8F
             {
                 DeviceCOM.counter.Add(new Counter { Id = i });
             }
-            chNo = Convert.ToInt16(System.Configuration.ConfigurationManager.AppSettings["Channel"]);
+            var (validatedCh, chErr) = Services.Implementations.ModbusSlaveService.ResolveChannelCount();
+            chNo = validatedCh;
             DeviceCOM.ChannelNo = chNo;
             if (chNo == 1)
             {
@@ -1463,11 +1469,11 @@ namespace _8F
             return graphDatas;
         }
 
-        public bool ImplementChanges(int ChangeType)
+        public bool ImplementChanges(int ChangeType, int? targetChannelId = null)
         {
             if (portCOM == null) return false;
             var rat = false;
-            if (ChangeType == 0)
+            if (ChangeType == 0 && !targetChannelId.HasValue)
             {
                 FrequencyCount frequencyCount = new FrequencyCount() { FC = 1, C = FrequencyNo, NC = chNo };
                 Mode _mode = new Mode() { FC = 2, M = 0 };
@@ -1502,7 +1508,7 @@ namespace _8F
 
             foreach (var ch in DeviceCOM.channelDatas)
             {
-                if (ch.Id <= chNo)
+                if (ch.Id <= chNo && (!targetChannelId.HasValue || ch.Id == targetChannelId.Value))
                 {
                     FrequencyWrite frequencyWrite = new FrequencyWrite();
                     frequencyWrite.FC = 4;
@@ -2773,38 +2779,335 @@ namespace _8F
             }
         }
 
-        private void OnModbusRegisterIdReceived(object? sender, ushort profileId)
+        public class ChannelProfileState
         {
-            if (profileId == 0) return;
+            public ushort ProfileId { get; set; } = 0;
+            public string ProfileName { get; set; } = "-";
+        }
 
-            Dispatcher.Invoke(async () =>
+        public readonly ChannelProfileState[] _loadedChannels = new ChannelProfileState[4]
+        {
+            new() { ProfileId = 0, ProfileName = "-" },
+            new() { ProfileId = 0, ProfileName = "-" },
+            new() { ProfileId = 0, ProfileName = "-" },
+            new() { ProfileId = 0, ProfileName = "-" }
+        };
+
+        private readonly SemaphoreSlim _profileLoadSemaphore = new(1, 1);
+
+        /// <summary>
+        /// Synchronous helper to open a configuration profile by ID for Channel 1 (legacy / button helper).
+        /// </summary>
+        public void OpenProfileById(ushort profileId)
+        {
+            _ = OpenProfileForChannelAsync(0, profileId, isUnattended: false);
+        }
+
+        /// <summary>
+        /// Loads and applies the configuration profile for Channel 1 (legacy helper).
+        /// </summary>
+        public Task<bool> OpenProfileByIdAsync(ushort profileId, bool isUnattended = true)
+        {
+            return OpenProfileForChannelAsync(0, profileId, isUnattended);
+        }
+
+        /// <summary>
+        /// Single-channel helper that delegates to OpenProfilesBatchAsync.
+        /// </summary>
+        public async Task<bool> OpenProfileForChannelAsync(int channelIndex, ushort profileId, bool isUnattended = true)
+        {
+            var batch = new Dictionary<int, ushort> { { channelIndex, profileId } };
+            return await OpenProfilesBatchAsync(batch, isUnattended);
+        }
+
+        /// <summary>
+        /// Batched channel profile loader.
+        /// Extracts and applies channel settings using ConfigurationImporter.ApplyRemapping,
+        /// updates _loadedChannels tracking on success, and executes ECT instrument ImplementChanges ONCE per batch.
+        /// </summary>
+        public async Task<bool> OpenProfilesBatchAsync(IReadOnlyDictionary<int, ushort> channelWrites, bool isUnattended = true)
+        {
+            if (channelWrites == null || channelWrites.Count == 0) return false;
+
+            // Guard: System busy or inspection logging active
+            if (DeviceCOM.IsLogEnable || DeviceCOM.IsSystemBusy)
             {
+                string busyMsg = $"Cannot load profile(s): System is busy (IsSystemBusy={DeviceCOM.IsSystemBusy}) or inspection logging is active (IsLogEnable={DeviceCOM.IsLogEnable}).";
+                ModbusLogger.Warn($"[Modbus Auto-Load] Warning: {busyMsg}");
+                if (!isUnattended)
+                {
+                    await Dispatcher.InvokeAsync(() =>
+                    {
+                        MessageBox.Show("Cannot change profile while system is busy or inspection logging is active. Please stop logging first.", "System Busy", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    });
+                }
+                return false;
+            }
+
+            await _profileLoadSemaphore.WaitAsync();
+            try
+            {
+                IConfigProfileRepository repo = new InspectionLogRepository();
+
+                // 1. Fetch DB profiles for all distinct valid Profile IDs in the batch
+                var distinctIds = channelWrites.Values.Where(id => id > 0).Distinct().ToList();
+                var profileMap = new Dictionary<ushort, List<ChannelData>>();
+                var nameMap = new Dictionary<ushort, string>();
+
+                foreach (var pid in distinctIds)
+                {
+                    try
+                    {
+                        var channels = await Task.Run(() => repo.GetConfigProfileAsync(pid));
+                        var name = await Task.Run(() => repo.GetProfileNameAsync(pid));
+                        if (channels != null && channels.Count > 0)
+                        {
+                            profileMap[pid] = channels;
+                            nameMap[pid] = !string.IsNullOrWhiteSpace(name) ? name : $"Profile #{pid}";
+                        }
+                        else
+                        {
+                            ModbusLogger.Warn($"[Modbus Auto-Load] Warning: Profile #{pid} not found in database.");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        ModbusLogger.Error($"[Modbus Auto-Load] Error fetching Profile #{pid} from database", ex);
+                    }
+                }
+
+                // 2. Validate each channel write in the batch
+                var validUpdates = new List<(int ChannelIndex, int ChannelNumber, ushort ProfileId, string ProfileName, ChannelData SourceChannel)>();
+
+                foreach (var (chIdx, pid) in channelWrites)
+                {
+                    if (chIdx < 0 || chIdx >= 4)
+                    {
+                        ModbusLogger.Warn($"[Modbus Auto-Load] Warning: Channel index {chIdx} is out of range (0..3).");
+                        continue;
+                    }
+
+                    int chNum = chIdx + 1;
+
+                    if (pid == 0)
+                    {
+                        ModbusLogger.Warn($"[Modbus Auto-Load] Warning: Channel {chNum} Profile ID 0 is invalid/unassigned. Channel {chNum} unchanged.");
+                        if (!isUnattended)
+                        {
+                            await Dispatcher.InvokeAsync(() =>
+                            {
+                                MessageBox.Show("Profile ID 0 is invalid. Please enter a valid profile ID greater than 0.", "Invalid Profile ID", MessageBoxButton.OK, MessageBoxImage.Warning);
+                            });
+                        }
+                        continue;
+                    }
+
+                    if (!profileMap.TryGetValue(pid, out var dbChannels) || dbChannels == null)
+                    {
+                        ModbusLogger.Warn($"[Modbus Auto-Load] Warning: Profile #{pid} not found in database. Channel {chNum} unchanged.");
+                        if (!isUnattended)
+                        {
+                            await Dispatcher.InvokeAsync(() =>
+                            {
+                                MessageBox.Show($"Profile #{pid} was not found in the database.", "Profile Not Found", MessageBoxButton.OK, MessageBoxImage.Warning);
+                            });
+                        }
+                        continue;
+                    }
+
+                    string pName = nameMap.GetValueOrDefault(pid, $"Profile #{pid}");
+
+                    // Locate channel with Id == chNum in the fetched whole-machine profile
+                    var srcChannel = dbChannels.FirstOrDefault(c => c.Id == chNum);
+                    if (srcChannel == null)
+                    {
+                        ModbusLogger.Warn($"[Modbus Auto-Load] Warning: Profile #{pid} ('{pName}') does not contain Channel {chNum}. Channel {chNum} unchanged.");
+                        if (!isUnattended)
+                        {
+                            await Dispatcher.InvokeAsync(() =>
+                            {
+                                MessageBox.Show($"Profile #{pid} ('{pName}') does not contain Channel {chNum}.", "Channel Not Found", MessageBoxButton.OK, MessageBoxImage.Warning);
+                            });
+                        }
+                        continue;
+                    }
+
+                    // Handle empty channel data
+                    if (srcChannel.graphDatas == null || srcChannel.graphDatas.Count == 0)
+                    {
+                        ModbusLogger.Warn($"[Modbus Auto-Load] Warning: Profile #{pid} ('{pName}') Channel {chNum} has no frequency/graph data. Channel {chNum} unchanged.");
+                        continue;
+                    }
+
+                    validUpdates.Add((chIdx, chNum, pid, pName, srcChannel));
+                }
+
+                if (validUpdates.Count == 0)
+                {
+                    return false;
+                }
+
+                // 3. Apply changes to DeviceCOM.channelDatas using ConfigurationImporter.ApplyRemapping on Dispatcher
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    if (DeviceCOM.channelDatas == null || DeviceCOM.channelDatas.Count < 4)
+                    {
+                        DeviceCOM.channelDatas = new List<ChannelData>
+                        {
+                            new ChannelData { Id = 1, IsSeleted = true, TxStrength = 100, graphDatas = new List<GraphData>() },
+                            new ChannelData { Id = 2, IsSeleted = true, TxStrength = 100, graphDatas = new List<GraphData>() },
+                            new ChannelData { Id = 3, IsSeleted = true, TxStrength = 100, graphDatas = new List<GraphData>() },
+                            new ChannelData { Id = 4, IsSeleted = true, TxStrength = 100, graphDatas = new List<GraphData>() }
+                        };
+                    }
+
+                    foreach (var update in validUpdates)
+                    {
+                        var mappings = new Dictionary<int, List<int>> { { update.ChannelNumber, new List<int> { update.ChannelNumber } } };
+                        ConfigurationImporter.ApplyRemapping(new List<ChannelData> { update.SourceChannel }, mappings, isImportAsIs: false);
+
+                        _loadedChannels[update.ChannelIndex].ProfileId = update.ProfileId;
+                        _loadedChannels[update.ChannelIndex].ProfileName = update.ProfileName;
+                    }
+
+                    UpdateConfigProfileDisplay();
+                    ClearGraphData();
+
+                    ModbusLogger.Info($"[ChannelDatas Dump] {ConfigurationImporter.DumpChannelDatas(DeviceCOM.channelDatas)}");
+                });
+
+                // 4. Implement changes to ECT hardware instrument with 5-second timeout protection
+                // Safe optimization: if only 1 channel was modified, transmit only that channel (~500ms);
+                // if multiple channels were modified, transmit the batch once (~2000ms instead of 4 x 2000ms = 8000ms).
+                int? targetCh = validUpdates.Count == 1 ? validUpdates[0].ChannelNumber : null;
+                bool rat = false;
                 try
                 {
-                    IConfigProfileRepository repo = new InspectionLogRepository();
-                    var dbChannels = await repo.GetConfigProfileAsync(profileId);
-                    if (dbChannels != null && dbChannels.Count > 0)
+                    var implementTask = Task.Run(() =>
                     {
-                        DeviceCOM.channelDatas = dbChannels;
-                        SelectCh1();
-                        ClearGraphData();
-                        var rat = ImplementChanges(0);
-                        if (!rat)
-                        {
-                            System.Diagnostics.Debug.WriteLine($"Modbus Auto-Load Profile #{profileId}: Configuration loaded, but no response from ECT instrument.");
-                        }
-                        lblConfigFileName.Content = $"DB: Profile #{profileId}";
+                        return Dispatcher.Invoke(() => ImplementChanges(0, targetCh));
+                    });
+
+                    if (await Task.WhenAny(implementTask, Task.Delay(5000)) == implementTask)
+                    {
+                        rat = await implementTask;
                     }
                     else
                     {
-                        System.Diagnostics.Debug.WriteLine($"Modbus Auto-Load Profile #{profileId}: Profile #{profileId} not found in database.");
+                        ModbusLogger.Warn($"[Modbus Auto-Load] Timeout (5s) waiting for ECT instrument response on batch write ({validUpdates.Count} channels). UI remaining responsive.");
                     }
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Error auto-loading Modbus DB Profile #{profileId}: {ex.Message}");
+                    ModbusLogger.Error("[Modbus Auto-Load] Error applying changes to ECT instrument for batch write", ex);
                 }
+
+                if (!rat)
+                {
+                    ModbusLogger.Warn("[Modbus Auto-Load] Configuration loaded into app, but no response from ECT instrument.");
+                }
+
+                foreach (var update in validUpdates)
+                {
+                    ModbusLogger.Info($"[Modbus Auto-Load] Successfully loaded Profile #{update.ProfileId} ('{update.ProfileName}') into Channel {update.ChannelNumber}.");
+                }
+
+                if (!isUnattended)
+                {
+                    await Dispatcher.InvokeAsync(() =>
+                    {
+                        var names = string.Join(", ", validUpdates.Select(u => $"Ch{u.ChannelNumber}: '{u.ProfileName}'"));
+                        MessageBox.Show($"Profile(s) loaded successfully!\n{names}", "Profile Loaded", MessageBoxButton.OK, MessageBoxImage.Information);
+                    });
+                }
+
+                return true;
+            }
+            finally
+            {
+                _profileLoadSemaphore.Release();
+            }
+        }
+
+        private void UpdateConfigProfileDisplay()
+        {
+            int activeChannels = modbusSlaveService?.ChannelCount ?? chNo;
+            if (activeChannels < Services.Implementations.ModbusSlaveService.MinChannelCount) activeChannels = Services.Implementations.ModbusSlaveService.MinChannelCount;
+            if (activeChannels > Services.Implementations.ModbusSlaveService.MaxChannelCount) activeChannels = Services.Implementations.ModbusSlaveService.MaxChannelCount;
+
+            string displayName;
+            if (activeChannels == 1)
+            {
+                displayName = $"DB: {_loadedChannels[0].ProfileName}";
+            }
+            else
+            {
+                bool allSame = true;
+                ushort firstId = _loadedChannels[0].ProfileId;
+                string firstName = _loadedChannels[0].ProfileName;
+
+                for (int i = 1; i < activeChannels; i++)
+                {
+                    if (_loadedChannels[i].ProfileId != firstId)
+                    {
+                        allSame = false;
+                        break;
+                    }
+                }
+
+                if (allSame && firstId > 0)
+                {
+                    displayName = $"DB: {firstName}";
+                }
+                else
+                {
+                    var parts = new List<string>();
+                    for (int i = 0; i < activeChannels; i++)
+                    {
+                        parts.Add($"Ch{i + 1} {_loadedChannels[i].ProfileName}");
+                    }
+                    displayName = $"DB: {string.Join(", ", parts)}";
+                }
+            }
+
+            filename = displayName;
+            lblConfigFileName.Content = displayName;
+        }
+
+        private async Task OnModbusChannelProfilesBatchReceivedAsync(IReadOnlyDictionary<int, ushort> batch)
+        {
+            await OpenProfilesBatchAsync(batch, isUnattended: true);
+        }
+
+        /// <summary>
+        /// Diagnostic helper to simulate manual File > Open profile loading for path equivalence testing.
+        /// </summary>
+        public async Task<bool> ManualLoadProfileForEquivalenceTestAsync(int profileId)
+        {
+            IConfigProfileRepository repo = new InspectionLogRepository();
+            var dbChannels = await repo.GetConfigProfileAsync(profileId);
+            var name = await repo.GetProfileNameAsync(profileId);
+            if (dbChannels == null || dbChannels.Count == 0) return false;
+
+            await Dispatcher.InvokeAsync(() =>
+            {
+                var mapped = ConfigurationImporter.ApplyRemapping(dbChannels, new Dictionary<int, List<int>>(), isImportAsIs: true);
+                DeviceCOM.channelDatas = mapped;
+                string resolvedName = !string.IsNullOrWhiteSpace(name) ? name : $"Profile #{profileId}";
+                int activeChannels = modbusSlaveService?.ChannelCount ?? chNo;
+                for (int i = 0; i < activeChannels; i++)
+                {
+                    _loadedChannels[i].ProfileId = (ushort)profileId;
+                    _loadedChannels[i].ProfileName = resolvedName;
+                }
+                filename = $"DB: {resolvedName}";
+                SelectCh1();
+                ClearGraphData();
+                lblConfigFileName.Content = $"DB: {resolvedName}";
+                ModbusLogger.Info($"[ChannelDatas Dump] {ConfigurationImporter.DumpChannelDatas(DeviceCOM.channelDatas)}");
             });
+
+            return true;
         }
     }
 
