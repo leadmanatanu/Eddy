@@ -113,6 +113,7 @@ namespace Eddy
         {
             try
             {
+                DeviceCOM.EnsureAbsoluteSettings();
                 if (DeviceCOM.IsTubeSatart || DeviceCOM.IsCalibarationStart)
                 {
                     lblMsg.Content = "The tube/calibration is in progress, no changes are allowed!";
@@ -167,7 +168,7 @@ namespace Eddy
                                     item.UTH = Convert.ToInt32(txtUTH2.Text);
                                     item.LTH = Convert.ToInt32(txtLTH2.Text);
                                     item.PP = Convert.ToInt32(txtPP1.Text);
-                                    item.TH = Convert.ToInt32(txtTH1.Text);
+                                    item.TH = Convert.ToInt32(txtTH2.Text);
 
                                     if (DeviceCOM.IsAttRequired)
                                     {

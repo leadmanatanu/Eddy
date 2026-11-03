@@ -186,6 +186,8 @@ namespace Eddy
                 ddlTT.SelectedIndex = tt - 1;
             }
 
+            DeviceCOM.EnsureAbsoluteSettings();
+
             
 
             var IsEddyAdvance = Convert.ToBoolean(System.Configuration.ConfigurationManager.AppSettings["IsEddyAdvance"]);
@@ -590,6 +592,7 @@ namespace Eddy
                                 DeviceCOM.part.ImagePath = ImageName;
                             }
 
+                            DeviceCOM.EnsureAbsoluteSettings();
                             string partJson = JsonConvert.SerializeObject(DeviceCOM.part);
                             string configJson = JsonConvert.SerializeObject(DeviceCOM.Configuration);
                             string graphJson = JsonConvert.SerializeObject(DeviceCOM.graphData);

@@ -299,6 +299,51 @@ namespace Eddy
                 return false;
             }
         }
+
+        public static void EnsureAbsoluteSettings(Configuration? config = null)
+        {
+            config ??= Configuration;
+            if (config == null) return;
+
+            if (config.Frequency == null)
+                config.Frequency = new Frequency();
+            if (config.Frequency.FD == null)
+                config.Frequency.FD = new List<FD>();
+
+            if (!config.Frequency.FD.Any(f => f.FN == 3))
+            {
+                config.Frequency.FD.Add(new FD
+                {
+                    FN = 3,
+                    E = 0,
+                    F = 10000,
+                    G = 30.0m,
+                    UTH = 90,
+                    LTH = 40,
+                    TH = 0,
+                    PP = 100,
+                    AT = 0
+                });
+            }
+
+            if (config.Filter == null)
+                config.Filter = new Filter();
+            if (config.Filter.FD == null)
+                config.Filter.FD = new List<FilterFD>();
+
+            if (!config.Filter.FD.Any(f => f.FN == 3))
+            {
+                config.Filter.FD.Add(new FilterFD
+                {
+                    FN = 3,
+                    H = 10,
+                    G = 30.0m,
+                    L = 100,
+                    X = 10,
+                    Y = 10
+                });
+            }
+        }
     }
 
     public class Part

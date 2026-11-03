@@ -1,4 +1,5 @@
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Npgsql;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
@@ -784,7 +785,13 @@ namespace Eddy
                                                     // FREQUENCY & FILTER
                                                     if (config?.Frequency?.FD != null && config?.Filter?.FD != null)
                                                     {
-                                                        var uniqueFD = config.Frequency.FD
+                                                        var freqEntries = config.Frequency.FD.Where(f => f.FN != 3).ToList();
+                                                        if (freqEntries.Count == 0 && config.Frequency.FD.Count > 0)
+                                                        {
+                                                            freqEntries.Add(config.Frequency.FD[0]);
+                                                        }
+
+                                                        var uniqueFD = freqEntries
                                                             .GroupBy(f => new { f.F, f.G, f.UTH, f.LTH, f.TH, f.PP })
                                                             .Select(g => g.First())
                                                             .ToList();
@@ -845,6 +852,47 @@ namespace Eddy
                                                             r.RelativeItem().Element(c => LV(c, "C Coil to C2 Distance(mm)", m.CC2.ToString()));
                                                         });
                                                     }
+
+                                                    // ABSOLUTE
+                                                    var firstRec = group.Records.FirstOrDefault();
+                                                    JObject? configJsonObj = null;
+                                                    try
+                                                    {
+                                                        if (!string.IsNullOrEmpty(firstRec.ConfigurationJson))
+                                                        {
+                                                            configJsonObj = JObject.Parse(firstRec.ConfigurationJson);
+                                                        }
+                                                    }
+                                                    catch { }
+
+                                                    var absFreqToken = configJsonObj?["Frequency"]?["FD"]?.FirstOrDefault(x => (int?)x["FN"] == 3);
+                                                    var absFilterToken = configJsonObj?["Filter"]?["FD"]?.FirstOrDefault(x => (int?)x["FN"] == 3);
+
+                                                    string absPreGain = absFreqToken?["G"] != null ? absFreqToken["G"]!.ToString() : "N/A";
+                                                    string absPostGain = absFilterToken?["G"] != null ? absFilterToken["G"]!.ToString() : "N/A";
+                                                    string absLowPass = absFilterToken?["L"] != null ? absFilterToken["L"]!.ToString() : "N/A";
+                                                    string absHighTh = absFreqToken?["UTH"] != null ? absFreqToken["UTH"]!.ToString() : "N/A";
+                                                    string absLowTh = absFreqToken?["LTH"] != null ? absFreqToken["LTH"]!.ToString() : "N/A";
+                                                    string absThirdTh = absFreqToken?["TH"] != null ? absFreqToken["TH"]!.ToString() : "N/A";
+
+                                                    record.Item().PaddingTop(5).Text("ABSOLUTE")
+                                                        .FontSize(6.5f).Bold().FontColor("#888888");
+
+                                                    record.Item().PaddingTop(2).Row(r =>
+                                                    {
+                                                        r.RelativeItem().Element(c => LV(c, "Pre Gain(dB)", absPreGain));
+                                                        r.RelativeItem().Element(c => LV(c, "Post Gain(dB)", absPostGain));
+                                                        r.RelativeItem().Element(c => LV(c, "Low Pass Filter", absLowPass));
+                                                        r.RelativeItem().Element(c => LV(c, "High Threshold", absHighTh));
+                                                    });
+
+                                                    record.Item().PaddingTop(1).Row(r =>
+                                                    {
+                                                        r.RelativeItem().Element(c => LV(c, "Low Threshold", absLowTh));
+                                                        r.RelativeItem().Element(c => LV(c, "Third Threshold", absThirdTh));
+                                                        r.RelativeItem();
+                                                        r.RelativeItem();
+                                                    });
 
                                                     // ---- Records table for this settings group ----
                                                     record.Item().PaddingTop(6).Table(table =>
@@ -985,7 +1033,13 @@ namespace Eddy
                 markerPart = $"{m.M1}|{m.M2}|{m.FmS}|{m.RmS}|{m.P1mS}|{m.C1C2}|{m.C2E}|{m.CC2}";
             }
 
-            return string.Join(";", freqParts) + "||" + markerPart;
+            var absFreq = config.Frequency.FD.FirstOrDefault(f => f.FN == 3);
+            var absFilter = config.Filter?.FD?.FirstOrDefault(f => f.FN == 3);
+            string absPart = (absFreq != null || absFilter != null)
+                ? $"{absFreq?.G}|{absFilter?.G}|{absFilter?.L}|{absFreq?.UTH}|{absFreq?.LTH}|{absFreq?.TH}"
+                : "no-absolute";
+
+            return string.Join(";", freqParts) + "||" + markerPart + "||" + absPart;
         }
 
         private void DownloadPdf_Click(object sender, RoutedEventArgs e)

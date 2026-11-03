@@ -195,6 +195,8 @@ namespace Eddy
                 ddlTT.SelectedIndex = tt - 1;
             }
 
+            DeviceCOM.EnsureAbsoluteSettings();
+
             //deviceCOM.WriteData(JsonConvert.SerializeObject(DeviceCOM.Configuration.Marker));
 
             byte[] data = new byte[23];
@@ -788,6 +790,7 @@ namespace Eddy
                                 DeviceCOM.part.ImagePath = ImageName;
                             }
 
+                            DeviceCOM.EnsureAbsoluteSettings();
                             string partJson = JsonConvert.SerializeObject(DeviceCOM.part);
                             string configJson = JsonConvert.SerializeObject(DeviceCOM.Configuration);
                             string graphJson = JsonConvert.SerializeObject(DeviceCOM.graphData);
@@ -1742,13 +1745,22 @@ namespace Eddy
             }
         }
 
+        private bool _isBalancing = false;
+
         private void btnCalibration_MouseDown(object sender, MouseButtonEventArgs e)
         {
-            if (DeviceCOM.IsTubeSatart || DeviceCOM.IsCalibarationStart)
+            if (_isBalancing) return;
+
+            if (DeviceCOM.IsCalibarationStart)
             {
-                MessageBox.Show("The tube/calibration is in progress, no calibration are allowed!", "Information");
+                resultStatus = "Auto Zero in progress";
+                lblResultStatus.Content = resultStatus;
+                return;
             }
-            else
+
+            _isBalancing = true;
+
+            try
             {
                 byte[] data = new byte[6];
                 data[0] = Convert.ToByte(2);
@@ -1758,8 +1770,18 @@ namespace Eddy
 
                 if (!deviceCOM.WriteDataInByte(data))
                 {
-                    MessageBox.Show("Tno response from the ECT Instrument, please reboot it and try again!!!", "Information");
+                    resultStatus = "Balance Failed";
+                    lblResultStatus.Content = resultStatus;
                 }
+            }
+            catch (Exception)
+            {
+                resultStatus = "Balance Failed";
+                lblResultStatus.Content = resultStatus;
+            }
+            finally
+            {
+                _isBalancing = false;
             }
         }
     }
