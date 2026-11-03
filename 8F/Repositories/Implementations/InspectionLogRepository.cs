@@ -859,6 +859,19 @@ namespace _8F.Services
         }
 
         /// <summary>
+        /// Retrieves the name of a saved configuration profile by its ID.
+        /// </summary>
+        public async Task<string?> GetProfileNameAsync(int profileId)
+        {
+            await using var conn = await GetOpenConnectionAsync();
+            const string sql = @"SELECT ""Name"" FROM public.""ConfigProfiles"" WHERE ""Id"" = @ProfileId LIMIT 1;";
+            await using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@ProfileId", profileId);
+            var result = await cmd.ExecuteScalarAsync();
+            return result != null && result != DBNull.Value ? result.ToString() : null;
+        }
+
+        /// <summary>
         /// Lists available configuration profiles for selection UI or audit.
         /// </summary>
         public async Task<List<ConfigProfileSummary>> ListConfigProfilesAsync()
