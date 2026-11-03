@@ -1,0 +1,84 @@
+<USER_REQUEST>
+# Prompt: 8F Modbus Slave Does Not Respond to a Real Machine (PLC Master) — Find the Cause and Port the Receive-Side Behaviour of the Reference Slave
+
+## Context
+
+8F (`8F.sln`, WPF / .NET 8) has a Modbus TCP slave (`ModbusSlaveService`, NModbus 3.x). Every test so far (the Python `test_modbus_master.py`, the diagnostic panel) ran against `127.0.0.1` on the same PC and passed. On a **real test with the machine**, the master does not get a response from 8F.
+
+We have a reference slave, `Mb_slave_gui.py` (a pymodbus-based simulator), which a master can talk to successfully. Do **not** copy its UI. Port only its **receive-side behaviour**, listed below, into the 8F slave.
+
+Current register map (unchanged by this task): address 0 = Heartbeat; addresses 1 to N = Channel 1 to N Profile IDs (N = `Channel` value in `App.config`); only FC 03, 06 and 16 are served; any other function code returns exception 01; addresses beyond N return exception 02.
+
+## What the reference slave does that 8F may not
+
+| Reference slave behaviour | Why it matters on a real network |
+|---|---|
+| Binds to `0.0.0.0` (all interfaces) by default and warns if bound to loopback | A listener bound to `127.0.0.1` works for every localhost test and is unreachable from the machine |
+| Answers requests for **any unit ID** ("single" mode) | NModbus only answers unit IDs that are registered on the network; a request for another unit ID (PLCs commonly use 0, 255 or their own number) is **silently ignored**, so the master sees "no response" |
+| Opens the inbound firewall port on start, or logs the exact `netsh` command if it cannot | Localhost traffic bypasses the Windows firewall, so tests passed while the real port was blocked |
+| Logs the LAN IPs a remote master should use | Confirms the app is really listening where the PLC points |
+| Turns bind errors (port in use, access denied, address not available) into readable messages | A failed start must be visible, not silent |
+| Logs every read and write it receives | When nothing responds, you need to see whether anything arrived at all |
+
+## Step 1: Find out what is actually wrong (report before changing code)
+
+Check each of these on the real setup and report the result for every item, with evidence (log lines, command output):
+
+1. **Is Modbus actually started?** Check `IsModbusServerEnable`, `ModbusServerPort` and the key/config gate that controls them in the Release build (`config.key`, `ProtectedSettings`). A missing or invalid key can leave the server disabled or on another port. Log clearly which value was used and why.
+2. **Where is the listener bound?** Find the code that creates the listener / `ModbusTcpSlaveNetwork` and show which `IPAddress` it uses. Run `netstat -ano | findstr :<port>` on the machine: the line must show `0.0.0.0:<port>` (or the LAN IP) in LISTENING state, not `127.0.0.1:<port>`.
+3. **Port.** Does the PLC use the same port as 8F (default 5020 here, the Modbus standard is 502)?
+4. **Windows firewall.** Is there an inbound rule for the port? Test from another PC with `Test-NetConnection <8F-PC-IP> -Port <port>`.
+5. **Unit ID.** Which unit ID(s) does the slave answer? Which unit ID does the PLC send? Capture with Wireshark (filter `tcp.port == <port>`) and read the unit identifier of the request. If the request arrives and no response is sent, this is the most likely cause.
+6. **Request content.** From the same capture: function code, start address and quantity. Check against what 8F serves. Common PLC mismatches: addressing base (PLC address 1 or 40001 versus protocol address 0), reading more registers than are exposed (for example 10 when only `N + 1` exist), FC 04, FC 01 or FC 23 sent as a connection check, and write FCs not in 06 / 16.
+7. **Connection behaviour.** Does the PLC keep one connection open or reconnect per request? Does 8F still respond after the PLC drops the connection abruptly or reconnects?
+8. **Anything else** the capture shows (for example no SYN-ACK = firewall or bind, SYN-ACK but no Modbus response = unit ID, request or exception handling).
+
+If you cannot reproduce with the real machine, reproduce with a second PC on the LAN (not `127.0.0.1`), with the firewall rule removed, and again with unit IDs 0, 1 and 255.
+
+## Step 2: Fix and port the behaviours
+
+Implement what Step 1 shows is needed, and in any case the following. Each new setting follows the same pattern as the existing Modbus settings (`ModbusServerPort`, `ModbusHeartbeatIntervalMs`, `IsModbusServerEnable`): read through the existing settings path, with the defaults defined as named constants (no literals in code), and mirrored in the `config.key` whitelist and `ConfigurationKeyGenerator` if the existing Modbus settings are controlled there. Say which you did.
+
+1. **Bind address.** Listen on all interfaces by default. Add a setting for the bind address (default: all interfaces). If it is set to loopback, log a WARN that only this PC can connect.
+2. **Unit ID handling.** Add a setting with two modes: `Any` (default, matches the reference slave) and `Fixed` with a configured unit ID. In `Any` mode, every unit ID from 0 to 255 gets a response. For NModbus, register the same slave data store under each unit ID (create slaves with the shared `SlaveDataStore` so the `AfterWrite` hook and the ordered pipeline stay single), or implement an equivalent that keeps one data store and one pipeline. Verify that a write sent to any unit ID reaches the same registers and the same Channel queue, and that nothing is processed twice. Include 0 (broadcast) in `Any` mode only if it responds correctly (a Modbus broadcast normally gets no response by protocol; say how you handled it).
+3. **Respond instead of staying silent.** For every request that arrives, the master must get either a normal response or a Modbus exception: function codes not in {03, 06, 16} → exception 01; address or quantity out of range → exception 02 or 03. Check that malformed frames and exceptions do **not** close the connection or kill the listener.
+4. **Request logging (receive-side).** Log every request that arrives in `modbus.log`: timestamp, client IP:port, unit ID, function code, start address, quantity (and values for writes), and the outcome (OK or exception code and reason). Include requests for unknown unit IDs and rejected function codes. Use the NModbus logger or network events if available; if the library does not expose requests that it silently drops, wrap the `TcpClient` stream or add an equivalent hook so those are still logged.
+5. **Raw frame logging.** Add a setting (default off) that logs each received and sent frame as hex, so a mismatch with the PLC can be read directly. Keep the rate limited so it cannot flood the disk, and keep the existing 5 MB rollover.
+6. **Connection events.** Log client connect and disconnect (IP:port, reason if abnormal) and keep a count of connected clients.
+7. **Startup report.** On start, log the effective settings (enabled, bind address, port, unit ID mode, channel count, register map) and the LAN IPv4 addresses a master should use, like the reference slave. If the server is **not** started (disabled by setting, invalid key, bind failure), log exactly why, at the right level.
+8. **Bind errors.** Convert the common failures into readable messages in the log and in the panel status line: port already in use, access denied (ports below 1024 need admin), address not available on this machine. The panel status must say "Stopped" or "Failed: <reason>", never "Active" when the listener is not running.
+9. **Firewall.** Detect whether an inbound rule exists for the port (Windows `netsh advfirewall firewall show rule`). If missing, log a WARN with the exact `netsh ... add rule` command. Add a setting, **default off**, that allows 8F to add the rule itself when it is running elevated. Do not add firewall rules silently on a client machine unless the setting is on.
+10. **Listener resilience.** If the accept loop or a client task faults, log it and keep (or restart) the listener. After an abrupt master disconnect (TCP reset) and after many reconnects, the slave must still answer. Enable TCP keep-alive on accepted connections so dead peers are cleaned up. Multiple masters at once must work.
+11. **Diagnostic panel.** Show the effective listening endpoint(s), unit ID mode, connected client count, time of the last request, and counters for requests, exceptions and unknown-unit-ID requests. Keep it non-blocking (no blocking `Dispatcher.Invoke`).
+
+## Do Not
+
+- Do not change the register map, the supported function codes, the `Channel`-dependent exposed addresses, the ordered `Channel<T>` pipeline, last-write-wins, or the profile-load logic.
+- Do not copy the Python tool's UI, and do not add a status register or write-back.
+- Do not hold any lock or semaphore across a dispatcher call or an `await` on the UI.
+- Do not hard-code IP addresses, ports, unit IDs or the firewall rule name; use settings and named constants.
+
+## Test Plan
+
+Run from **another PC on the LAN**, not `127.0.0.1`, using the Python `test_modbus_master.py` (add `--host` and `--unit` arguments if needed) and, if available, a standard Modbus master tool (Modbus Poll or similar).
+
+1. **Reachability:** with the default settings and the firewall rule present, FC 03 read of registers 0 to N from the other PC returns values. With the firewall rule removed, the 8F log shows the firewall WARN with the `netsh` command.
+2. **Unit IDs:** the same FC 03, FC 06 and FC 16 requests with unit IDs 0 (broadcast handling as defined), 1, 5 and 255 all behave identically in `Any` mode. In `Fixed` mode only the configured ID responds, and other IDs are logged as ignored.
+3. **Bind:** with the bind address set to loopback, the other PC cannot connect and 8F logs the warning. With the default, it can.
+4. **Exceptions:** FC 01, 02, 04, 05, 15 and 23 return exception 01; address or quantity out of range returns exception 02 or 03; the connection stays open after each exception.
+5. **Requests logged:** every request above appears in `modbus.log` with client IP, unit ID, FC, address, quantity and outcome. With raw frame logging on, the hex frames appear.
+6. **Resilience:** abrupt disconnect (kill the master process, then reconnect) several times, two simultaneous masters, a master that opens a new connection per request, 1000 requests in a loop. The slave keeps answering throughout, and the heartbeat keeps incrementing.
+7. **Start failures:** port already in use, port below 1024 without admin, invalid bind address, and Modbus disabled by setting or key: each shows a clear reason in the log and the panel status, and the app keeps running.
+8. **Regression:** the earlier suite (FC 06 and FC 16 channel loads, last-write-wins, bounds, `Channel` = 1 to 4, no freeze) still passes against the real LAN address.
+
+Also give a short checklist for the machine test: PLC IP, port, unit ID, address base (0 or 1), register count, and what the 8F log should show for a successful poll.
+
+## Deliverable
+
+1. The Step 1 findings for each of the 8 checks, with evidence, and the identified root cause(s) of the missing response.
+2. The code changes, with a short note per file and a list of the new settings with their defaults.
+3. The test results (pass or fail per test) and the machine-test checklist. State anything that could not be tested without the real machine or PLC, and what to look for in `modbus.log` when you test on it.
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-11-03T10:16:58+05:30.
+</ADDITIONAL_METADATA>

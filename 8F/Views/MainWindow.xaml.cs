@@ -267,7 +267,12 @@ namespace _8F
                 catch (Exception ex)
                 {
                     System.Diagnostics.Debug.WriteLine($"Modbus TCP Slave start notice: {ex.Message}");
+                    ModbusLogger.Error($"Modbus TCP Slave start failure: {ex.Message}", ex);
                 }
+            }
+            else
+            {
+                ModbusLogger.Info("[Modbus TCP Slave] Server is NOT started: 'IsModbusServerEnable' is set to false in App.config.");
             }
 
             factor = Convert.ToDouble(System.Configuration.ConfigurationManager.AppSettings["Factor"]);

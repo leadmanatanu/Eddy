@@ -57,12 +57,12 @@ namespace _8F.Views
                 string fallbackSuffix = _modbusService.IsChannelCountFallback
                     ? $" (Fallback: {_modbusService.ChannelCountConfigError})"
                     : "";
-                lblStatus.Text = $"Active (Port {_modbusService.Port}, Heartbeat {_modbusService.HeartbeatIntervalMs}ms, Channels: {_modbusService.ChannelCount}{fallbackSuffix})";
+                lblStatus.Text = $"Running · Port {_modbusService.Port}, Ch: {_modbusService.ChannelCount}{fallbackSuffix}";
                 lblStatus.Foreground = System.Windows.Media.Brushes.Green;
             }
             else
             {
-                lblStatus.Text = "Disabled / Stopped";
+                lblStatus.Text = _modbusService?.StatusDescription ?? "Disabled / Stopped";
                 lblStatus.Foreground = System.Windows.Media.Brushes.Red;
             }
         }
@@ -71,6 +71,15 @@ namespace _8F.Views
         {
             if (_modbusService != null)
             {
+                UpdateServerStatus();
+                lblEndpoints.Text = _modbusService.ListeningEndpointsDescription;
+                lblUnitIdMode.Text = _modbusService.UnitIdModeDescription;
+                lblClientCount.Text = _modbusService.ActiveClientCount.ToString();
+                lblLastRequestTime.Text = _modbusService.LastRequestTime.HasValue
+                    ? _modbusService.LastRequestTime.Value.ToString("HH:mm:ss.fff")
+                    : "None";
+                lblCounters.Text = $"Requests: {_modbusService.TotalRequestsCount} | Exceptions: {_modbusService.TotalExceptionsCount} | Unknown IDs: {_modbusService.UnknownUnitIdRequestsCount}";
+
                 // Address 0: Heartbeat
                 ushort valHb = _modbusService.ReadRegister(ModbusSlaveService.HeartbeatAddress);
                 lblHeartbeatValue.Text = valHb.ToString();

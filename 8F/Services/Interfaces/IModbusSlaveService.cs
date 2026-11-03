@@ -24,6 +24,16 @@ namespace _8F.Services.Interfaces
         bool IsChannelCountFallback { get; }
         string? ChannelCountConfigError { get; }
 
+        string BindAddress { get; }
+        string UnitIdModeDescription { get; }
+        int ActiveClientCount { get; }
+        DateTime? LastRequestTime { get; }
+        long TotalRequestsCount { get; }
+        long TotalExceptionsCount { get; }
+        long UnknownUnitIdRequestsCount { get; }
+        string ListeningEndpointsDescription { get; }
+        string StatusDescription { get; }
+
         ushort ReadRegister(ushort address = 0);
         void WriteRegister(ushort address, ushort value);
         void WriteRegister(ushort value);
