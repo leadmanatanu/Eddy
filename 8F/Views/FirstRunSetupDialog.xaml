@@ -1,0 +1,86 @@
+<Window x:Class="_8F.Views.FirstRunSetupDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="First-Time Setup" Height="440" Width="460"
+        WindowStartupLocation="CenterScreen" ResizeMode="NoResize"
+        WindowStyle="None" Background="Transparent" AllowsTransparency="True">
+
+    <Window.Resources>
+        <Style x:Key="MagkraftButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#305371"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="BorderBrush" Value="#FF000000"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#1E3A8A"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="MagkraftSecondaryButtonStyle" TargetType="Button" BasedOn="{StaticResource MagkraftButtonStyle}">
+            <Setter Property="Background" Value="#64748B"/>
+        </Style>
+    </Window.Resources>
+
+    <Border Margin="4" Background="#DBDBDB" BorderBrush="#B0B0B0" BorderThickness="1" CornerRadius="16" MouseDown="Window_MouseDown">
+        <Grid Margin="18">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <Label Grid.Row="0" Content="Initial Security Setup" FontSize="18" FontWeight="Bold" Foreground="#0F172A" HorizontalAlignment="Center"/>
+
+            <Separator Grid.Row="1" Margin="0,4,0,10" Background="#A0A0A0"/>
+
+            <TextBlock Grid.Row="2" Text="Please create passwords for Admin and Operator roles. Both must be at least 6 characters and cannot be identical." 
+                       Foreground="#334155" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap" Margin="4,0,4,10"/>
+
+            <!-- Form Fields -->
+            <StackPanel Grid.Row="3" Margin="4,0,4,10">
+                <!-- Admin -->
+                <TextBlock Text="New Admin Password:" FontWeight="Bold" Foreground="#0F172A" FontSize="12" Margin="0,0,0,2"/>
+                <PasswordBox Name="txtAdminPassword" Height="32" FontSize="14" VerticalContentAlignment="Center" Margin="0,0,0,6"/>
+
+                <TextBlock Text="Confirm Admin Password:" FontWeight="Bold" Foreground="#0F172A" FontSize="12" Margin="0,0,0,2"/>
+                <PasswordBox Name="txtConfirmAdminPassword" Height="32" FontSize="14" VerticalContentAlignment="Center" Margin="0,0,0,12"/>
+
+                <!-- Operator -->
+                <TextBlock Text="New Operator Password:" FontWeight="Bold" Foreground="#0F172A" FontSize="12" Margin="0,0,0,2"/>
+                <PasswordBox Name="txtOperatorPassword" Height="32" FontSize="14" VerticalContentAlignment="Center" Margin="0,0,0,6"/>
+
+                <TextBlock Text="Confirm Operator Password:" FontWeight="Bold" Foreground="#0F172A" FontSize="12" Margin="0,0,0,2"/>
+                <PasswordBox Name="txtConfirmOperatorPassword" Height="32" FontSize="14" VerticalContentAlignment="Center" Margin="0,0,0,6"/>
+            </StackPanel>
+
+            <!-- Action Buttons -->
+            <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="4,0,4,0">
+                <Button Name="btnSave" Content="Save &amp; Continue" Width="140" Height="34" Style="{StaticResource MagkraftButtonStyle}" IsDefault="True" Click="btnSave_Click" Margin="0,0,10,0"/>
+                <Button Name="btnExit" Content="Exit" Width="90" Height="34" Style="{StaticResource MagkraftSecondaryButtonStyle}" IsCancel="True" Click="btnExit_Click"/>
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>

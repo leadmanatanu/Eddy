@@ -247,7 +247,6 @@ D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\Views\OpenSourceSelectionDialog.b
 D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\Views\OperatorMaster.baml
 D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\Views\PartConfigReNew.baml
 D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\Views\PartFamilyMaster.baml
-D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\Views\PasswordDialog.baml
 D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\Views\SaveProfileDialog.baml
 D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\Views\AutoEllipse.g.cs
 D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\Views\ChannelRemappingWindow.g.cs
@@ -263,7 +262,6 @@ D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\Views\OperatorMaster.g.cs
 D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\Views\PartConfig.g.cs
 D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\Views\PartConfigReNew.g.cs
 D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\Views\PartFamilyMaster.g.cs
-D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\Views\PasswordDialog.g.cs
 D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\Views\RenewBatchWiseLog.g.cs
 D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\Views\Report.g.cs
 D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\Views\SaveProfileDialog.g.cs
@@ -280,3 +278,13 @@ D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\Views\TestWindow.baml
 d:\New folder\Eddy\8F\bin\Debug\net8.0-windows\NModbus.dll
 D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\Views\ModbusTestPanel.baml
 D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\Views\ModbusTestPanel.g.cs
+D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\Views\ChangePasswordDialog.baml
+D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\Views\FirstRunSetupDialog.baml
+D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\Views\LoginDialog.baml
+D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\Views\ChangePasswordDialog.g.cs
+D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\Views\FirstRunSetupDialog.g.cs
+D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\Views\LoginDialog.g.cs
+D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\Views\ConfigChangeDetailsDialog.baml
+D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\Views\LastChangeNoticeDialog.baml
+D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\Views\ConfigChangeDetailsDialog.g.cs
+D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\Views\LastChangeNoticeDialog.g.cs

@@ -1,3 +1,4 @@
+using _8F.Auth;
 using System;
 using System.Windows;
 using _8F.ViewModels;
@@ -26,6 +27,14 @@ namespace _8F
         public AutoEllipse()
         {
             InitializeComponent();
+            if (!AppServices.AuthService.Can(Permission.EditSettings))
+            {
+                ViewModel = null!;
+                MessageBox.Show("Admin access required to run Auto Ellipse calibration.", "Access Denied", MessageBoxButton.OK, MessageBoxImage.Warning);
+                Loaded += (s, e) => Close();
+                return;
+            }
+
             ViewModel = new AutoEllipseViewModel(dataGrid: dgTestResults);
             ViewModel.CloseAction = Close;
             DataContext = ViewModel;

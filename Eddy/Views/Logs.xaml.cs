@@ -902,7 +902,6 @@ namespace Eddy
                                                             columns.ConstantColumn(50);   // Sr No
                                                             columns.RelativeColumn(2);    // Timestamp
                                                             columns.ConstantColumn(60);   // Result
-                                                            columns.ConstantColumn(70);   // Amp %
                                                         });
 
                                                         // Header row
@@ -916,9 +915,6 @@ namespace Eddy
 
                                                             header.Cell().Background("#0D3B6E").Padding(4)
                                                                 .Text("Result").FontSize(7).Bold().FontColor("#FFFFFF");
-
-                                                            header.Cell().Background("#0D3B6E").Padding(4)
-                                                                .Text("Amp %").FontSize(7).Bold().FontColor("#FFFFFF");
                                                         });
 
                                                         // Data rows
@@ -931,39 +927,6 @@ namespace Eddy
                                                             try
                                                             {
                                                                 bool passed = localItem.Result;
-
-                                                                GraphData? graph = null;
-                                                                if (!passed && !string.IsNullOrEmpty(localItem.GraphDataJson))
-                                                                {
-                                                                    try { graph = JsonConvert.DeserializeObject<GraphData>(localItem.GraphDataJson); }
-                                                                    catch { /* ignore */ }
-                                                                }
-
-                                                                string ampText = "N/A";
-                                                                if (!passed && graph?.AmpD1 != null && config?.Frequency?.FD != null)
-                                                                {
-                                                                    const double totalValue = 32768;
-
-                                                                    foreach (var freq in config.Frequency.FD)
-                                                                    {
-                                                                        int UTH = freq.UTH;
-                                                                        int LTH = freq.LTH;
-
-                                                                        var invalidAmps = graph.AmpD1
-                                                                            .Where(a => a.Amp < LTH || a.Amp > UTH)
-                                                                            .Select(a => a.Amp)
-                                                                            .ToList();
-
-                                                                        if (invalidAmps.Any())
-                                                                        {
-                                                                            var maxAmp = invalidAmps.Max();
-                                                                            double percent = (maxAmp * 100.0) / totalValue;
-                                                                            ampText = $"{percent:F2}%";
-                                                                            break;
-                                                                        }
-                                                                    }
-                                                                }
-
                                                                 string rowBg = (localIndex % 2 == 0) ? "#FAFAFA" : "#FFFFFF";
 
                                                                 table.Cell().Background(rowBg).Padding(4)
@@ -975,9 +938,6 @@ namespace Eddy
                                                                 table.Cell().Background(passed ? "#E8F5E9" : "#FFEBEE").Padding(4)
                                                                     .Text(passed ? "PASS" : "FAIL").FontSize(7).Bold()
                                                                     .FontColor(passed ? "#2E7D32" : "#C62828");
-
-                                                                table.Cell().Background(rowBg).Padding(4)
-                                                                    .Text(ampText).FontSize(7).FontColor(passed ? "#333333" : "#C62828");
                                                             }
                                                             catch
                                                             {

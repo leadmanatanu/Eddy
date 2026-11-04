@@ -1,3 +1,4 @@
+using _8F.Auth;
 using System;
 using System.Windows;
 using System.Windows.Controls;
@@ -24,6 +25,14 @@ namespace _8F
         public CircleSetting(string selectChannel)
         {
             InitializeComponent();
+            if (!AppServices.AuthService.Can(Permission.EditSettings))
+            {
+                ViewModel = null!;
+                MessageBox.Show("Admin access required to view or edit system configuration.", "Access Denied", MessageBoxButton.OK, MessageBoxImage.Warning);
+                Loaded += (s, e) => Close();
+                return;
+            }
+
             ViewModel = new CircleSettingViewModel(selectChannel);
             ViewModel.CloseAction = Close;
             DataContext = ViewModel;
@@ -37,6 +46,12 @@ namespace _8F
 
         private void btnConfigSave_Click(object sender, RoutedEventArgs e)
         {
+            if (!AppServices.AuthService.Can(Permission.EditSettings))
+            {
+                MessageBox.Show("Admin access required to save configuration.", "Access Denied", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
             gdFreq.CommitEdit(DataGridEditingUnit.Cell, true);
             gdFreq.CommitEdit(DataGridEditingUnit.Row, true);
             ViewModel.SaveConfigCommand.Execute(null);
@@ -63,8 +78,9 @@ namespace _8F
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            if (ViewModel.IsSaved)
+            if (ViewModel != null && ViewModel.IsSaved)
             {
+                if (!AppServices.AuthService.Can(Permission.EditSettings)) return;
                 ViewModel.SaveConfigCommand.Execute(null);
             }
         }

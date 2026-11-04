@@ -1,3 +1,5 @@
+using _8F.Repositories;
+using _8F.Auth;
 using Npgsql;
 using System;
 using System.Collections.Generic;
@@ -18,6 +20,12 @@ namespace _8F
         public PartFamilyMaster()
         {
             InitializeComponent();
+            if (!AppServices.AuthService.Can(Permission.EditSettings))
+            {
+                MessageBox.Show("Admin access required for Part Master.", "Access Denied", MessageBoxButton.OK, MessageBoxImage.Warning);
+                Loaded += (s, e) => Close();
+                return;
+            }
 
             grdParts.Visibility = Visibility.Collapsed;
             txtPartsMessage.Visibility = Visibility.Visible;
@@ -30,7 +38,7 @@ namespace _8F
         {
             familyList.Clear();
 
-            using (var con = new NpgsqlConnection(ConfigurationManager.AppSettings["ConnectionString"]))
+            using (var con = new NpgsqlConnection(DbConnectionProvider.ConnectionString))
             {
                 con.Open();
 
@@ -123,7 +131,7 @@ namespace _8F
                 return;
             }
 
-            using (var con = new NpgsqlConnection(ConfigurationManager.AppSettings["ConnectionString"]))
+            using (var con = new NpgsqlConnection(DbConnectionProvider.ConnectionString))
             {
                 con.Open();
 
@@ -167,7 +175,7 @@ namespace _8F
 
         private bool FamilyExists(string name, int ignoreId = 0)
         {
-            using var con = new NpgsqlConnection(ConfigurationManager.AppSettings["ConnectionString"]);
+            using var con = new NpgsqlConnection(DbConnectionProvider.ConnectionString);
             con.Open();
 
             string sql = @"SELECT COUNT(1)
@@ -185,7 +193,7 @@ namespace _8F
 
         private bool PartExists(string partNo, int familyId, int ignoreId = 0)
         {
-            using var con = new NpgsqlConnection(ConfigurationManager.AppSettings["ConnectionString"]);
+            using var con = new NpgsqlConnection(DbConnectionProvider.ConnectionString);
             con.Open();
 
             string sql = @"SELECT COUNT(1)
@@ -264,7 +272,7 @@ namespace _8F
                 MessageBoxButton.YesNo) != MessageBoxResult.Yes)
                 return;
 
-            using var con = new NpgsqlConnection(ConfigurationManager.AppSettings["ConnectionString"]);
+            using var con = new NpgsqlConnection(DbConnectionProvider.ConnectionString);
             con.Open();
 
             string sql = @"UPDATE public.""PartFamilies""
@@ -274,6 +282,7 @@ namespace _8F
             using var cmd = new NpgsqlCommand(sql, con);
             cmd.Parameters.AddWithValue("@id", item.Id);
             cmd.ExecuteNonQuery();
+            _ = AppServices.ConfigChangeRepository.RecordChangeAsync("Part Master", null, $"Deleted part family '{item.FamilyName}'");
 
             // RESET UI
             SelectedFamilyId = 0;
@@ -309,7 +318,7 @@ namespace _8F
                 MessageBoxButton.YesNo) != MessageBoxResult.Yes)
                 return;
 
-            using var con = new NpgsqlConnection(ConfigurationManager.AppSettings["ConnectionString"]);
+            using var con = new NpgsqlConnection(DbConnectionProvider.ConnectionString);
             con.Open();
 
             string sql = @"UPDATE public.""Parts""
@@ -319,6 +328,7 @@ namespace _8F
             using var cmd = new NpgsqlCommand(sql, con);
             cmd.Parameters.AddWithValue("@id", item.Id);
             cmd.ExecuteNonQuery();
+            _ = AppServices.ConfigChangeRepository.RecordChangeAsync("Part Master", null, $"Deleted part '{item.PartNumber}'");
 
             // RESET UI
             SelectedPartId = 0;
@@ -344,7 +354,7 @@ namespace _8F
                 return;
             }
 
-            using var con = new NpgsqlConnection(ConfigurationManager.AppSettings["ConnectionString"]);
+            using var con = new NpgsqlConnection(DbConnectionProvider.ConnectionString);
             con.Open();
 
             if (SelectedFamilyId == 0)
@@ -360,6 +370,7 @@ namespace _8F
                 using var cmd = new NpgsqlCommand(sql, con);
                 cmd.Parameters.AddWithValue("@name", name);
                 cmd.ExecuteNonQuery();
+                _ = AppServices.ConfigChangeRepository.RecordChangeAsync("Part Master", null, $"Added part family '{name}'");
 
                 MessageBox.Show("Family added.");
             }
@@ -380,6 +391,7 @@ namespace _8F
                 cmd.Parameters.AddWithValue("@name", name);
                 cmd.Parameters.AddWithValue("@id", SelectedFamilyId);
                 cmd.ExecuteNonQuery();
+                _ = AppServices.ConfigChangeRepository.RecordChangeAsync("Part Master", null, $"Updated part family '{name}'");
 
                 MessageBox.Show("Family updated.");
             }
@@ -409,7 +421,7 @@ namespace _8F
                 return;
             }
 
-            using var con = new NpgsqlConnection(ConfigurationManager.AppSettings["ConnectionString"]);
+            using var con = new NpgsqlConnection(DbConnectionProvider.ConnectionString);
             con.Open();
 
             if (SelectedPartId == 0)
@@ -429,6 +441,7 @@ namespace _8F
                 cmd.Parameters.AddWithValue("@familyId", SelectedFamilyId);
                 cmd.Parameters.AddWithValue("@partNo", partNo);
                 cmd.ExecuteNonQuery();
+                _ = AppServices.ConfigChangeRepository.RecordChangeAsync("Part Master", null, $"Added part '{partNo}' to family");
 
                 MessageBox.Show("Part added.");
             }
@@ -449,6 +462,7 @@ namespace _8F
                 cmd.Parameters.AddWithValue("@partNo", partNo);
                 cmd.Parameters.AddWithValue("@id", SelectedPartId);
                 cmd.ExecuteNonQuery();
+                _ = AppServices.ConfigChangeRepository.RecordChangeAsync("Part Master", null, $"Updated part '{partNo}'");
 
                 MessageBox.Show("Part updated.");
             }

@@ -1,3 +1,4 @@
+using _8F.Auth;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -93,6 +94,12 @@ namespace _8F.ViewModels
 
         private void ExecuteSaveConfig()
         {
+            if (!AppServices.AuthService.Can(Permission.EditSettings))
+            {
+                StatusMessage = "Admin access required to save configuration.";
+                return;
+            }
+
             try
             {
                 SaveData();
@@ -245,6 +252,7 @@ namespace _8F.ViewModels
 
         private void ExecuteDeleteSelected(object? parameter)
         {
+            if (!AppServices.AuthService.Can(Permission.EditSettings)) return;
             if (parameter is EllipsDTO item)
             {
                 Ellipses.Remove(item);

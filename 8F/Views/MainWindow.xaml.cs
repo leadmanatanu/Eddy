@@ -1,4 +1,7 @@
-﻿using Newtonsoft.Json;
+using _8F.Models;
+using _8F.Services;
+using _8F.Repositories;
+using Newtonsoft.Json;
 using System;
 using System.Collections.ObjectModel;
 using System.Configuration;
@@ -28,6 +31,8 @@ using System.Windows.Media.Media3D;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using System.Windows.Threading;
+using _8F.Auth;
+using _8F.Views;
 using File = System.IO.File;
 
 namespace _8F
@@ -111,7 +116,7 @@ namespace _8F
         public int modbusHeartbeatIntervalMs = GetConfigInt("ModbusHeartbeatIntervalMs", 1000);
         public IModbusSlaveService modbusSlaveService = new ModbusSlaveService();
 
-        public bool isPasswordEnable = GetConfigBool("IsPasswordEnable", true);
+        public bool isChangePasswordEnable = GetConfigBool("IsChangePasswordEnable", true);
         bool isChangeConfigEnable = GetConfigBool("IsChangeConfigurationEnable", true);
         bool isThresholdSettingEnable = GetConfigBool("IsThresholdSettingEnable", true);
         bool isAutoEllipseEnabled = GetConfigBool("IsAutoEllipseEnable", true);
@@ -297,7 +302,7 @@ namespace _8F
             string IpAddress = System.Configuration.ConfigurationManager.AppSettings["IP"] ?? string.Empty;
             int Port = Convert.ToInt32(System.Configuration.ConfigurationManager.AppSettings["Port"]);
 
-            DeviceCOM.ConnectionString = System.Configuration.ConfigurationManager.AppSettings["ConnectionString"] ?? string.Empty;
+            DeviceCOM.ConnectionString = DbConnectionProvider.ConnectionString;
 
             portCOM.InitialPort(CommunicationType, portName, baudRate, IpAddress, Port);
 
@@ -339,61 +344,11 @@ namespace _8F
                 btnCh4.Visibility = Visibility.Visible;
             }
 
-            MenuItems = new ObservableCollection<MenuItemViewModel>(new List<MenuItemViewModel?>
-            {
-                new MenuItemViewModel { Header = "File",
-                    MenuItems = new ObservableCollection<MenuItemViewModel>(new List<MenuItemViewModel?>
-                    {
-                        new MenuItemViewModel { Header = "New", mainWindow = this },
-                        (isOpenWithDb || isOpenWithFile) ? new MenuItemViewModel { Header = "Open", mainWindow = this } : null,
-                        (isSaveWithDb || isSaveWithFile) ? new MenuItemViewModel { Header = "Save", mainWindow = this } : null,
-                        (isSaveAsWithDb || isSaveAsWithFile) ? new MenuItemViewModel { Header = "Save As", mainWindow = this } : null,
-                        (isImportConfigWithDb || isImportConfigWithFile) ? new MenuItemViewModel { Header = "Import Configuration", mainWindow = this } : null,
-                        (isExportConfigWithDb || isExportConfigWithFile) ? new MenuItemViewModel { Header = "Export Configuration", mainWindow = this } : null,
-                        isExitEnable ? new MenuItemViewModel { Header = "Exit", mainWindow = this } : null
-                    }.OfType<MenuItemViewModel>())
-                },
-                new MenuItemViewModel { Header = "Configuration",
-                    MenuItems = LogEnabled ? new ObservableCollection<MenuItemViewModel>(new List<MenuItemViewModel?>
-                    {
-                        isChangeConfigEnable ? new MenuItemViewModel { Header = "Change Configuration", mainWindow = this } : null,
-                        isThresholdSettingEnable ? new MenuItemViewModel { Header = "Threshold Setting", mainWindow = this } : null,
-                        isAutoEllipseEnabled ? new MenuItemViewModel { Header = "Auto Ellipse", mainWindow = this } : null,
-                        isRenewConfig ? new MenuItemViewModel { Header = "Operator Master", mainWindow = this } : null,
-                        isRenewConfig ? new MenuItemViewModel { Header = "Part Master", mainWindow = this } : null,
-                        isWriteConfigEnable ? new MenuItemViewModel { Header = "Write Configuration", mainWindow = this } : null,
-                        isCopyChannel1ConfigEnable ? new MenuItemViewModel { Header = "Copy Channel-1 Configuration", mainWindow = this } : null,
-                    }.OfType<MenuItemViewModel>()
-                    ) :
-                    new ObservableCollection<MenuItemViewModel>(new List<MenuItemViewModel?>
-                    {
-                        isChangeConfigEnable ? new MenuItemViewModel { Header = "Change Configuration", mainWindow = this } : null,
-                        isThresholdSettingEnable ? new MenuItemViewModel { Header = "Threshold Setting", mainWindow = this } : null,
-                        isAutoEllipseEnabled ? new MenuItemViewModel { Header = "Auto Ellipse", mainWindow = this } : null,
-                        isWriteConfigEnable ? new MenuItemViewModel { Header = "Write Configuration", mainWindow = this } : null,
-                        isCopyChannel1ConfigEnable ? new MenuItemViewModel { Header = "Copy Channel-1 Configuration", mainWindow = this } : null
-                    }.OfType<MenuItemViewModel>()
-                    )
-                },
-                new MenuItemViewModel
-                {
-                    Header = "View Log",
-                    MenuItems = new ObservableCollection<MenuItemViewModel>(new List<MenuItemViewModel?>
-                    {
-                        isBatchWiseLogEnable ? new MenuItemViewModel { Header = "Batch Wise Log", mainWindow = this } : null,
-                        (!isRenewConfig && isSerialNoLogEnable) ? new MenuItemViewModel { Header = "Serial Number Log", mainWindow = this } : null
-                    }.OfType<MenuItemViewModel>())
-                },
-                isModbusServerEnable ? new MenuItemViewModel
-                {
-                    Header = "Modbus",
-                    MenuItems = new ObservableCollection<MenuItemViewModel>(new List<MenuItemViewModel?>
-                    {
-                        new MenuItemViewModel { Header = "Modbus Diagnostic Panel", mainWindow = this }
-                    }.OfType<MenuItemViewModel>())
-                } : null
-            }.OfType<MenuItemViewModel>());
+            MenuItems = new ObservableCollection<MenuItemViewModel>();
             DataContext = this;
+            BuildMenuItems();
+            AppServices.SessionContext.SessionChanged += (s, role) => Dispatcher.Invoke(() => UpdateRoleUI(role));
+            UpdateRoleUI(AppServices.SessionContext.CurrentRole);
 
             InitialGraphData(true);
 
@@ -453,6 +408,246 @@ namespace _8F
                 var ratval = ImplementChanges(0);
             }
         }
+
+        public void BuildMenuItems()
+        {
+            var role = AppServices.SessionContext.CurrentRole;
+            bool isAdmin = (role == Role.Admin);
+
+            var fileList = new List<MenuItemViewModel?>();
+            if (isAdmin)
+            {
+                fileList.Add(new MenuItemViewModel { Header = "New", mainWindow = this });
+                if (isOpenWithDb || isOpenWithFile) fileList.Add(new MenuItemViewModel { Header = "Open", mainWindow = this });
+                if (isSaveWithDb || isSaveWithFile) fileList.Add(new MenuItemViewModel { Header = "Save", mainWindow = this });
+                if (isSaveAsWithDb || isSaveAsWithFile) fileList.Add(new MenuItemViewModel { Header = "Save As", mainWindow = this });
+                if (isImportConfigWithDb || isImportConfigWithFile) fileList.Add(new MenuItemViewModel { Header = "Import Configuration", mainWindow = this });
+                if (isExportConfigWithDb || isExportConfigWithFile) fileList.Add(new MenuItemViewModel { Header = "Export Configuration", mainWindow = this });
+            }
+
+            if (isChangePasswordEnable)
+            {
+                fileList.Add(new MenuItemViewModel { Header = "Change Password", mainWindow = this });
+            }
+            fileList.Add(new MenuItemViewModel { Header = "Logout", mainWindow = this });
+            if (isExitEnable)
+            {
+                fileList.Add(new MenuItemViewModel { Header = "Exit", mainWindow = this });
+            }
+
+            var menuList = new List<MenuItemViewModel?>
+            {
+                new MenuItemViewModel
+                {
+                    Header = "File",
+                    MenuItems = new ObservableCollection<MenuItemViewModel>(fileList.OfType<MenuItemViewModel>())
+                }
+            };
+
+            if (isAdmin)
+            {
+                var configList = new List<MenuItemViewModel?>();
+                if (isChangeConfigEnable) configList.Add(new MenuItemViewModel { Header = "Change Configuration", mainWindow = this });
+                if (isThresholdSettingEnable) configList.Add(new MenuItemViewModel { Header = "Threshold Setting", mainWindow = this });
+                if (isAutoEllipseEnabled) configList.Add(new MenuItemViewModel { Header = "Auto Ellipse", mainWindow = this });
+                if (isRenewConfig)
+                {
+                    configList.Add(new MenuItemViewModel { Header = "Operator Master", mainWindow = this });
+                    configList.Add(new MenuItemViewModel { Header = "Part Master", mainWindow = this });
+                }
+                if (isWriteConfigEnable) configList.Add(new MenuItemViewModel { Header = "Write Configuration", mainWindow = this });
+                if (isCopyChannel1ConfigEnable) configList.Add(new MenuItemViewModel { Header = "Copy Channel-1 Configuration", mainWindow = this });
+
+                menuList.Add(new MenuItemViewModel
+                {
+                    Header = "Configuration",
+                    MenuItems = new ObservableCollection<MenuItemViewModel>(configList.OfType<MenuItemViewModel>())
+                });
+
+                var logList = new List<MenuItemViewModel?>();
+                if (isBatchWiseLogEnable) logList.Add(new MenuItemViewModel { Header = "Batch Wise Log", mainWindow = this });
+                if (!isRenewConfig && isSerialNoLogEnable) logList.Add(new MenuItemViewModel { Header = "Serial Number Log", mainWindow = this });
+
+                menuList.Add(new MenuItemViewModel
+                {
+                    Header = "View Log",
+                    MenuItems = new ObservableCollection<MenuItemViewModel>(logList.OfType<MenuItemViewModel>())
+                });
+
+                if (isModbusServerEnable)
+                {
+                    menuList.Add(new MenuItemViewModel
+                    {
+                        Header = "Modbus",
+                        MenuItems = new ObservableCollection<MenuItemViewModel>(new List<MenuItemViewModel?>
+                        {
+                            new MenuItemViewModel { Header = "Modbus Diagnostic Panel", mainWindow = this }
+                        }.OfType<MenuItemViewModel>())
+                    });
+                }
+            }
+
+            MenuItems.Clear();
+            foreach (var item in menuList.OfType<MenuItemViewModel>())
+            {
+                MenuItems.Add(item);
+            }
+        }
+
+        public void UpdateRoleUI(Role role)
+        {
+            Title = $"ECT Instrument - 8F [Role: {role}]";
+            BuildMenuItems();
+
+            bool isAdmin = (role == Role.Admin);
+            Visibility logVis = isAdmin ? Visibility.Visible : Visibility.Collapsed;
+            if (btnLog != null) btnLog.Visibility = logVis;
+            if (btnLog1 != null) btnLog1.Visibility = logVis;
+            if (btnLog2 != null) btnLog2.Visibility = logVis;
+
+            Visibility resetVis = isAdmin ? Visibility.Visible : Visibility.Collapsed;
+            if (btnResetCounter != null) btnResetCounter.Visibility = resetVis;
+            if (btnResetCounter1 != null) btnResetCounter1.Visibility = resetVis;
+            if (btnResetCounter2 != null) btnResetCounter2.Visibility = resetVis;
+
+            bool canEdit = AppServices.AuthService.Can(Permission.EditSettings);
+            Visibility settingVis = canEdit ? Visibility.Visible : Visibility.Collapsed;
+            Border?[] settingBorders = { D1, D2, D3, D4, D5, D6, D7, D8 };
+            foreach (var b in settingBorders)
+            {
+                if (b != null) b.Visibility = settingVis;
+            }
+
+            if (role == Role.Operator)
+            {
+                if (brLastChange != null)
+                {
+                    brLastChange.Visibility = Visibility.Visible;
+                    _ = RefreshLastChangeLineAsync();
+                }
+            }
+            else
+            {
+                if (brLastChange != null)
+                {
+                    brLastChange.Visibility = Visibility.Collapsed;
+                }
+            }
+        }
+
+        public void ShowChangePasswordDialog()
+        {
+            var dlg = new ChangePasswordDialog(AppServices.AuthService)
+            {
+                Owner = this,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner
+            };
+            dlg.ShowDialog();
+        }
+
+        public void PerformLogout()
+        {
+            string beforeHash = ComputeConfigHash();
+            System.Diagnostics.Debug.WriteLine($"[Auth Logout] In-memory config hash before logout: {beforeHash}");
+
+            AppServices.AuthService.LogAuditAsync("Logout", AppServices.SessionContext.CurrentRole, $"User triggered Logout. ConfigHash: {beforeHash}");
+            AppServices.SessionContext.ClearSession();
+
+            var loginDlg = new LoginDialog(AppServices.AuthService)
+            {
+                Owner = this,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner
+            };
+
+            bool? result = loginDlg.ShowDialog();
+            if (result != true || !AppServices.SessionContext.IsAuthenticated)
+            {
+                AppServices.AuthService.LogAuditAsync("ExitNoAuth", null, "Application exited from logout prompt");
+                Application.Current.Shutdown();
+                return;
+            }
+
+            string afterHash = ComputeConfigHash();
+            System.Diagnostics.Debug.WriteLine($"[Auth Logout] In-memory config hash after login: {afterHash}");
+            AppServices.AuthService.LogAuditAsync("LoginSuccess", AppServices.SessionContext.CurrentRole, $"Re-login after logout. ConfigHash: {afterHash}");
+
+            if (AppServices.SessionContext.CurrentRole == Role.Operator)
+            {
+                _ = App.ShowOperatorLastChangeNoticeAsync(this);
+            }
+        }
+
+        public async Task RefreshLastChangeLineAsync()
+        {
+            try
+            {
+                var latest = await AppServices.ConfigChangeRepository.GetLatestChangeAsync();
+                if (latest == null)
+                {
+                    txtLastChange.Text = "No configuration changes recorded.";
+                    txtLastChange.Tag = null;
+                }
+                else
+                {
+                    string timeStr = latest.ChangedAt.ToLocalTime().ToString("dd-MMM-yyyy HH:mm");
+                    txtLastChange.Text = $"Last change: {timeStr} ({latest.ChangedByRole}) – {latest.Area}: {latest.Summary}";
+                    txtLastChange.Tag = latest;
+                }
+            }
+            catch
+            {
+                txtLastChange.Text = "Last change: unavailable";
+                txtLastChange.Tag = null;
+            }
+        }
+
+        private void LastChange_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (txtLastChange.Tag is ConfigChangeLogEntry entry)
+            {
+                var detailsDlg = new ConfigChangeDetailsDialog(entry)
+                {
+                    Owner = this,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner
+                };
+                detailsDlg.ShowDialog();
+            }
+            else if (txtLastChange.Text == "No configuration changes recorded.")
+            {
+                MessageBox.Show("No configuration changes recorded.", "Configuration History", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+
+        public static string ComputeConfigHash()
+        {
+            using var sha = System.Security.Cryptography.SHA256.Create();
+            var sb = new System.Text.StringBuilder();
+            if (DeviceCOM.channelDatas != null)
+            {
+                foreach (var ch in DeviceCOM.channelDatas.OrderBy(c => c.Id))
+                {
+                    sb.Append($"Ch:{ch.Id},Tx:{ch.TxStrength};");
+                    if (ch.graphDatas != null)
+                    {
+                        foreach (var g in ch.graphDatas.OrderBy(gd => gd.Id))
+                        {
+                            sb.Append($"G:{g.Id},F:{g.freq},G:{g.gain},P:{g.phase},E:{g.isEnable};");
+                            if (g.ellipses != null)
+                            {
+                                foreach (var el in g.ellipses.OrderBy(e => e.Id))
+                                {
+                                    sb.Append($"E:{el.Id},{el.height:F2},{el.width:F2},{el.ex:F2},{el.ey:F2},{el.angel:F2};");
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            byte[] hash = sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(sb.ToString()));
+            return Convert.ToHexString(hash);
+        }
+
+
 
         private bool ValidateMachine()
         {
@@ -1883,13 +2078,28 @@ namespace _8F
         private bool isDragging = false;
         private Point mouseStart;
         private TranslateTransform? dragTransform = null;
+        private ConfigSnapshot? _circleSettingBeforeSnap;
+        private string _circleSettingChannel = string.Empty;
+        private Point _dragStartCenter;
+        private int _draggedFreqId;
 
 
 
         private void Ellipse_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
+            if (!AppServices.AuthService.Can(Permission.EditSettings))
+                return;
+
             var ellipse = sender as Ellipse;
             if (ellipse == null) return;
+
+            int FreqId = Convert.ToInt32(((Ellipse)sender).DataContext);
+            _draggedFreqId = FreqId;
+            if (chNo >= 1 && chNo <= DeviceCOM.channelDatas.Count && FreqId >= 1 && FreqId <= DeviceCOM.channelDatas[chNo - 1].graphDatas.Count)
+            {
+                var ell = DeviceCOM.channelDatas[chNo - 1].graphDatas[FreqId - 1].ellipses[0];
+                _dragStartCenter = new Point(ell.ex, ell.ey);
+            }
 
             isDragging = true;
             mouseStart = e.GetPosition(cnBr1);
@@ -1908,7 +2118,26 @@ namespace _8F
             (sender as UIElement)?.ReleaseMouseCapture();
             dragTransform = null;
 
-
+            if (_draggedFreqId > 0 && chNo >= 1 && chNo <= DeviceCOM.channelDatas.Count && _draggedFreqId <= DeviceCOM.channelDatas[chNo - 1].graphDatas.Count)
+            {
+                var ell = DeviceCOM.channelDatas[chNo - 1].graphDatas[_draggedFreqId - 1].ellipses[0];
+                if (Math.Abs(ell.ex - _dragStartCenter.X) > 0.1 || Math.Abs(ell.ey - _dragStartCenter.Y) > 0.1)
+                {
+                    string gName = DeviceCOM.channelDatas[chNo - 1].graphDatas[_draggedFreqId - 1].Name;
+                    string summary = $"{gName} ellipse dragged from ({_dragStartCenter.X:0.#}, {_dragStartCenter.Y:0.#}) to ({ell.ex:0.#}, {ell.ey:0.#})";
+                    var diffList = new[]
+                    {
+                        new FieldDiff
+                        {
+                            Field = $"CH{chNo} {gName} Center",
+                            OldValue = $"({_dragStartCenter.X:0.#},{_dragStartCenter.Y:0.#})",
+                            NewValue = $"({ell.ex:0.#},{ell.ey:0.#})"
+                        }
+                    };
+                    _ = AppServices.ConfigChangeRepository.RecordChangeAsync("Ellipse Drag", $"CH{chNo}", summary, System.Text.Json.JsonSerializer.Serialize(diffList));
+                }
+                _draggedFreqId = 0;
+            }
         }
 
 
@@ -1939,6 +2168,15 @@ namespace _8F
 
         private void D_Click(object sender, RoutedEventArgs e)
         {
+            if (!AppServices.AuthService.Can(Permission.EditSettings))
+            {
+                MessageBox.Show("Admin access required to edit threshold settings.", "Access Denied", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            _circleSettingBeforeSnap = ConfigSnapshotService.TakeSnapshot();
+            _circleSettingChannel = ((Border)sender).Name;
+
             ellipsesPop = new CircleSetting(((Border)sender).Name);
             ellipsesPop.Closing += ellipsesPop_Closing;
             ellipsesPop.portCOM = portCOM;
@@ -1951,6 +2189,16 @@ namespace _8F
             if (ellipsesPop != null && ellipsesPop.IsSaved)
             {
                 ImplementChanges(2);
+                if (_circleSettingBeforeSnap != null)
+                {
+                    var snapAfter = ConfigSnapshotService.TakeSnapshot();
+                    var diff = ConfigSnapshotService.Compare(_circleSettingBeforeSnap, snapAfter);
+                    if (diff != null)
+                    {
+                        _ = AppServices.ConfigChangeRepository.RecordChangeAsync("Threshold", _circleSettingChannel, diff.Value.Summary, diff.Value.DetailsJson);
+                    }
+                    _circleSettingBeforeSnap = null;
+                }
             }
         }
 
@@ -2112,6 +2360,11 @@ namespace _8F
 
         private void btnResetCounter_Click(object sender, MouseButtonEventArgs e)
         {
+            if (!AppServices.AuthService.Can(Permission.ResetCounter))
+            {
+                MessageBox.Show("Admin access required to reset counters.", "Access Denied", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
             foreach (var cnt in DeviceCOM.counter)
             {
                 cnt.ResultCount = 0;
@@ -2508,6 +2761,11 @@ namespace _8F
 
         private void btnResetCounter_Click(object sender, RoutedEventArgs e)
         {
+            if (!AppServices.AuthService.Can(Permission.ResetCounter))
+            {
+                MessageBox.Show("Admin access required to reset counters.", "Access Denied", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
             var SChId = DeviceCOM.channelDatas.FirstOrDefault(c => c.IsSeleted)?.Id;
             var cnt = DeviceCOM.counter.FirstOrDefault(c => c.Id == SChId);
             if (cnt == null) return;
@@ -2533,18 +2791,10 @@ namespace _8F
 
         private void btnLog_MouseDown(object sender, MouseButtonEventArgs e)
         {
-            if (isPasswordEnable)
+            if (!AppServices.AuthService.Can(Permission.StartStopLog))
             {
-                PasswordDialog passwordDlg = new PasswordDialog(MenuItemViewModel.CONFIG_MENU_PASSWORD)
-                {
-                    Owner = this
-                };
-
-                bool? isAuth = passwordDlg.ShowDialog();
-                if (isAuth != true)
-                {
-                    return;
-                }
+                MessageBox.Show("Admin access required to start/stop logging.", "Access Denied", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
             }
 
             lblCode.Content = "";
@@ -2691,12 +2941,19 @@ namespace _8F
                 }
                 else if (e.Key == Key.R)
                 {
+                    if (!AppServices.AuthService.Can(Permission.ResetCounter))
+                    {
+                        MessageBox.Show("Admin access required to reset counters.", "Access Denied", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        return;
+                    }
+
                     foreach (var cnt in DeviceCOM.counter)
                     {
                         cnt.ResultCount = 0;
                         cnt.ResultOkCount = 0;
                         cnt.ResultOkNotCount = 0;
                     }
+                    _ = AppServices.ConfigChangeRepository.RecordChangeAsync("Reset Counters", null, "Inspection counters reset to 0");
 
                     lblTCount.Content = "Total Count - 0";
                     lblOkCount.Content = "OK Count - 0";

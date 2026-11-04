@@ -1,3 +1,4 @@
+using _8F.Auth;
 using System;
 using System.Windows;
 using System.Windows.Controls;
@@ -13,6 +14,14 @@ namespace _8F
         public OperatorMaster()
         {
             InitializeComponent();
+            if (!AppServices.AuthService.Can(Permission.EditSettings))
+            {
+                ViewModel = null!;
+                MessageBox.Show("Admin access required for Operator Master.", "Access Denied", MessageBoxButton.OK, MessageBoxImage.Warning);
+                Loaded += (s, e) => Close();
+                return;
+            }
+
             ViewModel = new OperatorMasterViewModel();
             ViewModel.CloseAction = Close;
             DataContext = ViewModel;

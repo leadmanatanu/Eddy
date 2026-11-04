@@ -1,3 +1,5 @@
+using _8F.Repositories;
+using _8F.Auth;
 using Npgsql;
 using System;
 using System.Collections.Generic;
@@ -51,7 +53,7 @@ namespace _8F.ViewModels
             try
             {
                 OperatorList.Clear();
-                string connectionString = ConfigurationManager.AppSettings["ConnectionString"] ?? string.Empty;
+                string connectionString = DbConnectionProvider.ConnectionString;
 
                 using (var con = new NpgsqlConnection(connectionString))
                 {
@@ -89,7 +91,7 @@ namespace _8F.ViewModels
                 return;
             }
 
-            string connectionString = ConfigurationManager.AppSettings["ConnectionString"] ?? string.Empty;
+            string connectionString = DbConnectionProvider.ConnectionString;
             using var con = new NpgsqlConnection(connectionString);
             con.Open();
 
@@ -105,6 +107,7 @@ namespace _8F.ViewModels
                 using var cmd = new NpgsqlCommand(sql, con);
                 cmd.Parameters.AddWithValue("@name", name);
                 cmd.ExecuteNonQuery();
+                _ = AppServices.ConfigChangeRepository.RecordChangeAsync("Operator Master", null, $"Added operator '{name}'");
             }
             else
             {
@@ -113,6 +116,7 @@ namespace _8F.ViewModels
                 cmd.Parameters.AddWithValue("@name", name);
                 cmd.Parameters.AddWithValue("@id", SelectedId);
                 cmd.ExecuteNonQuery();
+                _ = AppServices.ConfigChangeRepository.RecordChangeAsync("Operator Master", null, $"Updated operator '{name}'");
             }
 
             LoadOperators();
@@ -143,7 +147,7 @@ namespace _8F.ViewModels
                 var confirmResult = MessageBox.Show($"Are you sure you want to delete '{item.OperatorName}'?", "Confirm Delete", MessageBoxButton.YesNo, MessageBoxImage.Warning);
                 if (confirmResult == MessageBoxResult.Yes)
                 {
-                    string connectionString = ConfigurationManager.AppSettings["ConnectionString"] ?? string.Empty;
+                    string connectionString = DbConnectionProvider.ConnectionString;
                     using var con = new NpgsqlConnection(connectionString);
                     con.Open();
 
@@ -151,6 +155,7 @@ namespace _8F.ViewModels
                     using var cmd = new NpgsqlCommand(sql, con);
                     cmd.Parameters.AddWithValue("@id", item.Id);
                     cmd.ExecuteNonQuery();
+                    _ = AppServices.ConfigChangeRepository.RecordChangeAsync("Operator Master", null, $"Deleted operator '{item.OperatorName}'");
 
                     LoadOperators();
                 }

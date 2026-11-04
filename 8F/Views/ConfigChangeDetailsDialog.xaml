@@ -1,0 +1,85 @@
+<Window x:Class="_8F.Views.ConfigChangeDetailsDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Configuration Change Details" Height="420" Width="560"
+        WindowStartupLocation="CenterOwner" ResizeMode="CanResizeWithGrip"
+        WindowStyle="None" Background="Transparent" AllowsTransparency="True">
+
+    <Window.Resources>
+        <Style x:Key="MagkraftButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#305371"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="BorderBrush" Value="#FF000000"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#3d688d"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Border Background="#F4F6F9" BorderBrush="#305371" BorderThickness="2" CornerRadius="12" Margin="5">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="15" Color="#000000" Opacity="0.4" ShadowDepth="4"/>
+        </Border.Effect>
+
+        <Grid Margin="16">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <Border Grid.Row="0" Background="#305371" CornerRadius="8" Padding="10,6" Margin="0,0,0,10">
+                <TextBlock Text="Configuration Change Details (Read-Only)" Foreground="White" FontSize="15" FontWeight="Bold" HorizontalAlignment="Center"/>
+            </Border>
+
+            <!-- Metadata info -->
+            <StackPanel Grid.Row="1" Margin="0,0,0,10">
+                <TextBlock Name="txtMetaLine1" Text="Changed: - | Role: -" FontWeight="SemiBold" FontSize="12" Foreground="#333" Margin="0,2"/>
+                <TextBlock Name="txtMetaLine2" Text="Area: - | Channel: -" FontWeight="SemiBold" FontSize="12" Foreground="#333" Margin="0,2"/>
+                <TextBlock Text="Summary:" FontWeight="Bold" FontSize="12" Foreground="#111" Margin="0,4,0,2"/>
+                <Border Background="White" BorderBrush="#CCC" BorderThickness="1" CornerRadius="6" Padding="6" MaxHeight="70">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <TextBlock Name="txtSummary" Text="-" FontSize="12" Foreground="#111" TextWrapping="Wrap"/>
+                    </ScrollViewer>
+                </Border>
+            </StackPanel>
+
+            <!-- Detailed diff viewer -->
+            <Grid Grid.Row="2" Margin="0,0,0,10">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Row="0" Text="Field-Level Differences / Payload:" FontWeight="Bold" FontSize="12" Foreground="#111" Margin="0,0,0,4"/>
+                <Border Grid.Row="1" Background="White" BorderBrush="#CCC" BorderThickness="1" CornerRadius="6" Padding="6">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                        <TextBox Name="txtDetails" Text="-" FontSize="11" FontFamily="Consolas, monospace" Foreground="#222" IsReadOnly="True" BorderThickness="0" Background="Transparent" TextWrapping="Wrap"/>
+                    </ScrollViewer>
+                </Border>
+            </Grid>
+
+            <!-- Close Button -->
+            <Button Grid.Row="3" Content="Close" Style="{StaticResource MagkraftButtonStyle}" Width="90" Height="30" HorizontalAlignment="Right" Click="btnClose_Click" IsCancel="True"/>
+        </Grid>
+    </Border>
+</Window>

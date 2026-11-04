@@ -1,3 +1,5 @@
+using _8F.Services;
+using _8F.Repositories;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -30,14 +32,13 @@ using System.Windows.Media.Media3D;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using System.Windows.Threading;
+using _8F.Auth;
+using _8F.Views;
 
 namespace _8F.ViewModels
 {
     public class MenuItemViewModel
     {
-        public const string DefaultConfigPassword = "best@123";
-        public const string CONFIG_MENU_PASSWORD = DefaultConfigPassword;
-
         private static readonly HashSet<string> ConfigurationMenuHeaders = new(StringComparer.OrdinalIgnoreCase)
         {
             "Change Configuration",
@@ -62,6 +63,7 @@ namespace _8F.ViewModels
         string filename { get; set; } = string.Empty;
         public CircleSetting? ellipsesPop { get; set; }
         public MainWindow? mainWindow { get; set; }
+        private ConfigSnapshot? _menuBeforeSnap;
         public ObservableCollection<MenuItemViewModel> MenuItems { get; set; } = new();
         public bool isRenewConfig = Convert.ToBoolean(System.Configuration.ConfigurationManager.AppSettings["isrenewconfig"]);
         public ICommand Command
@@ -76,20 +78,50 @@ namespace _8F.ViewModels
         {
             if (mainWindow == null) return;
 
+            // 1. Session and Auth Action Handlers
+            if (Header == "Logout")
+            {
+                mainWindow.PerformLogout();
+                return;
+            }
+
+            if (Header == "Change Password")
+            {
+                mainWindow.ShowChangePasswordDialog();
+                return;
+            }
+
+            // 2. Permission Verification (Execution Layer Enforcement)
             if (ConfigurationMenuHeaders.Contains(Header))
             {
-                if (mainWindow.isPasswordEnable)
+                if (!AppServices.AuthService.Can(Permission.ConfigurationMenu))
                 {
-                    PasswordDialog passwordDlg = new PasswordDialog(CONFIG_MENU_PASSWORD)
-                    {
-                        Owner = mainWindow
-                    };
-
-                    bool? isAuth = passwordDlg.ShowDialog();
-                    if (isAuth != true)
-                    {
-                        return;
-                    }
+                    MessageBox.Show("Admin access required for configuration menu items.", "Access Denied", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+            }
+            else if (Header == "Write Configuration")
+            {
+                if (!AppServices.AuthService.Can(Permission.WriteConfiguration))
+                {
+                    MessageBox.Show("Admin access required to write configuration.", "Access Denied", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+            }
+            else if (Header == "New" || Header == "Open" || Header == "Save" || Header == "Save As" || Header == "Import Configuration" || Header == "Export Configuration")
+            {
+                if (!AppServices.AuthService.Can(Permission.FileOperations))
+                {
+                    MessageBox.Show("Admin access required for file configuration operations.", "Access Denied", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+            }
+            else if (Header == "Modbus Diagnostic Panel")
+            {
+                if (!AppServices.AuthService.Can(Permission.ModbusDiagnosticPanel))
+                {
+                    MessageBox.Show("Admin access required for Modbus diagnostic panel.", "Access Denied", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
                 }
             }
 
@@ -107,6 +139,7 @@ namespace _8F.ViewModels
                 {
                     if (Header == "Change Configuration")
                     {
+                        _menuBeforeSnap = ConfigSnapshotService.TakeSnapshot();
                         freqPop = new Freq();
                         freqPop.Closing += freqPop_Closing;
                         freqPop.portCOM = mainWindow.portCOM;
@@ -115,6 +148,7 @@ namespace _8F.ViewModels
                     }
                     else if (Header == "Threshold Setting")
                     {
+                        _menuBeforeSnap = ConfigSnapshotService.TakeSnapshot();
                         ellipsesPop = new CircleSetting("D1");
                         ellipsesPop.Closing += ellipsesPop_Closing;
                         ellipsesPop.portCOM = mainWindow.portCOM;
@@ -123,9 +157,19 @@ namespace _8F.ViewModels
                     }
                     else if (Header == "Auto Ellipse")
                     {
+                        var snapBefore = ConfigSnapshotService.TakeSnapshot();
                         var autoEllipsePop = new AutoEllipse();
                         autoEllipsePop.portCOM = mainWindow.portCOM;
                         autoEllipsePop.Owner = mainWindow;
+                        autoEllipsePop.Closing += (s, ev) =>
+                        {
+                            var snapAfter = ConfigSnapshotService.TakeSnapshot();
+                            var diff = ConfigSnapshotService.Compare(snapBefore, snapAfter);
+                            if (diff != null)
+                            {
+                                _ = AppServices.ConfigChangeRepository.RecordChangeAsync("Auto Ellipse", $"CH{mainWindow.chNo}", diff.Value.Summary, diff.Value.DetailsJson);
+                            }
+                        };
                         autoEllipsePop.ShowDialog();
                     }
                     else if (Header == "Part Master")
@@ -148,6 +192,10 @@ namespace _8F.ViewModels
                             {
                                 msg = "No response from the system, please reboot the ECT Instrument";
                             }
+                            else
+                            {
+                                _ = AppServices.ConfigChangeRepository.RecordChangeAsync("Write Configuration", $"CH{mainWindow.chNo}", $"Configuration written to ECT instrument for Channel {mainWindow.chNo}");
+                            }
 
                             MessageBox.Show(msg, "Information");
                         }
@@ -158,6 +206,7 @@ namespace _8F.ViewModels
                     }
                     else if (Header == "Copy Channel-1 Configuration")
                     {
+                        var snapBefore = ConfigSnapshotService.TakeSnapshot();
                         var chNo1 = DeviceCOM.channelDatas.FirstOrDefault(c => c.Id == 1);
                         foreach (var ch in DeviceCOM.channelDatas)
                         {
@@ -191,9 +240,6 @@ namespace _8F.ViewModels
                     }
                     else if (Header == "Data Log")
                     {
-                        //mainWindow.report = new Report();
-                        //mainWindow.report.ShowDialog();
-
                         System.Diagnostics.Process.Start(new ProcessStartInfo
                         {
                             FileName = this.mainWindow.WebPage,
@@ -225,7 +271,7 @@ namespace _8F.ViewModels
                                             _8F.Services.IConfigProfileRepository repo = new _8F.Services.InspectionLogRepository();
                                             await repo.SaveConfigProfileAsync(profileName, "Operator", currentChannels);
 
-                                            mainWindow.Dispatcher.Invoke(() =>
+                                             mainWindow.Dispatcher.Invoke(() =>
                                             {
                                                 mainWindow.lblConfigFileName.Content = profileName;
                                                 MessageBox.Show($"Configuration Profile '{profileName}' saved to Database successfully!", "Database Save", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -566,11 +612,9 @@ namespace _8F.ViewModels
                         DeviceCOM.part = new Part();
                         this.mainWindow.lblPartLogs.Content = "";
                         this.mainWindow.lblConfigFileName.Content = "";
-                        //this.mainWindow.btnLog.Visibility = Visibility.Hidden;
                     }
                     else if (Header == "Exit")
                     {
-                        //this.mainWindow.btnLog.Visibility = Visibility.Hidden;
                         mainWindow.Close();
                     }
                     else if (Header == "Batch Wise Log")
@@ -610,23 +654,6 @@ namespace _8F.ViewModels
         {
             if (mainWindow == null || incoming == null || incoming.Count == 0) return;
 
-            // Commented out remapping popup window per user request - apply direct 1-to-1 mapping for all channels
-            /*
-            string displayName = System.IO.Path.GetFileName(sourceName);
-            ChannelRemappingWindow remapWin = new ChannelRemappingWindow(incoming, displayName)
-            {
-                Owner = mainWindow
-            };
-            remapWin.ShowDialog();
-
-            if (!remapWin.IsConfirmed)
-            {
-                return; // User cancelled mapping
-            }
-
-            var mappedChannels = _8F.Services.ConfigurationImporter.ApplyRemapping(incoming, remapWin.TargetMappings, remapWin.IsImportAsIs);
-            */
-
             var mappedChannels = _8F.Services.ConfigurationImporter.ApplyRemapping(incoming, new Dictionary<int, List<int>>(), isImportAsIs: true);
 
             if (mappedChannels != null)
@@ -645,15 +672,25 @@ namespace _8F.ViewModels
             }
 
             mainWindow.lblConfigFileName.Content = sourceName;
+            _ = AppServices.ConfigChangeRepository.RecordChangeAsync("Open Profile", null, $"Loaded configuration profile/file '{sourceName}'");
             _8F.Services.Implementations.ModbusLogger.Info($"[ChannelDatas Dump] {_8F.Services.ConfigurationImporter.DumpChannelDatas(DeviceCOM.channelDatas)}");
         }
-
 
         private void freqPop_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
         {
             if (freqPop != null && freqPop.IsSaved && mainWindow != null)
             {
                 mainWindow.ImplementChanges(1);
+                if (_menuBeforeSnap != null)
+                {
+                    var snapAfter = ConfigSnapshotService.TakeSnapshot();
+                    var diff = ConfigSnapshotService.Compare(_menuBeforeSnap, snapAfter);
+                    if (diff != null)
+                    {
+                        _ = AppServices.ConfigChangeRepository.RecordChangeAsync("Frequency", $"CH{mainWindow.chNo}", diff.Value.Summary, diff.Value.DetailsJson);
+                    }
+                    _menuBeforeSnap = null;
+                }
             }
         }
 
@@ -662,8 +699,17 @@ namespace _8F.ViewModels
             if (ellipsesPop != null && ellipsesPop.IsSaved && mainWindow != null)
             {
                 mainWindow.ImplementChanges(2);
+                if (_menuBeforeSnap != null)
+                {
+                    var snapAfter = ConfigSnapshotService.TakeSnapshot();
+                    var diff = ConfigSnapshotService.Compare(_menuBeforeSnap, snapAfter);
+                    if (diff != null)
+                    {
+                        _ = AppServices.ConfigChangeRepository.RecordChangeAsync("Threshold", "D1", diff.Value.Summary, diff.Value.DetailsJson);
+                    }
+                    _menuBeforeSnap = null;
+                }
             }
         }
     }
-
 }

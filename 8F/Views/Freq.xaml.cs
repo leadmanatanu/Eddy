@@ -1,3 +1,4 @@
+using _8F.Auth;
 using System;
 using System.Windows;
 using System.Windows.Controls;
@@ -24,6 +25,14 @@ namespace _8F
         public Freq()
         {
             InitializeComponent();
+            if (!AppServices.AuthService.Can(Permission.EditSettings))
+            {
+                ViewModel = null!;
+                MessageBox.Show("Admin access required to view or edit configuration.", "Access Denied", MessageBoxButton.OK, MessageBoxImage.Warning);
+                Loaded += (s, e) => Close();
+                return;
+            }
+
             ViewModel = new FreqViewModel();
             ViewModel.CloseAction = Close;
             DataContext = ViewModel;
@@ -45,6 +54,12 @@ namespace _8F
 
         private void btnConfigSave_Click(object sender, RoutedEventArgs e)
         {
+            if (!AppServices.AuthService.Can(Permission.EditSettings))
+            {
+                MessageBox.Show("Admin access required to save configuration.", "Access Denied", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
             gdFreq.CommitEdit(DataGridEditingUnit.Cell, true);
             gdFreq.CommitEdit(DataGridEditingUnit.Row, true);
             ViewModel.TxStrengthValue = txtTxStrength.Value;

@@ -44,7 +44,12 @@
             </Menu>
 
             <Image Name="imgLogo" Visibility="Hidden"  Width="180" Panel.ZIndex="999" Grid.Row="0" Grid.Column="1" />
-            <Label Name="lblCode" Content="" VerticalAlignment="Center" HorizontalAlignment="right" FontSize="16" Foreground="red" FontWeight="Bold" Grid.Row="0" Grid.Column="2"></Label>
+            <StackPanel Grid.Row="0" Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                <Border Name="brLastChange" Cursor="Hand" MouseDown="LastChange_MouseDown" Visibility="Collapsed" VerticalAlignment="Center" Margin="0,0,12,0" Background="#305371" CornerRadius="6" Padding="8,4">
+                    <TextBlock Name="txtLastChange" Foreground="White" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" Text="Last change: ..." ToolTip="Click to view full change details"/>
+                </Border>
+                <Label Name="lblCode" Content="" VerticalAlignment="Center" FontSize="16" Foreground="red" FontWeight="Bold"></Label>
+            </StackPanel>
         </Grid>
 
 

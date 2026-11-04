@@ -1,3 +1,4 @@
+using _8F.Repositories;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
@@ -21,12 +22,7 @@ namespace _8F.Services
 
         public InspectionLogRepository(string? connectionString = null)
         {
-            // 1. Connection string resolution priority:
-            //    Explicit parameter > Environment Variable > App.config > Default fallback
-            _connectionString = connectionString 
-                ?? Environment.GetEnvironmentVariable("EDDY_DB_CONNECTION_STRING")
-                ?? ConfigurationManager.AppSettings["ConnectionString"]
-                ?? "Host=localhost;Port=5432;Username=postgres;Password=aryan123;Database=EddyShorter;Pooling=true;Minimum Pool Size=2;Maximum Pool Size=20;";
+            _connectionString = connectionString ?? DbConnectionProvider.ConnectionString;
 
             var eddyDataFolder = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Eddy");
