@@ -264,7 +264,7 @@ namespace Eddy
                                                 .Row(r =>
                                                 {
                                                     r.RelativeItem()
-                                                        .Text($"BatchName: {log.BatchName}")
+                                                        .Text($"File Name: {log.BatchName}")
                                                         .FontSize(8)
                                                         .Bold()
                                                         .FontColor("#FFFFFF");
@@ -620,356 +620,490 @@ namespace Eddy
             }
         }
 
-        public void GeneratePdf(string filePath)
+        private void ShowNonModalMessage(string message)
         {
             try
             {
-                var batchDetails = new Dictionary<string, List<(DateTime TimeStamp, string ConfigurationJson, string GraphDataJson, bool Result, string BatchName)>>();
-
-                var data = GetBatchDetails();
-                foreach (var log in listOfLog)
-                    batchDetails[log.BatchName] = data.Where(d => d.BatchName == log.BatchName).OrderBy(d => d.TimeStamp).ToList();
-
-                QuestPDF.Settings.License = LicenseType.Community;
-
-                QuestPDF.Fluent.Document.Create(container =>
+                void Show()
                 {
-                    container.Page(page =>
+                    var win = new Window
                     {
-                        page.Margin(20);
-                        page.Size(PageSizes.A4);
-
-                        page.Header().ShowOnce().BorderBottom(2).BorderColor("#0D3B6E").PaddingBottom(8).Row(r =>
+                        Title = "Report Generated",
+                        Width = 450,
+                        Height = 130,
+                        WindowStartupLocation = WindowStartupLocation.CenterScreen,
+                        ResizeMode = ResizeMode.NoResize,
+                        Topmost = true,
+                        Background = Brushes.WhiteSmoke,
+                        Content = new Border
                         {
-                            r.RelativeItem().Row(left =>
+                            Padding = new Thickness(15),
+                            Child = new TextBlock
                             {
-                                var imagePath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", "Magkraft.jpg");
-                                var imageBytes = File.ReadAllBytes(imagePath);
+                                Text = message,
+                                FontSize = 13,
+                                Foreground = Brushes.Black,
+                                TextWrapping = TextWrapping.Wrap
+                            }
+                        }
+                    };
+                    win.Show();
+                    Task.Delay(5000).ContinueWith(_ => win.Dispatcher.Invoke(() => win.Close()));
+                }
 
+                if (Application.Current != null && Application.Current.Dispatcher != null)
+                {
+                    Application.Current.Dispatcher.InvokeAsync(Show);
+                }
+                else
+                {
+                    Console.WriteLine(message);
+                }
+            }
+            catch
+            {
+                Console.WriteLine(message);
+            }
+        }
+
+        private void GenerateSingleConfigPdf(
+            string targetPath,
+            string batchName,
+            Configuration? config,
+            List<(DateTime TimeStamp, string ConfigurationJson, string GraphDataJson, bool Result, string BatchName, string PartJson)> records)
+        {
+            var firstTube = records.FirstOrDefault();
+            var lastTube = records.LastOrDefault();
+            string startStr = firstTube != default ? firstTube.TimeStamp.ToString("dd/MM/yy HH:mm:ss") : "-";
+            string endStr = lastTube != default ? lastTube.TimeStamp.ToString("dd/MM/yy HH:mm:ss") : "-";
+            int passCount = records.Count(r => r.Result);
+            int failCount = records.Count(r => !r.Result);
+            int totalCount = records.Count;
+
+            JObject? partJsonObj = null;
+            try
+            {
+                if (firstTube != default && !string.IsNullOrEmpty(firstTube.PartJson))
+                    partJsonObj = JObject.Parse(firstTube.PartJson);
+            }
+            catch { }
+
+            string GetPartField(JObject? obj, params string[] names)
+            {
+                if (obj == null) return "N/A";
+                foreach (var n in names)
+                {
+                    var val = obj[n]?.ToString();
+                    if (!string.IsNullOrWhiteSpace(val)) return val;
+                }
+                return "N/A";
+            }
+
+            string partCompany = GetPartField(partJsonObj, "CompanyName", "Company");
+            string partGrade = GetPartField(partJsonObj, "Grade");
+            string partPlace = GetPartField(partJsonObj, "Placce", "Place");
+            string partCheckedBy = GetPartField(partJsonObj, "CheckedBy");
+            string partBatchSize = GetPartField(partJsonObj, "BatchSize");
+            string partNumber = GetPartField(partJsonObj, "PartNumber");
+
+            void LV(IContainer c, string label, string value)
+            {
+                c.Text(t =>
+                {
+                    t.Span($"{label}: ").FontSize(7).FontColor("#888888");
+                    t.Span(value ?? "-").FontSize(7).Bold().FontColor("#111111");
+                });
+            }
+
+            QuestPDF.Fluent.Document.Create(container =>
+            {
+                container.Page(page =>
+                {
+                    page.Margin(20);
+                    page.Size(PageSizes.A4);
+
+                    page.Header().ShowOnce().BorderBottom(2).BorderColor("#0D3B6E").PaddingBottom(8).Row(r =>
+                    {
+                        r.RelativeItem().Row(left =>
+                        {
+                            var imagePath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", "Magkraft.jpg");
+                            if (File.Exists(imagePath))
+                            {
+                                var imageBytes = File.ReadAllBytes(imagePath);
                                 left.AutoItem()
                                     .Height(25)
                                     .Width(25)
                                     .AlignMiddle()
                                     .Image(imageBytes).FitHeight();
+                            }
 
-                                left.ConstantItem(12);
+                            left.ConstantItem(12);
 
-                                left.AutoItem().AlignMiddle()
-                                    .Text("TUBE EDDY REPORT")
-                                    .FontSize(18)
-                                    .Bold()
-                                    .FontColor("#0D3B6E");
-                            });
-
-                            r.ConstantItem(180).AlignRight().AlignBottom()
-                                .Text($"Generated: {DateTime.Now:dd/MM/yyyy HH:mm}")
-                                .FontSize(8)
-                                .FontColor("#888888");
+                            left.AutoItem().AlignMiddle()
+                                .Text("TUBE EDDY REPORT")
+                                .FontSize(18)
+                                .Bold()
+                                .FontColor("#0D3B6E");
                         });
 
-                        page.Content().PaddingTop(10).Column(col =>
+                        r.ConstantItem(180).AlignRight().AlignBottom()
+                            .Text($"Generated: {DateTime.Now:dd/MM/yyyy HH:mm}")
+                            .FontSize(8)
+                            .FontColor("#888888");
+                    });
+
+                    page.Content().PaddingTop(10).Column(col =>
+                    {
+                        col.Item().Border(1).BorderColor("#CCCCCC").Column(batch =>
                         {
-                            col.Spacing(10);
-
-                            foreach (var log in listOfLog)
-                            {
-                                try
+                            // Batch header
+                            batch.Item()
+                                .Background("#0D3B6E")
+                                .Padding(7).PaddingLeft(12).PaddingRight(12)
+                                .Row(r =>
                                 {
-                                    col.Item().Border(1).BorderColor("#CCCCCC").Column(batch =>
+                                    r.RelativeItem().Text($"File Name: {batchName}")
+                                        .FontSize(8).Bold().FontColor("#FFFFFF");
+
+                                    r.ConstantItem(420).AlignRight().Row(statsRow =>
                                     {
-                                        // Batch header
-                                        batch.Item()
-                                            .Background("#0D3B6E")
-                                            .Padding(7).PaddingLeft(12).PaddingRight(12)
-                                            .Row(r =>
-                                            {
-                                                r.RelativeItem().Text($"BatchName: {log.BatchName}")
-                                                    .FontSize(8).Bold().FontColor("#FFFFFF");
+                                        statsRow.AutoItem().AlignMiddle()
+                                            .Text("Start: ").FontSize(8).FontColor("#ccd6e0");
+                                        statsRow.AutoItem().AlignMiddle()
+                                            .Text($"{startStr}").FontSize(8).Bold().FontColor("#FFFFFF");
 
-                                                r.ConstantItem(420).AlignRight().Row(statsRow =>
+                                        statsRow.ConstantItem(5);
+                                        statsRow.AutoItem().AlignMiddle()
+                                            .Text("|").FontSize(8).FontColor("#4a6a8a");
+                                        statsRow.ConstantItem(5);
+
+                                        statsRow.AutoItem().AlignMiddle()
+                                            .Text("End: ").FontSize(8).FontColor("#ccd6e0");
+                                        statsRow.AutoItem().AlignMiddle()
+                                            .Text($"{endStr}").FontSize(8).Bold().FontColor("#FFFFFF");
+
+                                        statsRow.ConstantItem(5);
+                                        statsRow.AutoItem().AlignMiddle()
+                                            .Text("|").FontSize(8).FontColor("#4a6a8a");
+                                        statsRow.ConstantItem(5);
+
+                                        statsRow.AutoItem().AlignMiddle()
+                                            .Text("Pass: ").FontSize(8).FontColor("#ccd6e0");
+                                        statsRow.AutoItem().AlignMiddle()
+                                            .Text($"{passCount}").FontSize(8).Bold().FontColor("#69F0AE");
+
+                                        statsRow.ConstantItem(5);
+                                        statsRow.AutoItem().AlignMiddle()
+                                            .Text("|").FontSize(8).FontColor("#4a6a8a");
+                                        statsRow.ConstantItem(5);
+
+                                        statsRow.AutoItem().AlignMiddle()
+                                            .Text("Fail: ").FontSize(8).FontColor("#ccd6e0");
+                                        statsRow.AutoItem().AlignMiddle()
+                                            .Text($"{failCount}").FontSize(8).Bold().FontColor("#FF5252");
+
+                                        statsRow.ConstantItem(5);
+                                        statsRow.AutoItem().AlignMiddle()
+                                            .Text("|").FontSize(8).FontColor("#4a6a8a");
+                                        statsRow.ConstantItem(5);
+
+                                        statsRow.AutoItem().AlignMiddle()
+                                            .Text("Total: ").FontSize(8).FontColor("#ccd6e0");
+                                        statsRow.AutoItem().AlignMiddle()
+                                            .Text($"{totalCount}").FontSize(8).Bold().FontColor("#40C4FF");
+                                    });
+                                });
+
+                            // BATCH CONFIGURATION
+                            batch.Item()
+                                .Padding(7).PaddingLeft(12).PaddingRight(12)
+                                .Column(batchCol =>
+                                {
+                                    batchCol.Item().Text("BATCH CONFIGURATION")
+                                        .FontSize(6.5f).Bold().FontColor("#888888");
+
+                                    batchCol.Item().PaddingTop(2).Row(r =>
+                                    {
+                                        r.RelativeItem().Element(c => LV(c, "Company Name", partCompany));
+                                        r.RelativeItem().Element(c => LV(c, "Grade", partGrade));
+                                        r.RelativeItem().Element(c => LV(c, "Place", partPlace));
+                                        r.RelativeItem().Element(c => LV(c, "Checked By", partCheckedBy));
+                                    });
+
+                                    batchCol.Item().PaddingTop(1).Row(r =>
+                                    {
+                                        r.RelativeItem().Element(c => LV(c, "Batch Size", partBatchSize));
+                                        r.RelativeItem().Element(c => LV(c, "Part Number", partNumber));
+                                        r.RelativeItem();
+                                        r.RelativeItem();
+                                    });
+                                });
+
+                            batch.Item()
+                                .BorderTop(1).BorderColor("#E8E8E8")
+                                .Padding(7).PaddingLeft(12).PaddingRight(12)
+                                .Column(record =>
+                                {
+                                    // FREQUENCY & FILTER
+                                    if (config?.Frequency?.FD != null && config?.Filter?.FD != null)
+                                    {
+                                        var freqEntries = config.Frequency.FD.Where(f => f.FN != 3).ToList();
+                                        if (freqEntries.Count == 0 && config.Frequency.FD.Count > 0)
+                                        {
+                                            freqEntries.Add(config.Frequency.FD[0]);
+                                        }
+
+                                        var uniqueFD = freqEntries
+                                            .GroupBy(f => new { f.F, f.G, f.UTH, f.LTH, f.TH, f.PP })
+                                            .Select(g => g.First())
+                                            .ToList();
+
+                                        foreach (var f in uniqueFD)
+                                        {
+                                            try
+                                            {
+                                                var filterRow = config.Filter.FD.FirstOrDefault(fd => fd.FN == f.FN);
+
+                                                record.Item().PaddingTop(5).Text("FREQUENCY & FILTER")
+                                                    .FontSize(6.5f).Bold().FontColor("#888888");
+
+                                                record.Item().PaddingTop(2).Row(r =>
                                                 {
-                                                    statsRow.AutoItem().AlignMiddle()
-                                                        .Text("Start: ").FontSize(8).FontColor("#ccd6e0");
-                                                    statsRow.AutoItem().AlignMiddle()
-                                                        .Text($"{log.LogStartDate}").FontSize(8).Bold().FontColor("#FFFFFF");
-
-                                                    statsRow.ConstantItem(5);
-                                                    statsRow.AutoItem().AlignMiddle()
-                                                        .Text("|").FontSize(8).FontColor("#4a6a8a");
-                                                    statsRow.ConstantItem(5);
-
-                                                    statsRow.AutoItem().AlignMiddle()
-                                                        .Text("End: ").FontSize(8).FontColor("#ccd6e0");
-                                                    statsRow.AutoItem().AlignMiddle()
-                                                        .Text($"{log.LogEndDate}").FontSize(8).Bold().FontColor("#FFFFFF");
-
-                                                    statsRow.ConstantItem(5);
-                                                    statsRow.AutoItem().AlignMiddle()
-                                                        .Text("|").FontSize(8).FontColor("#4a6a8a");
-                                                    statsRow.ConstantItem(5);
-
-                                                    statsRow.AutoItem().AlignMiddle()
-                                                        .Text("Pass: ").FontSize(8).FontColor("#ccd6e0");
-                                                    statsRow.AutoItem().AlignMiddle()
-                                                        .Text($"{log.PassCount}").FontSize(8).Bold().FontColor("#69F0AE");
-
-                                                    statsRow.ConstantItem(5);
-                                                    statsRow.AutoItem().AlignMiddle()
-                                                        .Text("|").FontSize(8).FontColor("#4a6a8a");
-                                                    statsRow.ConstantItem(5);
-
-                                                    statsRow.AutoItem().AlignMiddle()
-                                                        .Text("Fail: ").FontSize(8).FontColor("#ccd6e0");
-                                                    statsRow.AutoItem().AlignMiddle()
-                                                        .Text($"{log.FailCount}").FontSize(8).Bold().FontColor("#FF5252");
-
-                                                    statsRow.ConstantItem(5);
-                                                    statsRow.AutoItem().AlignMiddle()
-                                                        .Text("|").FontSize(8).FontColor("#4a6a8a");
-                                                    statsRow.ConstantItem(5);
-
-                                                    statsRow.AutoItem().AlignMiddle()
-                                                        .Text("Total: ").FontSize(8).FontColor("#ccd6e0");
-                                                    statsRow.AutoItem().AlignMiddle()
-                                                        .Text($"{log.TotalCount}").FontSize(8).Bold().FontColor("#40C4FF");
+                                                    r.RelativeItem().Element(c => LV(c, "Frequency(KHz)", (f.F / 1000).ToString()));
+                                                    r.RelativeItem().Element(c => LV(c, "Pre Gain(dB)", f.G.ToString()));
+                                                    r.RelativeItem().Element(c => LV(c, "Phase", f.PP.ToString()));
+                                                    r.RelativeItem().Element(c => LV(c, "High Threshold", f.UTH.ToString()));
                                                 });
-                                            });
 
-                                        var details = batchDetails[log.BatchName];
-
-                                        // ---- Build consecutive groups sharing the same settings ----
-                                        var groups = new List<(Configuration? Config, List<(DateTime TimeStamp, string ConfigurationJson, string GraphDataJson, bool Result, string BatchName)> Records)>();
-
-                                        string? lastKey = null;
-                                        foreach (var item in details)
-                                        {
-                                            Configuration? cfg = null;
-                                            try { cfg = JsonConvert.DeserializeObject<Configuration>(item.ConfigurationJson); }
-                                            catch { /* leave null, treated as its own group */ }
-
-                                            string key = BuildSettingsKey(cfg);
-
-                                            if (groups.Count == 0 || key != lastKey)
-                                            {
-                                                groups.Add((cfg, new List<(DateTime, string, string, bool, string)> { item }));
-                                                lastKey = key;
+                                                record.Item().PaddingTop(1).Row(r =>
+                                                {
+                                                    r.RelativeItem().Element(c => LV(c, "Low Threshold", f.LTH.ToString()));
+                                                    r.RelativeItem().Element(c => LV(c, "Third Threshold", f.TH.ToString()));
+                                                    r.RelativeItem().Element(c => LV(c, "High Pass Filter", filterRow?.H.ToString() ?? "-"));
+                                                    r.RelativeItem().Element(c => LV(c, "Low Pass Filter", filterRow?.L.ToString() ?? "-"));
+                                                });
                                             }
-                                            else
-                                            {
-                                                groups[groups.Count - 1].Records.Add(item);
-                                            }
+                                            catch (Exception) { }
                                         }
+                                    }
 
-                                        void LV(IContainer c, string label, string value)
+                                    // MARKER
+                                    if (config?.Marker != null)
+                                    {
+                                        var m = config.Marker;
+
+                                        record.Item().PaddingTop(5).Text("MARKER")
+                                            .FontSize(6.5f).Bold().FontColor("#888888");
+
+                                        record.Item().PaddingTop(2).Row(r =>
                                         {
-                                            c.Text(t =>
-                                            {
-                                                t.Span($"{label}: ").FontSize(7).FontColor("#888888");
-                                                t.Span(value ?? "-").FontSize(7).Bold().FontColor("#111111");
-                                            });
-                                        }
+                                            r.RelativeItem().Element(c => LV(c, "Marker1(ms)", m.M1.ToString()));
+                                            r.RelativeItem().Element(c => LV(c, "Marker2(ms)", m.M2.ToString()));
+                                            r.RelativeItem().Element(c => LV(c, "Forward Run Time(ms)", m.FmS.ToString()));
+                                            r.RelativeItem().Element(c => LV(c, "Reverse Run Time(ms)", m.RmS.ToString()));
+                                        });
 
-                                        int groupIndex = 0;
+                                        record.Item().PaddingTop(1).Row(r =>
+                                        {
+                                            r.RelativeItem().Element(c => LV(c, "Paint Spray Time(ms)", m.P1mS.ToString()));
+                                            r.RelativeItem().Element(c => LV(c, "C1 to C2 Sensor Distance(mm)", m.C1C2.ToString()));
+                                            r.RelativeItem().Element(c => LV(c, "C2 to Exit Sensor Distance(mm)", m.C2E.ToString()));
+                                            r.RelativeItem().Element(c => LV(c, "C Coil to C2 Distance(mm)", m.CC2.ToString()));
+                                        });
+                                    }
+
+                                    // ABSOLUTE
+                                    JObject? configJsonObj = null;
+                                    try
+                                    {
+                                        if (firstTube != default && !string.IsNullOrEmpty(firstTube.ConfigurationJson))
+                                        {
+                                            configJsonObj = JObject.Parse(firstTube.ConfigurationJson);
+                                        }
+                                    }
+                                    catch { }
+
+                                    var absFreqToken = configJsonObj?["Frequency"]?["FD"]?.FirstOrDefault(x => (int?)x["FN"] == 3);
+                                    var absFilterToken = configJsonObj?["Filter"]?["FD"]?.FirstOrDefault(x => (int?)x["FN"] == 3);
+
+                                    string absPreGain = absFreqToken?["G"] != null ? absFreqToken["G"]!.ToString() : "N/A";
+                                    string absPostGain = absFilterToken?["G"] != null ? absFilterToken["G"]!.ToString() : "N/A";
+                                    string absLowPass = absFilterToken?["L"] != null ? absFilterToken["L"]!.ToString() : "N/A";
+                                    string absHighTh = absFreqToken?["UTH"] != null ? absFreqToken["UTH"]!.ToString() : "N/A";
+                                    string absLowTh = absFreqToken?["LTH"] != null ? absFreqToken["LTH"]!.ToString() : "N/A";
+                                    string absThirdTh = absFreqToken?["TH"] != null ? absFreqToken["TH"]!.ToString() : "N/A";
+
+                                    record.Item().PaddingTop(5).Text("ABSOLUTE")
+                                        .FontSize(6.5f).Bold().FontColor("#888888");
+
+                                    record.Item().PaddingTop(2).Row(r =>
+                                    {
+                                        r.RelativeItem().Element(c => LV(c, "Pre Gain(dB)", absPreGain));
+                                        r.RelativeItem().Element(c => LV(c, "Post Gain(dB)", absPostGain));
+                                        r.RelativeItem().Element(c => LV(c, "Low Pass Filter", absLowPass));
+                                        r.RelativeItem().Element(c => LV(c, "High Threshold", absHighTh));
+                                    });
+
+                                    record.Item().PaddingTop(1).Row(r =>
+                                    {
+                                        r.RelativeItem().Element(c => LV(c, "Low Threshold", absLowTh));
+                                        r.RelativeItem().Element(c => LV(c, "Third Threshold", absThirdTh));
+                                        r.RelativeItem();
+                                        r.RelativeItem();
+                                    });
+
+                                    // ---- Records table for this settings group ----
+                                    record.Item().PaddingTop(6).Table(table =>
+                                    {
+                                        table.ColumnsDefinition(columns =>
+                                        {
+                                            columns.ConstantColumn(50);   // Sr No
+                                            columns.RelativeColumn(2);    // Timestamp
+                                            columns.ConstantColumn(60);   // Result
+                                        });
+
+                                        // Header row
+                                        table.Header(header =>
+                                        {
+                                            header.Cell().Background("#0D3B6E").Padding(4)
+                                                .Text("Sr No").FontSize(7).Bold().FontColor("#FFFFFF");
+
+                                            header.Cell().Background("#0D3B6E").Padding(4)
+                                                .Text("Timestamp").FontSize(7).Bold().FontColor("#FFFFFF");
+
+                                            header.Cell().Background("#0D3B6E").Padding(4)
+                                                .Text("Result").FontSize(7).Bold().FontColor("#FFFFFF");
+                                        });
+
+                                        // Data rows
                                         int recordCounter = 0;
-
-                                        foreach (var group in groups)
+                                        foreach (var item in records)
                                         {
-                                            groupIndex++;
-                                            var config = group.Config;
+                                            recordCounter++;
+                                            var localIndex = recordCounter;
+                                            var localItem = item;
 
-                                            batch.Item()
-                                                .BorderTop(1).BorderColor("#E8E8E8")
-                                                .Padding(7).PaddingLeft(12).PaddingRight(12)
-                                                .Column(record =>
-                                                {
-                                                    // FREQUENCY & FILTER
-                                                    if (config?.Frequency?.FD != null && config?.Filter?.FD != null)
-                                                    {
-                                                        var freqEntries = config.Frequency.FD.Where(f => f.FN != 3).ToList();
-                                                        if (freqEntries.Count == 0 && config.Frequency.FD.Count > 0)
-                                                        {
-                                                            freqEntries.Add(config.Frequency.FD[0]);
-                                                        }
+                                            try
+                                            {
+                                                bool passed = localItem.Result;
+                                                string rowBg = (localIndex % 2 == 0) ? "#FAFAFA" : "#FFFFFF";
 
-                                                        var uniqueFD = freqEntries
-                                                            .GroupBy(f => new { f.F, f.G, f.UTH, f.LTH, f.TH, f.PP })
-                                                            .Select(g => g.First())
-                                                            .ToList();
+                                                table.Cell().Background(rowBg).Padding(4)
+                                                    .Text(localIndex.ToString()).FontSize(7).FontColor("#333333");
 
-                                                        foreach (var f in uniqueFD)
-                                                        {
-                                                            try
-                                                            {
-                                                                var filterRow = config.Filter.FD.FirstOrDefault(fd => fd.FN == f.FN);
+                                                table.Cell().Background(rowBg).Padding(4)
+                                                    .Text(localItem.TimeStamp.ToString("dd/MM/yyyy HH:mm:ss")).FontSize(7).FontColor("#333333");
 
-                                                                record.Item().PaddingTop(5).Text("FREQUENCY & FILTER")
-                                                                    .FontSize(6.5f).Bold().FontColor("#888888");
-
-                                                                record.Item().PaddingTop(2).Row(r =>
-                                                                {
-                                                                    r.RelativeItem().Element(c => LV(c, "Frequency(KHz)", (f.F / 1000).ToString()));
-                                                                    r.RelativeItem().Element(c => LV(c, "Pre Gain(dB)", f.G.ToString()));
-                                                                    r.RelativeItem().Element(c => LV(c, "Phase", f.PP.ToString()));
-                                                                    r.RelativeItem().Element(c => LV(c, "High Threshold", f.UTH.ToString()));
-                                                                });
-
-                                                                record.Item().PaddingTop(1).Row(r =>
-                                                                {
-                                                                    r.RelativeItem().Element(c => LV(c, "Low Threshold", f.LTH.ToString()));
-                                                                    r.RelativeItem().Element(c => LV(c, "Third Threshold", f.TH.ToString()));
-                                                                    r.RelativeItem().Element(c => LV(c, "High Pass Filter", filterRow?.H.ToString() ?? "-"));
-                                                                    r.RelativeItem().Element(c => LV(c, "Low Pass Filter", filterRow?.L.ToString() ?? "-"));
-                                                                });
-                                                            }
-                                                            catch
-                                                            {
-                                                                MessageBox.Show("Something went wrong. Please try again.");
-                                                            }
-                                                        }
-                                                    }
-
-                                                    // MARKER
-                                                    if (config?.Marker != null)
-                                                    {
-                                                        var m = config.Marker;
-
-                                                        record.Item().PaddingTop(5).Text("MARKER")
-                                                            .FontSize(6.5f).Bold().FontColor("#888888");
-
-                                                        record.Item().PaddingTop(2).Row(r =>
-                                                        {
-                                                            r.RelativeItem().Element(c => LV(c, "Marker1(ms)", m.M1.ToString()));
-                                                            r.RelativeItem().Element(c => LV(c, "Marker2(ms)", m.M2.ToString()));
-                                                            r.RelativeItem().Element(c => LV(c, "Front Delay(ms)", m.FmS.ToString()));
-                                                            r.RelativeItem().Element(c => LV(c, "Rear Delay(ms)", m.RmS.ToString()));
-                                                        });
-
-                                                        record.Item().PaddingTop(1).Row(r =>
-                                                        {
-                                                            r.RelativeItem().Element(c => LV(c, "Paint Spray Time(ms)", m.P1mS.ToString()));
-                                                            r.RelativeItem().Element(c => LV(c, "C1 to C2 Sensor Distance(mm)", m.C1C2.ToString()));
-                                                            r.RelativeItem().Element(c => LV(c, "C2 to Exit Sensor Distance(mm)", m.C2E.ToString()));
-                                                            r.RelativeItem().Element(c => LV(c, "C Coil to C2 Distance(mm)", m.CC2.ToString()));
-                                                        });
-                                                    }
-
-                                                    // ABSOLUTE
-                                                    var firstRec = group.Records.FirstOrDefault();
-                                                    JObject? configJsonObj = null;
-                                                    try
-                                                    {
-                                                        if (!string.IsNullOrEmpty(firstRec.ConfigurationJson))
-                                                        {
-                                                            configJsonObj = JObject.Parse(firstRec.ConfigurationJson);
-                                                        }
-                                                    }
-                                                    catch { }
-
-                                                    var absFreqToken = configJsonObj?["Frequency"]?["FD"]?.FirstOrDefault(x => (int?)x["FN"] == 3);
-                                                    var absFilterToken = configJsonObj?["Filter"]?["FD"]?.FirstOrDefault(x => (int?)x["FN"] == 3);
-
-                                                    string absPreGain = absFreqToken?["G"] != null ? absFreqToken["G"]!.ToString() : "N/A";
-                                                    string absPostGain = absFilterToken?["G"] != null ? absFilterToken["G"]!.ToString() : "N/A";
-                                                    string absLowPass = absFilterToken?["L"] != null ? absFilterToken["L"]!.ToString() : "N/A";
-                                                    string absHighTh = absFreqToken?["UTH"] != null ? absFreqToken["UTH"]!.ToString() : "N/A";
-                                                    string absLowTh = absFreqToken?["LTH"] != null ? absFreqToken["LTH"]!.ToString() : "N/A";
-                                                    string absThirdTh = absFreqToken?["TH"] != null ? absFreqToken["TH"]!.ToString() : "N/A";
-
-                                                    record.Item().PaddingTop(5).Text("ABSOLUTE")
-                                                        .FontSize(6.5f).Bold().FontColor("#888888");
-
-                                                    record.Item().PaddingTop(2).Row(r =>
-                                                    {
-                                                        r.RelativeItem().Element(c => LV(c, "Pre Gain(dB)", absPreGain));
-                                                        r.RelativeItem().Element(c => LV(c, "Post Gain(dB)", absPostGain));
-                                                        r.RelativeItem().Element(c => LV(c, "Low Pass Filter", absLowPass));
-                                                        r.RelativeItem().Element(c => LV(c, "High Threshold", absHighTh));
-                                                    });
-
-                                                    record.Item().PaddingTop(1).Row(r =>
-                                                    {
-                                                        r.RelativeItem().Element(c => LV(c, "Low Threshold", absLowTh));
-                                                        r.RelativeItem().Element(c => LV(c, "Third Threshold", absThirdTh));
-                                                        r.RelativeItem();
-                                                        r.RelativeItem();
-                                                    });
-
-                                                    // ---- Records table for this settings group ----
-                                                    record.Item().PaddingTop(6).Table(table =>
-                                                    {
-                                                        table.ColumnsDefinition(columns =>
-                                                        {
-                                                            columns.ConstantColumn(50);   // Sr No
-                                                            columns.RelativeColumn(2);    // Timestamp
-                                                            columns.ConstantColumn(60);   // Result
-                                                        });
-
-                                                        // Header row
-                                                        table.Header(header =>
-                                                        {
-                                                            header.Cell().Background("#0D3B6E").Padding(4)
-                                                                .Text("Sr No").FontSize(7).Bold().FontColor("#FFFFFF");
-
-                                                            header.Cell().Background("#0D3B6E").Padding(4)
-                                                                .Text("Timestamp").FontSize(7).Bold().FontColor("#FFFFFF");
-
-                                                            header.Cell().Background("#0D3B6E").Padding(4)
-                                                                .Text("Result").FontSize(7).Bold().FontColor("#FFFFFF");
-                                                        });
-
-                                                        // Data rows
-                                                        foreach (var item in group.Records)
-                                                        {
-                                                            recordCounter++;
-                                                            var localIndex = recordCounter;
-                                                            var localItem = item;
-
-                                                            try
-                                                            {
-                                                                bool passed = localItem.Result;
-                                                                string rowBg = (localIndex % 2 == 0) ? "#FAFAFA" : "#FFFFFF";
-
-                                                                table.Cell().Background(rowBg).Padding(4)
-                                                                    .Text(localIndex.ToString()).FontSize(7).FontColor("#333333");
-
-                                                                table.Cell().Background(rowBg).Padding(4)
-                                                                    .Text(localItem.TimeStamp.ToString("dd/MM/yyyy HH:mm:ss")).FontSize(7).FontColor("#333333");
-
-                                                                table.Cell().Background(passed ? "#E8F5E9" : "#FFEBEE").Padding(4)
-                                                                    .Text(passed ? "PASS" : "FAIL").FontSize(7).Bold()
-                                                                    .FontColor(passed ? "#2E7D32" : "#C62828");
-                                                            }
-                                                            catch
-                                                            {
-                                                                MessageBox.Show("Something went wrong. Please try again.");
-                                                            }
-                                                        }
-                                                    });
-
-                                                });
+                                                table.Cell().Background(passed ? "#E8F5E9" : "#FFEBEE").Padding(4)
+                                                    .Text(passed ? "PASS" : "FAIL").FontSize(7).Bold()
+                                                    .FontColor(passed ? "#2E7D32" : "#C62828");
+                                            }
+                                            catch
+                                            {
+                                                MessageBox.Show("Something went wrong. Please try again.");
+                                            }
                                         }
                                     });
-                                }
-                                catch (Exception)
-                                {
-                                    MessageBox.Show("Something went wrong. Please try again.");
-                                }
-                            }
-                        });
-
-                        // Footer
-                        page.Footer().AlignCenter().PaddingTop(4).Text(x =>
-                        {
-                            x.Span("Page ").FontSize(8);
-                            x.CurrentPageNumber().FontSize(8);
-                            x.Span(" of ").FontSize(8);
-                            x.TotalPages().FontSize(8);
+                                });
                         });
                     });
-                })
-                .GeneratePdf(filePath);
 
-                MessageBox.Show("PDF Generated ✅");
+                    // Footer
+                    page.Footer().AlignCenter().PaddingTop(4).Text(x =>
+                    {
+                        x.Span("Page ").FontSize(8);
+                        x.CurrentPageNumber().FontSize(8);
+                        x.Span(" of ").FontSize(8);
+                        x.TotalPages().FontSize(8);
+                    });
+                });
+            })
+            .GeneratePdf(targetPath);
+        }
+
+        public void GeneratePdf(string filePath)
+        {
+            try
+            {
+                var data = GetBatchDetails();
+                var batchDetails = new Dictionary<string, List<(DateTime TimeStamp, string ConfigurationJson, string GraphDataJson, bool Result, string BatchName, string PartJson)>>();
+                foreach (var log in listOfLog)
+                    batchDetails[log.BatchName] = data.Where(d => d.BatchName == log.BatchName).OrderBy(d => d.TimeStamp).ToList();
+
+                QuestPDF.Settings.License = LicenseType.Community;
+
+                string fullPath = System.IO.Path.GetFullPath(filePath);
+                string folder = System.IO.Path.GetDirectoryName(fullPath) ?? "";
+                string baseName = System.IO.Path.GetFileNameWithoutExtension(fullPath);
+                string ext = System.IO.Path.GetExtension(fullPath);
+                if (string.IsNullOrEmpty(ext)) ext = ".pdf";
+
+                Directory.CreateDirectory(folder);
+
+                var generatedFiles = new List<string>();
+
+                foreach (var log in listOfLog)
+                {
+                    if (!batchDetails.TryGetValue(log.BatchName, out var details) || details.Count == 0)
+                    {
+                        GenerateSingleConfigPdf(fullPath, log.BatchName, null, new List<(DateTime, string, string, bool, string, string)>());
+                        generatedFiles.Add(fullPath);
+                        continue;
+                    }
+
+                    // ---- Build consecutive groups sharing the same settings ----
+                    var groups = new List<(Configuration? Config, List<(DateTime TimeStamp, string ConfigurationJson, string GraphDataJson, bool Result, string BatchName, string PartJson)> Records)>();
+
+                    string? lastKey = null;
+                    foreach (var item in details)
+                    {
+                        Configuration? cfg = null;
+                        try { cfg = JsonConvert.DeserializeObject<Configuration>(item.ConfigurationJson); }
+                        catch { /* leave null, treated as its own group */ }
+
+                        string key = BuildSettingsKey(cfg);
+
+                        if (groups.Count == 0 || key != lastKey)
+                        {
+                            groups.Add((cfg, new List<(DateTime, string, string, bool, string, string)> { item }));
+                            lastKey = key;
+                        }
+                        else
+                        {
+                            groups[groups.Count - 1].Records.Add(item);
+                        }
+                    }
+
+                    for (int g = 0; g < groups.Count; g++)
+                    {
+                        var group = groups[g];
+
+                        string targetFile;
+                        if (groups.Count == 1)
+                        {
+                            targetFile = listOfLog.Count == 1
+                                ? fullPath
+                                : System.IO.Path.Combine(folder, $"{baseName}_{log.BatchName}{ext}");
+                        }
+                        else
+                        {
+                            targetFile = listOfLog.Count == 1
+                                ? System.IO.Path.Combine(folder, $"{baseName}_Config{g + 1}{ext}")
+                                : System.IO.Path.Combine(folder, $"{baseName}_{log.BatchName}_Config{g + 1}{ext}");
+                        }
+
+                        GenerateSingleConfigPdf(targetFile, log.BatchName, group.Config, group.Records);
+                        generatedFiles.Add(targetFile);
+                    }
+                }
+
+                if (generatedFiles.Count > 0)
+                {
+                    string msg = generatedFiles.Count == 1
+                        ? $"1 report created: {folder}"
+                        : $"{generatedFiles.Count} reports created: {folder}";
+                    ShowNonModalMessage(msg);
+                }
             }
             catch (Exception)
             {
@@ -977,30 +1111,7 @@ namespace Eddy
             }
         }
 
-        private string BuildSettingsKey(Configuration? config)
-        {
-            if (config?.Frequency?.FD == null)
-                return "no-settings";
-
-            var freqParts = config.Frequency.FD
-                .OrderBy(f => f.FN)
-                .Select(f => $"{f.F}|{f.G}|{f.UTH}|{f.LTH}|{f.TH}|{f.PP}");
-
-            string markerPart = "no-marker";
-            if (config.Marker != null)
-            {
-                var m = config.Marker;
-                markerPart = $"{m.M1}|{m.M2}|{m.FmS}|{m.RmS}|{m.P1mS}|{m.C1C2}|{m.C2E}|{m.CC2}";
-            }
-
-            var absFreq = config.Frequency.FD.FirstOrDefault(f => f.FN == 3);
-            var absFilter = config.Filter?.FD?.FirstOrDefault(f => f.FN == 3);
-            string absPart = (absFreq != null || absFilter != null)
-                ? $"{absFreq?.G}|{absFilter?.G}|{absFilter?.L}|{absFreq?.UTH}|{absFreq?.LTH}|{absFreq?.TH}"
-                : "no-absolute";
-
-            return string.Join(";", freqParts) + "||" + markerPart + "||" + absPart;
-        }
+        private string BuildSettingsKey(Configuration? config) => DeviceCOM.BuildSettingsKey(config);
 
         private void DownloadPdf_Click(object sender, RoutedEventArgs e)
         {
@@ -1054,9 +1165,9 @@ namespace Eddy
             }
         }
 
-        public List<(DateTime TimeStamp,string ConfigurationJson,string GraphDataJson,bool Result,string BatchName)> GetBatchDetails()
+        public List<(DateTime TimeStamp, string ConfigurationJson, string GraphDataJson, bool Result, string BatchName, string PartJson)> GetBatchDetails()
         {
-            var list = new List<(DateTime,string,string,bool,string)>();
+            var list = new List<(DateTime, string, string, bool, string, string)>();
 
             if (!clStartDate.SelectedDate.HasValue || !clToDate.SelectedDate.HasValue)
             {
@@ -1080,7 +1191,8 @@ namespace Eddy
                 ""ConfigurationJson"",
                 ""GraphDataJson"",
                 ""Result"",
-                ""BatchName""
+                ""BatchName"",
+                ""PartJson""
             FROM ""Logs""
             WHERE ""BatchName"" ILIKE '%' || @BatchName || '%'
                 AND ""TimeStamp"" >= @StartDate
@@ -1109,7 +1221,9 @@ namespace Eddy
                                     reader.GetBoolean(
                                         reader.GetOrdinal("Result")),
 
-                                    reader["BatchName"]?.ToString() ?? ""
+                                    reader["BatchName"]?.ToString() ?? "",
+
+                                    reader["PartJson"]?.ToString() ?? ""
                                 ));
                             }
                         }
@@ -1197,6 +1311,11 @@ namespace Eddy
             }
 
             return list;
+        }
+
+        private void grdlogs_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+
         }
     }
 }

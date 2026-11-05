@@ -241,9 +241,12 @@ namespace Eddy
             data1[4] = Convert.ToByte(1);
             data1[5] = Convert.ToByte(2);
 
+            var isAbsolute = Convert.ToBoolean(System.Configuration.ConfigurationManager.AppSettings["isAbsolute"]);
             int startBytes = 6;
             foreach (var fd in DeviceCOM.Configuration.Frequency.FD)
             {
+                if (!isAbsolute && fd.FN == 3) continue;
+
                 data1[startBytes] = Convert.ToByte(fd.FN);
 
                 data1[startBytes + 1] = (byte)(fd.F & 0xFF);         // Lowest byte
@@ -266,6 +269,8 @@ namespace Eddy
 
             foreach (var fd in DeviceCOM.Configuration.Filter.FD)
             {
+                if (!isAbsolute && fd.FN == 3) continue;
+
                 data1[startBytes] = Convert.ToByte(fd.FN);
 
                 var gaint = Convert.ToInt16(fd.G * 10);
@@ -1682,11 +1687,45 @@ namespace Eddy
         {
             if (DeviceCOM.IsLogEnable)
             {
+                DeviceCOM.RememberClosedFile();
                 DeviceCOM.IsLogEnable = false;
                 lblLog.Content = "Start Log";
+                if (DeviceCOM.part != null)
+                {
+                    DeviceCOM.part.Name = "";
+                }
             }
             else
             {
+                DeviceCOM.EnsureAbsoluteSettings();
+                string currentKey = DeviceCOM.BuildSettingsKey(DeviceCOM.Configuration);
+
+                bool canContinue = !string.IsNullOrWhiteSpace(DeviceCOM.LastClosedBatchName)
+                    && DeviceCOM.LastClosedPart != null
+                    && DeviceCOM.LastClosedSettingsKey == currentKey;
+
+                if (canContinue)
+                {
+                    var dlg = new ContinueLogDialog(DeviceCOM.LastClosedBatchName!, this);
+                    dlg.ShowDialog();
+
+                    if (dlg.Result == true)
+                    {
+                        if (TryContinuePreviousLog(DeviceCOM.LastClosedBatchName!))
+                        {
+                            return;
+                        }
+                    }
+                    else if (dlg.Result == false)
+                    {
+                        DeviceCOM.LastClosedBatchName = null;
+                    }
+                    else
+                    {
+                        return;
+                    }
+                }
+
                 partConfig = new PartConfig();
                 partConfig.Closing += partConfig_Closing;
                 partConfig.Owner = this;
@@ -1700,12 +1739,98 @@ namespace Eddy
             if (DeviceCOM.IsLogEnable)
             {
                 lblLog.Content = "Stop Log";
+                DeviceCOM.Ok = 0;
+                DeviceCOM.NoOk = 0;
+                lblOk.Content = "Ok Count-0";
+                lblNotOk.Content = "Not Ok Count-0";
+                lblTotal.Content = "Total Count-0";
+                wpCounter.Plot.Clear();
+                wpCounter.Refresh();
                 //lblPartLogs.Content = DeviceCOM.part.BatchName + " => " + DeviceCOM.part.Name;
             }
             else
             {
-                //lblPartLogs.Content = "";
+                lblLog.Content = "Start Log";
             }
+        }
+
+        private bool TryContinuePreviousLog(string batchName)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(DeviceCOM.DBConnection))
+                {
+                    DeviceCOM.DBConnection = Convert.ToString(System.Configuration.ConfigurationManager.AppSettings["DBConnection"]) ?? "";
+                }
+
+                int okCount = 0;
+                int notOkCount = 0;
+                bool readSuccess = false;
+
+                using (var con = new NpgsqlConnection(DeviceCOM.DBConnection))
+                {
+                    con.Open();
+                    using var cmd = new NpgsqlCommand(@"
+                        SELECT 
+                            COUNT(*) FILTER (WHERE ""Result"" = true),
+                            COUNT(*) FILTER (WHERE ""Result"" = false)
+                        FROM ""Logs""
+                        WHERE ""BatchName"" = @batch;", con);
+                    cmd.Parameters.AddWithValue("@batch", batchName);
+                    using var reader = cmd.ExecuteReader();
+                    if (reader.Read())
+                    {
+                        okCount = Convert.ToInt32(reader[0]);
+                        notOkCount = Convert.ToInt32(reader[1]);
+                        readSuccess = true;
+                    }
+                }
+
+                if (readSuccess)
+                {
+                    DeviceCOM.part = new Part
+                    {
+                        Name = batchName,
+                        Placce = DeviceCOM.LastClosedPart?.Placce ?? "",
+                        Grade = DeviceCOM.LastClosedPart?.Grade ?? "",
+                        CheckedBy = DeviceCOM.LastClosedPart?.CheckedBy ?? "",
+                        CompanyName = DeviceCOM.LastClosedPart?.CompanyName ?? "",
+                        BatchSize = DeviceCOM.LastClosedPart?.BatchSize ?? 0,
+                        ImagePath = DeviceCOM.LastClosedPart?.ImagePath ?? ""
+                    };
+
+                    DeviceCOM.Ok = okCount;
+                    DeviceCOM.NoOk = notOkCount;
+                    lblOk.Content = "Ok Count-" + DeviceCOM.Ok.ToString();
+                    lblNotOk.Content = "Not Ok Count-" + DeviceCOM.NoOk.ToString();
+                    lblTotal.Content = "Total Count-" + (DeviceCOM.Ok + DeviceCOM.NoOk).ToString();
+
+                    wpCounter.Plot.Clear();
+                    var pieSlices = new List<ScottPlot.PieSlice>();
+                    if (DeviceCOM.Ok > 0 || DeviceCOM.NoOk > 0)
+                    {
+                        pieSlices.Add(new ScottPlot.PieSlice(DeviceCOM.Ok, ScottPlot.Colors.Green, "Ok"));
+                        pieSlices.Add(new ScottPlot.PieSlice(DeviceCOM.NoOk, ScottPlot.Colors.Red, "Not Ok"));
+                        var pie = wpCounter.Plot.Add.Pie(pieSlices);
+                        wpCounter.Plot.Axes.Bottom.IsVisible = false;
+                        wpCounter.Plot.Axes.Left.IsVisible = false;
+                    }
+                    wpCounter.Refresh();
+
+                    DeviceCOM.IsLogEnable = true;
+                    lblLog.Content = "Stop Log";
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"TryContinuePreviousLog error: {ex}");
+            }
+
+            resultStatus = "Unable to read previous file counts from database. Starting new file.";
+            lblResultStatus.Content = resultStatus;
+            DeviceCOM.LastClosedBatchName = null;
+            return false;
         }
 
         private void ddlTT_SelectionChanged(object sender, SelectionChangedEventArgs e)

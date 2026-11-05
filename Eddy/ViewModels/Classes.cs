@@ -341,6 +341,8 @@ namespace Eddy
                         }
                         else 
                         { 
+                            var isAbsolute = Convert.ToBoolean(System.Configuration.ConfigurationManager.AppSettings["isAbsolute"]);
+
                             byte[] data1 = new byte[29];
                             data1[0] = Convert.ToByte(2);
                             data1[1] = Convert.ToByte(57);
@@ -352,6 +354,8 @@ namespace Eddy
                             int startBytes = 6;
                             foreach (var fd in DeviceCOM.Configuration.Frequency.FD)
                             {
+                                if (!isAbsolute && fd.FN == 3) continue;
+
                                 data1[startBytes] = Convert.ToByte(fd.FN);
 
                                 data1[startBytes + 1] = (byte)(fd.F & 0xFF);         // Lowest byte
@@ -374,6 +378,8 @@ namespace Eddy
 
                             foreach (var fd in DeviceCOM.Configuration.Filter.FD)
                             {
+                                if (!isAbsolute && fd.FN == 3) continue;
+
                                 data1[startBytes] = Convert.ToByte(fd.FN);
 
                                 var gaint = Convert.ToInt16(fd.G * 10);
@@ -714,6 +720,8 @@ namespace Eddy
 
                             foreach (var fd in DeviceCOM.Configuration.Filter.FD)
                             {
+                                if (!isAbsolute && fd.FN == 3) continue;
+
                                 data1[startBytes] = Convert.ToByte(fd.FN);
 
                                 var gaint = Convert.ToInt16(fd.G * 10);

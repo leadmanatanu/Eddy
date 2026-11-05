@@ -46,6 +46,9 @@ namespace Eddy
         public static DateTime busyStamp = System.DateTime.Now;
         public static Part? part;
         public static bool IsLogEnable = false;
+        public static string? LastClosedBatchName = null;
+        public static Part? LastClosedPart = null;
+        public static string? LastClosedSettingsKey = null;
         public static byte[]? receiveBytes;
         public static double[]? dataBuffer;
         public static bool IsCalibarationStart = false;
@@ -342,6 +345,65 @@ namespace Eddy
                     X = 10,
                     Y = 10
                 });
+            }
+        }
+
+        public static string BuildSettingsKey(Configuration? config)
+        {
+            if (config?.Frequency?.FD == null)
+                return "no-settings";
+
+            EnsureAbsoluteSettings(config);
+
+            var freqParts = config.Frequency.FD
+                .OrderBy(f => f.FN)
+                .Select(f => $"{f.F}|{f.G}|{f.UTH}|{f.LTH}|{f.TH}|{f.PP}");
+
+            string markerPart = "no-marker";
+            if (config.Marker != null)
+            {
+                var m = config.Marker;
+                markerPart = $"{m.M1}|{m.M2}|{m.FmS}|{m.RmS}|{m.P1mS}|{m.C1C2}|{m.C2E}|{m.CC2}";
+            }
+
+            string filterPart = "no-filter";
+            if (config.Filter?.FD != null)
+            {
+                filterPart = string.Join(";", config.Filter.FD.OrderBy(f => f.FN).Select(f => $"{f.FN}|{f.H}|{f.L}|{f.G}"));
+            }
+
+            var absFreq = config.Frequency.FD.FirstOrDefault(f => f.FN == 3);
+            var absFilter = config.Filter?.FD?.FirstOrDefault(f => f.FN == 3);
+            string absPart = (absFreq != null || absFilter != null)
+                ? $"{absFreq?.G}|{absFilter?.G}|{absFilter?.L}|{absFreq?.UTH}|{absFreq?.LTH}|{absFreq?.TH}"
+                : "no-absolute";
+
+            return string.Join(";", freqParts) + "||" + filterPart + "||" + markerPart + "||" + absPart;
+        }
+
+        public static void RememberClosedFile()
+        {
+            if (part != null && !string.IsNullOrWhiteSpace(part.Name))
+            {
+                EnsureAbsoluteSettings();
+                LastClosedBatchName = part.Name.Trim();
+                LastClosedPart = new Part
+                {
+                    Name = part.Name.Trim(),
+                    Placce = part.Placce,
+                    Grade = part.Grade,
+                    CheckedBy = part.CheckedBy,
+                    CompanyName = part.CompanyName,
+                    BatchSize = part.BatchSize,
+                    ImagePath = part.ImagePath
+                };
+                LastClosedSettingsKey = BuildSettingsKey(Configuration);
+            }
+            else
+            {
+                LastClosedBatchName = null;
+                LastClosedPart = null;
+                LastClosedSettingsKey = null;
             }
         }
     }

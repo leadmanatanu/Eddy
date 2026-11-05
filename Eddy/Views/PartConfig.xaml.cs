@@ -1,4 +1,5 @@
 using Newtonsoft.Json;
+using Npgsql;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.Eventing.Reader;
@@ -30,7 +31,7 @@ namespace Eddy
                 DeviceCOM.part = new Part();
 
             
-            txtBatchName.Text = DeviceCOM.part.Name;
+            txtBatchName.Text = "";
             txtPlace.Text = DeviceCOM.part.Placce;
             txtCheckedBy.Text = DeviceCOM.part.CheckedBy;
             txtCompanyName.Text = DeviceCOM.part.CompanyName;
@@ -51,7 +52,7 @@ namespace Eddy
                 if (msg.Count == 0)
                 {
                     DeviceCOM.part ??= new Part();
-                    DeviceCOM.part.Name = txtBatchName.Text;
+                    DeviceCOM.part.Name = txtBatchName.Text.Trim();
                     DeviceCOM.part.Placce = txtPlace.Text;
                     DeviceCOM.part.Grade = txtGrade.Text;
                     DeviceCOM.part.CheckedBy = txtCheckedBy.Text;
@@ -79,9 +80,33 @@ namespace Eddy
         public List<String> Validaton()
         {
             List<String> validationMsg = new List<string>();
-            if (string.IsNullOrEmpty(txtBatchName.Text))
+            string batchName = txtBatchName.Text?.Trim() ?? "";
+            if (string.IsNullOrEmpty(batchName))
             {
-                validationMsg.Add("Batch Name is required.");
+                validationMsg.Add("File Name is required.");
+            }
+            else
+            {
+                try
+                {
+                    using (var con = new NpgsqlConnection(DeviceCOM.DBConnection))
+                    {
+                        con.Open();
+                        using (var cmd = new NpgsqlCommand("SELECT 1 FROM \"Logs\" WHERE LOWER(TRIM(\"BatchName\")) = LOWER(TRIM(@batch)) LIMIT 1;", con))
+                        {
+                            cmd.Parameters.AddWithValue("@batch", batchName);
+                            var exists = cmd.ExecuteScalar();
+                            if (exists != null)
+                            {
+                                validationMsg.Add("File name already used. Enter a new name.");
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Batch duplicate check error: {ex}");
+                }
             }
             if (string.IsNullOrEmpty(txtPlace.Text))
             {

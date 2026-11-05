@@ -139,6 +139,8 @@ namespace Eddy
                             int startBytes = 6;
                             foreach (var fd in DeviceCOM.Configuration.Frequency.FD)
                             {
+                                if (!isAbsolute && fd.FN == 3) continue;
+
                                 data1[startBytes] = Convert.ToByte(fd.FN);
 
                                 data1[startBytes + 1] = (byte)(fd.F & 0xFF);         // Lowest byte
@@ -161,6 +163,8 @@ namespace Eddy
 
                             foreach (var fd in DeviceCOM.Configuration.Filter.FD)
                             {
+                                if (!isAbsolute && fd.FN == 3) continue;
+
                                 data1[startBytes] = Convert.ToByte(fd.FN);
 
                                 var gaint = Convert.ToInt16(fd.G * 10);
