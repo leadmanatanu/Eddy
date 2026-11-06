@@ -89,6 +89,7 @@ namespace Eddy
             {
                 try
                 {
+                    DbWriterQueue.Flush(5000);
                     using (var con = new NpgsqlConnection(DeviceCOM.DBConnection))
                     {
                         con.Open();
@@ -131,13 +132,13 @@ namespace Eddy
 
             if (string.IsNullOrEmpty(txtBatchSize.Text))
             {
-                validationMsg.Add("Batch Size is required and sould be greater than 0");
+                validationMsg.Add("File Size is required and sould be greater than 0");
             }
             else
             {
                 if (Convert.ToInt16(txtBatchSize.Text) <= 0)
                 {
-                    validationMsg.Add("Batch Size is required and sould be greater than 0");
+                    validationMsg.Add("File Size is required and sould be greater than 0");
                 }
             }
 

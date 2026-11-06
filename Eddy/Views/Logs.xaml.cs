@@ -170,7 +170,7 @@ namespace Eddy
                 Microsoft.Win32.SaveFileDialog dlg =
                     new Microsoft.Win32.SaveFileDialog();
 
-                dlg.FileName = "BatchSummaryReport";
+                dlg.FileName = "FileSummaryReport";
                 dlg.DefaultExt = ".pdf";
                 dlg.Filter = "PDF Files (.pdf)|*.pdf";
 
@@ -448,7 +448,8 @@ namespace Eddy
                                             if (config?.Frequency?.FD != null &&
                                                 config?.Filter?.FD != null)
                                             {
-                                                var uniqueFD = config.Frequency.FD
+                                                var freqList = DeviceCOM.isAbsolute ? config.Frequency.FD : config.Frequency.FD.Where(f => f.FN != 3);
+                                                var uniqueFD = freqList
                                                     .GroupBy(f => new
                                                     {
                                                         f.F,
@@ -703,8 +704,8 @@ namespace Eddy
             string partGrade = GetPartField(partJsonObj, "Grade");
             string partPlace = GetPartField(partJsonObj, "Placce", "Place");
             string partCheckedBy = GetPartField(partJsonObj, "CheckedBy");
-            string partBatchSize = GetPartField(partJsonObj, "BatchSize");
-            string partNumber = GetPartField(partJsonObj, "PartNumber");
+
+
 
             void LV(IContainer c, string label, string value)
             {
@@ -819,7 +820,7 @@ namespace Eddy
                                 .Padding(7).PaddingLeft(12).PaddingRight(12)
                                 .Column(batchCol =>
                                 {
-                                    batchCol.Item().Text("BATCH CONFIGURATION")
+                                    batchCol.Item().Text("FILE CONFIGURATION")
                                         .FontSize(6.5f).Bold().FontColor("#888888");
 
                                     batchCol.Item().PaddingTop(2).Row(r =>
@@ -830,13 +831,6 @@ namespace Eddy
                                         r.RelativeItem().Element(c => LV(c, "Checked By", partCheckedBy));
                                     });
 
-                                    batchCol.Item().PaddingTop(1).Row(r =>
-                                    {
-                                        r.RelativeItem().Element(c => LV(c, "Batch Size", partBatchSize));
-                                        r.RelativeItem().Element(c => LV(c, "Part Number", partNumber));
-                                        r.RelativeItem();
-                                        r.RelativeItem();
-                                    });
                                 });
 
                             batch.Item()
@@ -913,6 +907,8 @@ namespace Eddy
                                     }
 
                                     // ABSOLUTE
+                                    if (DeviceCOM.isAbsolute)
+                                    {
                                     JObject? configJsonObj = null;
                                     try
                                     {
@@ -951,6 +947,8 @@ namespace Eddy
                                         r.RelativeItem();
                                         r.RelativeItem();
                                     });
+
+                                    }
 
                                     // ---- Records table for this settings group ----
                                     record.Item().PaddingTop(6).Table(table =>
@@ -1134,14 +1132,14 @@ namespace Eddy
             {
                 if (selectedLog == null)
                 {
-                    MessageBox.Show("Invalid batch");
+                    MessageBox.Show("Invalid File");
                     return;
                 }
 
                 // Backup original list
                 var originalList = listOfLog;
 
-                // ✅ Replace with ONLY selected batch
+                // Replace with ONLY selected batch
                 listOfLog = new List<LogData> { selectedLog };
 
                 // File dialog

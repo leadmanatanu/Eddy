@@ -442,7 +442,7 @@ namespace Eddy
 
                     MessageBox.Show(msg, "Information");
                 }
-                else if (Header == "Batch Wise Log")
+                else if (Header == "File Wise Log")
                 {
                     Logs logs = new Logs();
                     logs.ShowDialog();
@@ -790,7 +790,7 @@ namespace Eddy
 
                     MessageBox.Show(msg, "Information");
                 }
-                else if (Header == "Batch Wise Log")
+                else if (Header == "File Wise Log")
                 {
                     Logs logs = new Logs();
                     logs.ShowDialog();

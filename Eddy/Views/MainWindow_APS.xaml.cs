@@ -109,7 +109,7 @@ namespace Eddy
                 new MenuItemViewModel_APS { Header = "View Log",
                     MenuItems = new ObservableCollection<MenuItemViewModel_APS>
                     {
-                        new MenuItemViewModel_APS { Header = "Batch Wise Log", mainWindow =this }
+                        new MenuItemViewModel_APS { Header = "File Wise Log", mainWindow =this }
                     }
                 },
             };
@@ -326,6 +326,7 @@ namespace Eddy
             dispatcherTimerui.Start();
 
             Closing += MainWindow_APS_Closing;
+            DbWriterQueue.OnStatusMessage += msg => Dispatcher.InvokeAsync(() => { resultStatus = msg; lblResultStatus.Content = msg; });
 
             Task.Run(() => PollLoop());
 
@@ -725,6 +726,7 @@ namespace Eddy
         {
             try
             {
+                DbWriterQueue.Flush(30000);
                 _consumerCts?.Cancel();
                 processingQueue.CompleteAdding();
                 receiver?.StopReceiving();
@@ -777,53 +779,43 @@ namespace Eddy
                 List<Fdata> Ld;
                 lock (DeviceCOM.AmpD1Lock)
                 {
-                    Ld = DeviceCOM.graphData.AmpD1.ToList();
+                    Ld = DeviceCOM.graphData.AmpD1?.ToList() ?? new List<Fdata>();
                     DeviceCOM.graphData.AmpD1 = new List<Fdata>();
                 }
                 string ImageName = Guid.NewGuid().ToString() + ".jpeg";
 
-                // Heavy DB work stays on background thread
+                // Hand tube save to background writer queue so packet processing thread returns immediately
                 if (DeviceCOM.IsLogEnable)
                 {
-                    try
+                    Part? partSnapshot = null;
+                    if (DeviceCOM.part != null)
                     {
-                        using (var con = new NpgsqlConnection(DeviceCOM.DBConnection))
+                        DeviceCOM.part.ImagePath = ImageName;
+                        partSnapshot = new Part
                         {
-                            con.Open();
-                            if (DeviceCOM.part != null)
-                            {
-                                DeviceCOM.part.ImagePath = ImageName;
-                            }
-
-                            DeviceCOM.EnsureAbsoluteSettings();
-                            string partJson = JsonConvert.SerializeObject(DeviceCOM.part);
-                            string configJson = JsonConvert.SerializeObject(DeviceCOM.Configuration);
-                            string graphJson = JsonConvert.SerializeObject(DeviceCOM.graphData);
-
-                            string sql = @"
-                                INSERT INTO ""Logs"" 
-                                (""TimeStamp"", ""PartJson"", ""ConfigurationJson"", ""GraphDataJson"", ""BatchName"", ""Result"")
-                                VALUES 
-                                (@time, @part, @config, @graph, @batch, @result)";
-
-                            using (var cmd = new NpgsqlCommand(sql, con))
-                            {
-                                cmd.Parameters.AddWithValue("@time", DateTime.Now);
-                                cmd.Parameters.AddWithValue("@part", NpgsqlTypes.NpgsqlDbType.Jsonb, partJson);
-                                cmd.Parameters.AddWithValue("@config", NpgsqlTypes.NpgsqlDbType.Jsonb, configJson);
-                                cmd.Parameters.AddWithValue("@graph", NpgsqlTypes.NpgsqlDbType.Jsonb, graphJson);
-                                cmd.Parameters.AddWithValue("@batch", DeviceCOM.part?.Name ?? "");
-                                cmd.Parameters.AddWithValue("@result", NpgsqlTypes.NpgsqlDbType.Boolean, result);
-
-                                cmd.ExecuteNonQuery();
-                            }
-                        }
+                            Name = DeviceCOM.part.Name,
+                            Placce = DeviceCOM.part.Placce,
+                            Grade = DeviceCOM.part.Grade,
+                            CheckedBy = DeviceCOM.part.CheckedBy,
+                            CompanyName = DeviceCOM.part.CompanyName,
+                            BatchSize = DeviceCOM.part.BatchSize,
+                            ImagePath = ImageName
+                        };
                     }
-                    catch (Exception ex)
+
+                    DeviceCOM.EnsureAbsoluteSettings();
+
+                    var saveItem = new TubeSaveItem
                     {
-                        System.Diagnostics.Debug.WriteLine($"StopTude DB Log exception: {ex}");
-                        Dispatcher.InvokeAsync(() => MessageBox.Show("Something went wrong. Please try again"));
-                    }
+                        TimeStamp = DateTime.Now,
+                        Part = partSnapshot,
+                        Configuration = DeviceCOM.Configuration,
+                        GraphData = new GraphData { Result = result, AmpD1 = Ld },
+                        BatchName = DeviceCOM.part?.Name ?? "",
+                        Result = result
+                    };
+
+                    DbWriterQueue.Enqueue(saveItem);
                 }
 
                 if (result)
@@ -1758,6 +1750,7 @@ namespace Eddy
         {
             try
             {
+                DbWriterQueue.Flush(5000);
                 if (string.IsNullOrEmpty(DeviceCOM.DBConnection))
                 {
                     DeviceCOM.DBConnection = Convert.ToString(System.Configuration.ConfigurationManager.AppSettings["DBConnection"]) ?? "";

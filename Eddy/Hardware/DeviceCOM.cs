@@ -43,6 +43,7 @@ namespace Eddy
         public static bool IsTestOn = false;
         public static bool IsAttRequired = false;
         public static bool IsJSON = false;
+        public static bool isAbsolute => Convert.ToBoolean(System.Configuration.ConfigurationManager.AppSettings["isAbsolute"]);
         public static DateTime busyStamp = System.DateTime.Now;
         public static Part? part;
         public static bool IsLogEnable = false;
@@ -355,7 +356,8 @@ namespace Eddy
 
             EnsureAbsoluteSettings(config);
 
-            var freqParts = config.Frequency.FD
+            var freqList = isAbsolute ? config.Frequency.FD : config.Frequency.FD.Where(f => f.FN != 3);
+            var freqParts = freqList
                 .OrderBy(f => f.FN)
                 .Select(f => $"{f.F}|{f.G}|{f.UTH}|{f.LTH}|{f.TH}|{f.PP}");
 
@@ -369,7 +371,8 @@ namespace Eddy
             string filterPart = "no-filter";
             if (config.Filter?.FD != null)
             {
-                filterPart = string.Join(";", config.Filter.FD.OrderBy(f => f.FN).Select(f => $"{f.FN}|{f.H}|{f.L}|{f.G}"));
+                var filterList = isAbsolute ? config.Filter.FD : config.Filter.FD.Where(f => f.FN != 3);
+                filterPart = string.Join(";", filterList.OrderBy(f => f.FN).Select(f => $"{f.FN}|{f.H}|{f.L}|{f.G}"));
             }
 
             var absFreq = config.Frequency.FD.FirstOrDefault(f => f.FN == 3);
@@ -377,6 +380,11 @@ namespace Eddy
             string absPart = (absFreq != null || absFilter != null)
                 ? $"{absFreq?.G}|{absFilter?.G}|{absFilter?.L}|{absFreq?.UTH}|{absFreq?.LTH}|{absFreq?.TH}"
                 : "no-absolute";
+
+            if (!isAbsolute)
+            {
+                return string.Join(";", freqParts) + "||" + filterPart + "||" + markerPart;
+            }
 
             return string.Join(";", freqParts) + "||" + filterPart + "||" + markerPart + "||" + absPart;
         }
