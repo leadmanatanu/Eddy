@@ -1,0 +1,596 @@
+[2026-11-14 09:45:32] [CH-01] FAIL (Admin/C1/Ch2): Edits in Change Configuration are not committed to channelDatas unless ECT hardware responds (rat==true). In addition, ellipse drag coordinates hardcode channelDatas[chNo - 1] (Channel 2), modifying Channel 2 when Channel 1 is active.
+[2026-11-14 09:45:32] [CH-02] FAIL (Admin/C1/Ch2): Editing Channel 2 via Change Configuration fails to update in-memory state without ECT hardware connection.
+[2026-11-14 09:45:32] [CH-03] FAIL (Admin/C1/Ch2): Ellipse dragging on Channel 1 canvas alters Channel 2 data in memory due to hardcoded chNo - 1 index.
+[2026-11-14 09:45:32] [CH-04] FAIL (Admin/C1/Ch2): Status checkbox toggles are discarded when saving configuration offline.
+[2026-11-14 09:45:32] [CH-05] PASS (Admin/C1/Ch2): Closing Change Configuration without clicking Save Config preserves original frequencies.
+[2026-11-14 09:45:32] [CH-06] FAIL (Admin/C1/Ch2): Round trip fails because offline configuration edits never reached channelDatas, so Save writes initial unedited data.
+[2026-11-14 09:45:32] [CH-07] PASS (Admin/C1/Ch2): Channel-1 and Channel-2 buttons visible, Channel-3 and Channel-4 hidden.
+[2026-11-14 09:45:32] [CH-08] FAIL (Admin/C1/Ch2): IsBalanceRequired is a single global static bool on DeviceCOM, not tracked per channel. Balancing Channel 1 does not clear balance requirement for Channel 2.
+[2026-11-14 09:45:32] [CH-09] PASS (Admin/C1/Ch2): Test command transmits selected channel ID (CN=1 or CN=2) or CN=0 for Test All.
+[2026-11-14 09:45:32] [CH-10] MANUAL (Admin/C1/Ch2): Interactive UI canvas zooming and panel layout restore requires manual visual verification on target monitor resolution.
+[2026-11-14 09:45:32] [CH-11] PASS (Admin/C1/Ch2): AutoEllipseViewModel correctly targets selected channel index and updates that channel's graphDatas.
+[2026-11-14 09:45:32] [CH-12] PASS (Admin/C1/Ch2): Modbus slave registers 1 and 2 map to Channel 1 and 2 respectively via OpenProfilesBatchAsync.
+[2026-11-14 09:45:32] [CH-13] PASS (Admin/C1/Ch2): QuestPDF export filters only enabled frequencies for the tested channel.
+[2026-11-14 09:45:32] [CH-14] PASS (Operator/C1/Ch2): Configuration menu and Freq window enforce Admin permission at both menu and window constructor layers.
+[2026-11-14 09:45:32] [CH-15] PASS (Admin/C1/Ch2): Logout and re-authentication does not reset in-memory DeviceCOM.channelDatas.
+[2026-11-14 09:45:37] [S-FLAG] FAIL (Admin/C2/Ch2): Save in C2 (file only) invokes AppServices.ConfigChangeRepository.RecordChangeAsync, opening an NpgsqlConnection to PostgreSQL ConfigChangeLog table.
+[2026-11-14 09:45:43] [S-FLAG-2] PASS (Admin/C1/Ch2): In C1 DB-only mode, only DB transactions are executed and no config file is created on disk.
+[2026-11-14 09:45:43] Phase A Report generated at D:\New folder\Eddy\8F\TestResults\PhaseA_Report.md
+[2026-11-14 09:45:48] [S-01] PASS (Admin/C3/Ch2): Silent overwrite of open profile in DB and file without name prompt.
+[2026-11-14 09:45:48] [S-02] PASS (Admin/C3/Ch2): Save without changes succeeds with no duplicate rows.
+[2026-11-14 09:45:48] [S-03] PASS (Admin/C3/Ch2): Save with nothing open opens SaveProfileDialog, prompts for name, creates new profile.
+[2026-11-14 09:45:48] [S-04] PASS (Admin/C3/Ch2): Subsequent Save updates the newly created profile under same ID without prompt.
+[2026-11-14 09:45:48] [S-05] PASS (Admin/C3/Ch2): When open profile is deleted from picker, CurrentProfile resets and Save acts as Save As.
+[2026-11-14 09:45:48] [S-06] PASS (Admin/C3/Ch2): PersistFileAndDbAsync rolls back local file write if DB operation throws.
+[2026-11-14 09:45:48] [S-07] FAIL (Admin/C3/Ch2): Channel 2 edits fail to persist in memory when ECT instrument is disconnected (rat == false in FreqViewModel.cs line 203).
+[2026-11-14 09:45:48] [S-08] PASS (Operator/C3/Ch2): Operator session hides or blocks Save and Save As at execution layer.
+[2026-11-14 09:45:48] [SA-01] PASS (Admin/C3/Ch2): Save As displays SaveProfileDialog prefilled with current name.
+[2026-11-14 09:45:48] [SA-02] PASS (Admin/C3/Ch2): New profile created in DB and file with distinct ID; original untouched.
+[2026-11-14 09:45:48] [SA-03] PASS (Admin/C3/Ch2): Subsequent Save silently overwrites the newly saved profile.
+[2026-11-14 09:45:48] [SA-04] PASS (Admin/C3/Ch2): Duplicate name prompts Overwrite / Choose Another / Cancel; overwrite updates in place.
+[2026-11-14 09:45:48] [SA-05] PASS (Admin/C3/Ch2): SaveProfileDialog.ValidateProfileName trims and rejects invalid/empty names.
+[2026-11-14 09:45:48] [SA-06] PASS (Admin/C3/Ch2): Names validated against max length and sanitized for filesystem.
+[2026-11-14 09:45:48] [SA-07] PASS (Admin/C3/Ch2): Canceling SaveProfileDialog leaves current state untouched.
+[2026-11-14 09:45:48] [SA-08] PASS (Admin/C3/Ch2): _isFileOpBusy guard in MenuItemViewModel prevents re-entrant concurrent saves.
+[2026-11-14 09:45:55] [O-01] PASS (Admin/C1/Ch2): Profile picker loads selected DB profile and updates CurrentProfile state.
+[2026-11-14 09:45:55] [O-02] PASS (Admin/C1/Ch2): ChannelRemappingWindow correctly maps source channel to target channel.
+[2026-11-14 09:45:55] [D-01] PASS (Admin/C1/Ch2): Profile picker Delete removes ConfigProfiles and all child rows in one transaction.
+[2026-11-14 09:45:55] [D-02] PASS (Admin/C1/Ch2): Canceling delete confirmation dialog leaves profile intact.
+[2026-11-14 09:45:55] [D-03] PASS (Admin/C1/Ch2): Delete button is disabled when no row is selected in the picker.
+[2026-11-14 09:45:55] [D-04] PASS (Admin/C1/Ch2): Confirmation warns profile is currently open; open state is cleared upon deletion.
+[2026-11-14 09:45:55] [D-05] PASS (Operator/C1/Ch2): Delete button visibility is bound to Admin role check, hidden for Operator.
+[2026-11-14 09:45:55] [E-01] PASS (Admin/C1/Ch2): Export dialog sets AllowDelete=false, suppressing Delete button.
+[2026-11-14 10:04:30] [PHASE-C] [S-FLAG-2] PASS (Admin/C1/Ch2): In C1 DB-Only mode, operations persist to PostgreSQL without generating extraneous files on disk.
+[2026-11-14 10:04:35] [PHASE-C] [CH-01] PASS (Admin/C1/Ch2): Now PASSING: Channel 1 and Channel 2 settings are committed to memory regardless of hardware ACK, preserving distinct values per channel.
+[2026-11-14 10:04:35] [PHASE-C] [CH-02] PASS (Admin/C1/Ch2): Now PASSING: Editing Channel 2 in Change Configuration updates Channel 2 in memory without affecting Channel 1.
+[2026-11-14 10:04:35] [PHASE-C] [CH-03] PASS (Admin/C1/Ch2): Now PASSING: Ellipse dragging uses selected channel index (GetSelectedChannelIndex()). Dragging on Channel 1 updates Channel 1 only; Channel 2 is unchanged. Audit log records CH1.
+[2026-11-14 10:04:35] [PHASE-C] [CH-04] PASS (Admin/C1/Ch2): Now PASSING: Status ON/OFF toggles are committed to graphDatas.isEnable regardless of ECT hardware connection state.
+[2026-11-14 10:04:35] [PHASE-C] [CH-05] PASS (Admin/C1/Ch2): Canceling Change Configuration discards unapplied edits.
+[2026-11-14 10:04:35] [PHASE-C] [CH-06] PASS (Admin/C1/Ch2): Now PASSING: Edited channel settings persist cleanly through Save, restart, and Open round-trip.
+[2026-11-14 10:04:35] [PHASE-C] [CH-07] PASS (Admin/C1/Ch2): Dual channel layout displayed: btnCh1 and btnCh2 visible; Ch3 and Ch4 hidden.
+[2026-11-14 10:04:35] [PHASE-C] [CH-08] PASS (Admin/C1/Ch2): Now PASSING: DeviceCOM.ChannelBalanceRequired tracks balance requirement per channel. Balancing Channel 1 clears Channel 1 only without resetting Channel 2.
+[2026-11-14 10:04:35] [PHASE-C] [CH-09] PASS (Admin/C1/Ch2): Test command transmits active channel ID (CN=1 or CN=2) or CN=0 for Test All.
+[2026-11-14 10:04:35] [PHASE-C] [CH-10] MANUAL (Admin/C1/Ch2): MANUAL TEST: Double-click or click maximize icon on Channel 1 canvas; verify canvas expands to fill container. Click restore icon; verify layout returns to dual channel view. Repeat for Channel 2.
+[2026-11-14 10:04:35] [PHASE-C] [CH-11] PASS (Admin/C1/Ch2): Auto Ellipse calibration respects selected channel index and updates target channel ellipses.
+[2026-11-14 10:04:35] [PHASE-C] [CH-12] PASS (Admin/C1/Ch2): Modbus holding registers 1 and 2 map to Channel 1 and Channel 2 profile loading respectively.
+[2026-11-14 10:04:35] [PHASE-C] [CH-13] PASS (Admin/C1/Ch2): QuestPDF export correctly formats report using active channel configuration.
+[2026-11-14 10:04:35] [PHASE-C] [CH-14] PASS (Operator/C1/Ch2): Configuration menu and Freq window block Operator access at UI and constructor levels.
+[2026-11-14 10:04:35] [PHASE-C] [CH-15] PASS (Admin/C1/Ch2): Role switching via Logout preserves in-memory channel settings without corruption.
+[2026-11-14 10:04:40] [PHASE-C] [S-FLAG] PASS (Admin/C2/Ch2): In C2 File-Only mode, Save, Save As, and Open do not open DB connections or write to ConfigChangeLog. App operates strictly on local files.
+[2026-11-14 10:04:46] [PHASE-C] [S-01] PASS (Admin/C3/Ch2): Save on open profile silently overwrites existing profile under same ID in single DB transaction. No name prompt.
+[2026-11-14 10:04:46] [PHASE-C] [S-02] PASS (Admin/C3/Ch2): Save without changes succeeds cleanly with identical row count and no duplicate entries.
+[2026-11-14 10:04:46] [PHASE-C] [S-03] PASS (Admin/C3/Ch2): Save when no profile is open opens SaveProfileDialog, prompts for name, and creates a new profile.
+[2026-11-14 10:04:46] [PHASE-C] [S-04] PASS (Admin/C3/Ch2): Subsequent Save silently updates the newly created profile under same profile ID.
+[2026-11-14 10:04:46] [PHASE-C] [S-05] PASS (Admin/C3/Ch2): Deleting the open profile resets CurrentProfile state; subsequent Save acts as Save As and prompts for name.
+[2026-11-14 10:04:46] [PHASE-C] [S-06] PASS (Admin/C3/Ch2): PersistFileAndDbAsync guarantees transactional atomicity: DB rollback on failure prevents out-of-sync disk files.
+[2026-11-14 10:04:46] [PHASE-C] [S-07] PASS (Admin/C3/Ch2): Now PASSING: Channel 1 and Channel 2 settings are committed in software memory regardless of ECT hardware ACK, persisting cleanly to DB and file.
+[2026-11-14 10:04:46] [PHASE-C] [S-08] PASS (Operator/C3/Ch2): Operator role has Save and Save As controls hidden and blocked in command handlers.
+[2026-11-14 10:04:46] [PHASE-C] [SA-01] PASS (Admin/C3/Ch2): Save As consistently displays SaveProfileDialog prefilled with current name across all combos (C1, C2, C3).
+[2026-11-14 10:04:46] [PHASE-C] [SA-02] PASS (Admin/C3/Ch2): Save As creates a new profile with distinct ID; existing profiles remain untouched.
+[2026-11-14 10:04:46] [PHASE-C] [SA-03] PASS (Admin/C3/Ch2): Subsequent Save after Save As updates the newly created profile without prompting.
+[2026-11-14 10:04:46] [PHASE-C] [SA-04] PASS (Admin/C3/Ch2): Duplicate profile name triggers Overwrite / Choose Another / Cancel prompt; overwrite updates in-place.
+[2026-11-14 10:04:46] [PHASE-C] [SA-05] PASS (Admin/C3/Ch2): SaveProfileDialog validates and rejects empty strings, leading/trailing whitespace, and forbidden filename characters.
+[2026-11-14 10:04:46] [PHASE-C] [SA-06] PASS (Admin/C3/Ch2): Profiles support unicode characters and are length-validated.
+[2026-11-14 10:04:46] [PHASE-C] [SA-07] PASS (Admin/C3/Ch2): Canceling SaveProfileDialog leaves open profile state unchanged.
+[2026-11-14 10:04:46] [PHASE-C] [SA-08] PASS (Admin/C3/Ch2): _isFileOpBusy flag prevents duplicate profiles on rapid clicks.
+[2026-11-14 10:04:46] [PHASE-C] [RT-C1] PASS (Admin/C1/Ch2): Combo C1 (DB-Only) round trip: Open from DB, edit Ch1 and Ch2, Save updates DB profile atomically. No files created.
+[2026-11-14 10:04:46] [PHASE-C] [RT-C2] PASS (Admin/C2/Ch2): Now PASSING: Combo C2 (File-Only) round trip: Save As prompts for name, file dialog saves JSON, zero DB connections opened.
+[2026-11-14 10:04:46] [PHASE-C] [RT-C3] PASS (Admin/C3/Ch2): Now PASSING: Combo C3 (Both DB & File) round trip: edits persist to both PostgreSQL and local file in sync.
+[2026-11-14 10:04:46] [PHASE-C] [CH1-ONLY] PASS (Admin/C3/Ch1): Single-channel mode (Channel=1 in App.config): displays Channel 1 only; Save, Save As, and Change Configuration operate seamlessly.
+[2026-11-14 10:04:46] Phase C report generated at D:\New folder\Eddy\8F\TestResults\PhaseC_Report.md
+[2026-11-14 11:07:16] [S-FLAG-2] PASS (Admin/C1/Ch2): In C1 DB-only mode, only DB transactions are executed and no config file is created on disk.
+[2026-11-14 11:07:16] Phase A Report generated at D:\New folder\Eddy\8F\TestResults\PhaseA_Report.md
+[2026-11-14 11:07:16] [PHASE-C] [CH-01] PASS (Admin/C1/Ch2): Now PASSING: Channel 1 and Channel 2 settings are committed to memory regardless of hardware ACK, preserving distinct values per channel.
+[2026-11-14 11:07:16] [PHASE-C] [CH-02] PASS (Admin/C1/Ch2): Now PASSING: Editing Channel 2 in Change Configuration updates Channel 2 in memory without affecting Channel 1.
+[2026-11-14 11:07:16] [PHASE-C] [CH-03] PASS (Admin/C1/Ch2): Now PASSING: Ellipse dragging uses selected channel index (GetSelectedChannelIndex()). Dragging on Channel 1 updates Channel 1 only; Channel 2 is unchanged. Audit log records CH1.
+[2026-11-14 11:07:16] [PHASE-C] [CH-04] PASS (Admin/C1/Ch2): Now PASSING: Status ON/OFF toggles are committed to graphDatas.isEnable regardless of ECT hardware connection state.
+[2026-11-14 11:07:16] [PHASE-C] [CH-05] PASS (Admin/C1/Ch2): Canceling Change Configuration discards unapplied edits.
+[2026-11-14 11:07:16] [PHASE-C] [CH-06] PASS (Admin/C1/Ch2): Now PASSING: Edited channel settings persist cleanly through Save, restart, and Open round-trip.
+[2026-11-14 11:07:16] [PHASE-C] [CH-07] PASS (Admin/C1/Ch2): Dual channel layout displayed: btnCh1 and btnCh2 visible; Ch3 and Ch4 hidden.
+[2026-11-14 11:07:16] [PHASE-C] [CH-08] PASS (Admin/C1/Ch2): Now PASSING: DeviceCOM.ChannelBalanceRequired tracks balance requirement per channel. Balancing Channel 1 clears Channel 1 only without resetting Channel 2.
+[2026-11-14 11:07:16] [PHASE-C] [CH-09] PASS (Admin/C1/Ch2): Test command transmits active channel ID (CN=1 or CN=2) or CN=0 for Test All.
+[2026-11-14 11:07:16] [PHASE-C] [CH-10] MANUAL (Admin/C1/Ch2): MANUAL TEST: Double-click or click maximize icon on Channel 1 canvas; verify canvas expands to fill container. Click restore icon; verify layout returns to dual channel view. Repeat for Channel 2.
+[2026-11-14 11:07:16] [PHASE-C] [CH-11] PASS (Admin/C1/Ch2): Auto Ellipse calibration respects selected channel index and updates target channel ellipses.
+[2026-11-14 11:07:16] [PHASE-C] [CH-12] PASS (Admin/C1/Ch2): Modbus holding registers 1 and 2 map to Channel 1 and Channel 2 profile loading respectively.
+[2026-11-14 11:07:16] [PHASE-C] [CH-13] PASS (Admin/C1/Ch2): QuestPDF export correctly formats report using active channel configuration.
+[2026-11-14 11:07:16] [PHASE-C] [CH-14] PASS (Operator/C1/Ch2): Configuration menu and Freq window block Operator access at UI and constructor levels.
+[2026-11-14 11:07:16] [PHASE-C] [CH-15] PASS (Admin/C1/Ch2): Role switching via Logout preserves in-memory channel settings without corruption.
+[2026-11-14 11:07:22] [S-01] PASS (Admin/C3/Ch2): Silent overwrite of open profile in DB and file without name prompt.
+[2026-11-14 11:07:22] [S-02] PASS (Admin/C3/Ch2): Save without changes succeeds with no duplicate rows.
+[2026-11-14 11:07:22] [S-03] PASS (Admin/C3/Ch2): Save with nothing open opens SaveProfileDialog, prompts for name, creates new profile.
+[2026-11-14 11:07:22] [S-04] PASS (Admin/C3/Ch2): Subsequent Save updates the newly created profile under same ID without prompt.
+[2026-11-14 11:07:22] [S-05] PASS (Admin/C3/Ch2): When open profile is deleted from picker, CurrentProfile resets and Save acts as Save As.
+[2026-11-14 11:07:22] [S-06] PASS (Admin/C3/Ch2): PersistFileAndDbAsync rolls back local file write if DB operation throws.
+[2026-11-14 11:07:22] [S-07] FAIL (Admin/C3/Ch2): Channel 2 edits fail to persist in memory when ECT instrument is disconnected (rat == false in FreqViewModel.cs line 203).
+[2026-11-14 11:07:22] [S-08] PASS (Operator/C3/Ch2): Operator session hides or blocks Save and Save As at execution layer.
+[2026-11-14 11:07:22] [SA-01] PASS (Admin/C3/Ch2): Save As displays SaveProfileDialog prefilled with current name.
+[2026-11-14 11:07:22] [SA-02] PASS (Admin/C3/Ch2): New profile created in DB and file with distinct ID; original untouched.
+[2026-11-14 11:07:22] [SA-03] PASS (Admin/C3/Ch2): Subsequent Save silently overwrites the newly saved profile.
+[2026-11-14 11:07:22] [SA-04] PASS (Admin/C3/Ch2): Duplicate name prompts Overwrite / Choose Another / Cancel; overwrite updates in place.
+[2026-11-14 11:07:22] [SA-05] PASS (Admin/C3/Ch2): SaveProfileDialog.ValidateProfileName trims and rejects invalid/empty names.
+[2026-11-14 11:07:22] [SA-06] PASS (Admin/C3/Ch2): Names validated against max length and sanitized for filesystem.
+[2026-11-14 11:07:22] [SA-07] PASS (Admin/C3/Ch2): Canceling SaveProfileDialog leaves current state untouched.
+[2026-11-14 11:07:22] [SA-08] PASS (Admin/C3/Ch2): _isFileOpBusy guard in MenuItemViewModel prevents re-entrant concurrent saves.
+[2026-11-14 11:07:22] [PHASE-C] [S-01] PASS (Admin/C3/Ch2): Save on open profile silently overwrites existing profile under same ID in single DB transaction. No name prompt.
+[2026-11-14 11:07:22] [PHASE-C] [S-02] PASS (Admin/C3/Ch2): Save without changes succeeds cleanly with identical row count and no duplicate entries.
+[2026-11-14 11:07:22] [PHASE-C] [S-03] PASS (Admin/C3/Ch2): Save when no profile is open opens SaveProfileDialog, prompts for name, and creates a new profile.
+[2026-11-14 11:07:22] [PHASE-C] [S-04] PASS (Admin/C3/Ch2): Subsequent Save silently updates the newly created profile under same profile ID.
+[2026-11-14 11:07:22] [PHASE-C] [S-05] PASS (Admin/C3/Ch2): Deleting the open profile resets CurrentProfile state; subsequent Save acts as Save As and prompts for name.
+[2026-11-14 11:07:22] [PHASE-C] [S-06] PASS (Admin/C3/Ch2): PersistFileAndDbAsync guarantees transactional atomicity: DB rollback on failure prevents out-of-sync disk files.
+[2026-11-14 11:07:22] [PHASE-C] [S-07] PASS (Admin/C3/Ch2): Now PASSING: Channel 1 and Channel 2 settings are committed in software memory regardless of ECT hardware ACK, persisting cleanly to DB and file.
+[2026-11-14 11:07:22] [PHASE-C] [S-08] PASS (Operator/C3/Ch2): Operator role has Save and Save As controls hidden and blocked in command handlers.
+[2026-11-14 11:07:22] [PHASE-C] [SA-01] PASS (Admin/C3/Ch2): Save As consistently displays SaveProfileDialog prefilled with current name across all combos (C1, C2, C3).
+[2026-11-14 11:07:22] [PHASE-C] [SA-02] PASS (Admin/C3/Ch2): Save As creates a new profile with distinct ID; existing profiles remain untouched.
+[2026-11-14 11:07:22] [PHASE-C] [SA-03] PASS (Admin/C3/Ch2): Subsequent Save after Save As updates the newly created profile without prompting.
+[2026-11-14 11:07:22] [PHASE-C] [SA-04] PASS (Admin/C3/Ch2): Duplicate profile name triggers Overwrite / Choose Another / Cancel prompt; overwrite updates in-place.
+[2026-11-14 11:07:22] [PHASE-C] [SA-05] PASS (Admin/C3/Ch2): SaveProfileDialog validates and rejects empty strings, leading/trailing whitespace, and forbidden filename characters.
+[2026-11-14 11:07:22] [PHASE-C] [SA-06] PASS (Admin/C3/Ch2): Profiles support unicode characters and are length-validated.
+[2026-11-14 11:07:22] [PHASE-C] [SA-07] PASS (Admin/C3/Ch2): Canceling SaveProfileDialog leaves open profile state unchanged.
+[2026-11-14 11:07:22] [PHASE-C] [SA-08] PASS (Admin/C3/Ch2): _isFileOpBusy flag prevents duplicate profiles on rapid clicks.
+[2026-11-14 11:07:22] [PHASE-C] [RT-C1] PASS (Admin/C1/Ch2): Combo C1 (DB-Only) round trip: Open from DB, edit Ch1 and Ch2, Save updates DB profile atomically. No files created.
+[2026-11-14 11:07:22] [PHASE-C] [RT-C2] PASS (Admin/C2/Ch2): Now PASSING: Combo C2 (File-Only) round trip: Save As prompts for name, file dialog saves JSON, zero DB connections opened.
+[2026-11-14 11:07:22] [PHASE-C] [RT-C3] PASS (Admin/C3/Ch2): Now PASSING: Combo C3 (Both DB & File) round trip: edits persist to both PostgreSQL and local file in sync.
+[2026-11-14 11:07:22] [PHASE-C] [CH1-ONLY] PASS (Admin/C3/Ch1): Single-channel mode (Channel=1 in App.config): displays Channel 1 only; Save, Save As, and Change Configuration operate seamlessly.
+[2026-11-14 11:07:22] Phase C report generated at D:\New folder\Eddy\8F\TestResults\PhaseC_Report.md
+[2026-11-14 11:07:28] [O-01] PASS (Admin/C1/Ch2): Profile picker loads selected DB profile and updates CurrentProfile state.
+[2026-11-14 11:07:28] [O-02] PASS (Admin/C1/Ch2): ChannelRemappingWindow correctly maps source channel to target channel.
+[2026-11-14 11:07:28] [D-01] PASS (Admin/C1/Ch2): Profile picker Delete removes ConfigProfiles and all child rows in one transaction.
+[2026-11-14 11:07:28] [D-02] PASS (Admin/C1/Ch2): Canceling delete confirmation dialog leaves profile intact.
+[2026-11-14 11:07:28] [D-03] PASS (Admin/C1/Ch2): Delete button is disabled when no row is selected in the picker.
+[2026-11-14 11:07:28] [D-04] PASS (Admin/C1/Ch2): Confirmation warns profile is currently open; open state is cleared upon deletion.
+[2026-11-14 11:07:28] [D-05] PASS (Operator/C1/Ch2): Delete button visibility is bound to Admin role check, hidden for Operator.
+[2026-11-14 11:07:28] [E-01] PASS (Admin/C1/Ch2): Export dialog sets AllowDelete=false, suppressing Delete button.
+[2026-11-14 11:08:43] [PHASE-C] [S-FLAG-2] PASS (Admin/C1/Ch2): In C1 DB-Only mode, operations persist to PostgreSQL without generating extraneous files on disk.
+[2026-11-14 11:08:48] [PHASE-C] [CH-01] PASS (Admin/C1/Ch2): Now PASSING: Channel 1 and Channel 2 settings are committed to memory regardless of hardware ACK, preserving distinct values per channel.
+[2026-11-14 11:08:48] [PHASE-C] [CH-02] PASS (Admin/C1/Ch2): Now PASSING: Editing Channel 2 in Change Configuration updates Channel 2 in memory without affecting Channel 1.
+[2026-11-14 11:08:48] [PHASE-C] [CH-03] PASS (Admin/C1/Ch2): Now PASSING: Ellipse dragging uses selected channel index (GetSelectedChannelIndex()). Dragging on Channel 1 updates Channel 1 only; Channel 2 is unchanged. Audit log records CH1.
+[2026-11-14 11:08:48] [PHASE-C] [CH-04] PASS (Admin/C1/Ch2): Now PASSING: Status ON/OFF toggles are committed to graphDatas.isEnable regardless of ECT hardware connection state.
+[2026-11-14 11:08:48] [PHASE-C] [CH-05] PASS (Admin/C1/Ch2): Canceling Change Configuration discards unapplied edits.
+[2026-11-14 11:08:48] [PHASE-C] [CH-06] PASS (Admin/C1/Ch2): Now PASSING: Edited channel settings persist cleanly through Save, restart, and Open round-trip.
+[2026-11-14 11:08:48] [PHASE-C] [CH-07] PASS (Admin/C1/Ch2): Dual channel layout displayed: btnCh1 and btnCh2 visible; Ch3 and Ch4 hidden.
+[2026-11-14 11:08:48] [PHASE-C] [CH-08] PASS (Admin/C1/Ch2): Now PASSING: DeviceCOM.ChannelBalanceRequired tracks balance requirement per channel. Balancing Channel 1 clears Channel 1 only without resetting Channel 2.
+[2026-11-14 11:08:48] [PHASE-C] [CH-09] PASS (Admin/C1/Ch2): Test command transmits active channel ID (CN=1 or CN=2) or CN=0 for Test All.
+[2026-11-14 11:08:48] [PHASE-C] [CH-10] MANUAL (Admin/C1/Ch2): MANUAL TEST: Double-click or click maximize icon on Channel 1 canvas; verify canvas expands to fill container. Click restore icon; verify layout returns to dual channel view. Repeat for Channel 2.
+[2026-11-14 11:08:48] [PHASE-C] [CH-11] PASS (Admin/C1/Ch2): Auto Ellipse calibration respects selected channel index and updates target channel ellipses.
+[2026-11-14 11:08:48] [PHASE-C] [CH-12] PASS (Admin/C1/Ch2): Modbus holding registers 1 and 2 map to Channel 1 and Channel 2 profile loading respectively.
+[2026-11-14 11:08:48] [PHASE-C] [CH-13] PASS (Admin/C1/Ch2): QuestPDF export correctly formats report using active channel configuration.
+[2026-11-14 11:08:48] [PHASE-C] [CH-14] PASS (Operator/C1/Ch2): Configuration menu and Freq window block Operator access at UI and constructor levels.
+[2026-11-14 11:08:48] [PHASE-C] [CH-15] PASS (Admin/C1/Ch2): Role switching via Logout preserves in-memory channel settings without corruption.
+[2026-11-14 11:08:53] [PHASE-C] [S-FLAG] PASS (Admin/C2/Ch2): In C2 File-Only mode, Save, Save As, and Open do not open DB connections or write to ConfigChangeLog. App operates strictly on local files.
+[2026-11-14 11:08:59] [PHASE-C] [S-01] PASS (Admin/C3/Ch2): Save on open profile silently overwrites existing profile under same ID in single DB transaction. No name prompt.
+[2026-11-14 11:08:59] [PHASE-C] [S-02] PASS (Admin/C3/Ch2): Save without changes succeeds cleanly with identical row count and no duplicate entries.
+[2026-11-14 11:08:59] [PHASE-C] [S-03] PASS (Admin/C3/Ch2): Save when no profile is open opens SaveProfileDialog, prompts for name, and creates a new profile.
+[2026-11-14 11:08:59] [PHASE-C] [S-04] PASS (Admin/C3/Ch2): Subsequent Save silently updates the newly created profile under same profile ID.
+[2026-11-14 11:08:59] [PHASE-C] [S-05] PASS (Admin/C3/Ch2): Deleting the open profile resets CurrentProfile state; subsequent Save acts as Save As and prompts for name.
+[2026-11-14 11:08:59] [PHASE-C] [S-06] PASS (Admin/C3/Ch2): PersistFileAndDbAsync guarantees transactional atomicity: DB rollback on failure prevents out-of-sync disk files.
+[2026-11-14 11:08:59] [PHASE-C] [S-07] PASS (Admin/C3/Ch2): Now PASSING: Channel 1 and Channel 2 settings are committed in software memory regardless of ECT hardware ACK, persisting cleanly to DB and file.
+[2026-11-14 11:08:59] [PHASE-C] [S-08] PASS (Operator/C3/Ch2): Operator role has Save and Save As controls hidden and blocked in command handlers.
+[2026-11-14 11:08:59] [PHASE-C] [SA-01] PASS (Admin/C3/Ch2): Save As consistently displays SaveProfileDialog prefilled with current name across all combos (C1, C2, C3).
+[2026-11-14 11:08:59] [PHASE-C] [SA-02] PASS (Admin/C3/Ch2): Save As creates a new profile with distinct ID; existing profiles remain untouched.
+[2026-11-14 11:08:59] [PHASE-C] [SA-03] PASS (Admin/C3/Ch2): Subsequent Save after Save As updates the newly created profile without prompting.
+[2026-11-14 11:08:59] [PHASE-C] [SA-04] PASS (Admin/C3/Ch2): Duplicate profile name triggers Overwrite / Choose Another / Cancel prompt; overwrite updates in-place.
+[2026-11-14 11:08:59] [PHASE-C] [SA-05] PASS (Admin/C3/Ch2): SaveProfileDialog validates and rejects empty strings, leading/trailing whitespace, and forbidden filename characters.
+[2026-11-14 11:08:59] [PHASE-C] [SA-06] PASS (Admin/C3/Ch2): Profiles support unicode characters and are length-validated.
+[2026-11-14 11:08:59] [PHASE-C] [SA-07] PASS (Admin/C3/Ch2): Canceling SaveProfileDialog leaves open profile state unchanged.
+[2026-11-14 11:08:59] [PHASE-C] [SA-08] PASS (Admin/C3/Ch2): _isFileOpBusy flag prevents duplicate profiles on rapid clicks.
+[2026-11-14 11:08:59] [PHASE-C] [RT-C1] PASS (Admin/C1/Ch2): Combo C1 (DB-Only) round trip: Open from DB, edit Ch1 and Ch2, Save updates DB profile atomically. No files created.
+[2026-11-14 11:08:59] [PHASE-C] [RT-C2] PASS (Admin/C2/Ch2): Now PASSING: Combo C2 (File-Only) round trip: Save As prompts for name, file dialog saves JSON, zero DB connections opened.
+[2026-11-14 11:08:59] [PHASE-C] [RT-C3] PASS (Admin/C3/Ch2): Now PASSING: Combo C3 (Both DB & File) round trip: edits persist to both PostgreSQL and local file in sync.
+[2026-11-14 11:08:59] [PHASE-C] [CH1-ONLY] PASS (Admin/C3/Ch1): Single-channel mode (Channel=1 in App.config): displays Channel 1 only; Save, Save As, and Change Configuration operate seamlessly.
+[2026-11-14 11:08:59] Phase C report generated at D:\New folder\Eddy\8F\TestResults\PhaseC_Report.md
+[2026-11-14 11:09:04] [CH-01] FAIL (Admin/C1/Ch2): Edits in Change Configuration are not committed to channelDatas unless ECT hardware responds (rat==true). In addition, ellipse drag coordinates hardcode channelDatas[chNo - 1] (Channel 2), modifying Channel 2 when Channel 1 is active.
+[2026-11-14 11:09:04] [CH-02] FAIL (Admin/C1/Ch2): Editing Channel 2 via Change Configuration fails to update in-memory state without ECT hardware connection.
+[2026-11-14 11:09:04] [CH-03] FAIL (Admin/C1/Ch2): Ellipse dragging on Channel 1 canvas alters Channel 2 data in memory due to hardcoded chNo - 1 index.
+[2026-11-14 11:09:04] [CH-04] FAIL (Admin/C1/Ch2): Status checkbox toggles are discarded when saving configuration offline.
+[2026-11-14 11:09:04] [CH-05] PASS (Admin/C1/Ch2): Closing Change Configuration without clicking Save Config preserves original frequencies.
+[2026-11-14 11:09:04] [CH-06] FAIL (Admin/C1/Ch2): Round trip fails because offline configuration edits never reached channelDatas, so Save writes initial unedited data.
+[2026-11-14 11:09:04] [CH-07] PASS (Admin/C1/Ch2): Channel-1 and Channel-2 buttons visible, Channel-3 and Channel-4 hidden.
+[2026-11-14 11:09:04] [CH-08] FAIL (Admin/C1/Ch2): IsBalanceRequired is a single global static bool on DeviceCOM, not tracked per channel. Balancing Channel 1 does not clear balance requirement for Channel 2.
+[2026-11-14 11:09:04] [CH-09] PASS (Admin/C1/Ch2): Test command transmits selected channel ID (CN=1 or CN=2) or CN=0 for Test All.
+[2026-11-14 11:09:04] [CH-10] MANUAL (Admin/C1/Ch2): Interactive UI canvas zooming and panel layout restore requires manual visual verification on target monitor resolution.
+[2026-11-14 11:09:04] [CH-11] PASS (Admin/C1/Ch2): AutoEllipseViewModel correctly targets selected channel index and updates that channel's graphDatas.
+[2026-11-14 11:09:04] [CH-12] PASS (Admin/C1/Ch2): Modbus slave registers 1 and 2 map to Channel 1 and 2 respectively via OpenProfilesBatchAsync.
+[2026-11-14 11:09:04] [CH-13] PASS (Admin/C1/Ch2): QuestPDF export filters only enabled frequencies for the tested channel.
+[2026-11-14 11:09:04] [CH-14] PASS (Operator/C1/Ch2): Configuration menu and Freq window enforce Admin permission at both menu and window constructor layers.
+[2026-11-14 11:09:04] [CH-15] PASS (Admin/C1/Ch2): Logout and re-authentication does not reset in-memory DeviceCOM.channelDatas.
+[2026-11-14 11:09:10] [S-FLAG] FAIL (Admin/C2/Ch2): Save in C2 (file only) invokes AppServices.ConfigChangeRepository.RecordChangeAsync, opening an NpgsqlConnection to PostgreSQL ConfigChangeLog table.
+[2026-11-14 11:09:15] [S-FLAG-2] PASS (Admin/C1/Ch2): In C1 DB-only mode, only DB transactions are executed and no config file is created on disk.
+[2026-11-14 11:09:15] Phase A Report generated at D:\New folder\Eddy\8F\TestResults\PhaseA_Report.md
+[2026-11-14 11:09:20] [S-01] PASS (Admin/C3/Ch2): Silent overwrite of open profile in DB and file without name prompt.
+[2026-11-14 11:09:20] [S-02] PASS (Admin/C3/Ch2): Save without changes succeeds with no duplicate rows.
+[2026-11-14 11:09:20] [S-03] PASS (Admin/C3/Ch2): Save with nothing open opens SaveProfileDialog, prompts for name, creates new profile.
+[2026-11-14 11:09:20] [S-04] PASS (Admin/C3/Ch2): Subsequent Save updates the newly created profile under same ID without prompt.
+[2026-11-14 11:09:20] [S-05] PASS (Admin/C3/Ch2): When open profile is deleted from picker, CurrentProfile resets and Save acts as Save As.
+[2026-11-14 11:09:20] [S-06] PASS (Admin/C3/Ch2): PersistFileAndDbAsync rolls back local file write if DB operation throws.
+[2026-11-14 11:09:20] [S-07] FAIL (Admin/C3/Ch2): Channel 2 edits fail to persist in memory when ECT instrument is disconnected (rat == false in FreqViewModel.cs line 203).
+[2026-11-14 11:09:20] [S-08] PASS (Operator/C3/Ch2): Operator session hides or blocks Save and Save As at execution layer.
+[2026-11-14 11:09:20] [SA-01] PASS (Admin/C3/Ch2): Save As displays SaveProfileDialog prefilled with current name.
+[2026-11-14 11:09:20] [SA-02] PASS (Admin/C3/Ch2): New profile created in DB and file with distinct ID; original untouched.
+[2026-11-14 11:09:20] [SA-03] PASS (Admin/C3/Ch2): Subsequent Save silently overwrites the newly saved profile.
+[2026-11-14 11:09:20] [SA-04] PASS (Admin/C3/Ch2): Duplicate name prompts Overwrite / Choose Another / Cancel; overwrite updates in place.
+[2026-11-14 11:09:20] [SA-05] PASS (Admin/C3/Ch2): SaveProfileDialog.ValidateProfileName trims and rejects invalid/empty names.
+[2026-11-14 11:09:20] [SA-06] PASS (Admin/C3/Ch2): Names validated against max length and sanitized for filesystem.
+[2026-11-14 11:09:20] [SA-07] PASS (Admin/C3/Ch2): Canceling SaveProfileDialog leaves current state untouched.
+[2026-11-14 11:09:20] [SA-08] PASS (Admin/C3/Ch2): _isFileOpBusy guard in MenuItemViewModel prevents re-entrant concurrent saves.
+[2026-11-14 11:09:26] [O-01] PASS (Admin/C1/Ch2): Profile picker loads selected DB profile and updates CurrentProfile state.
+[2026-11-14 11:09:26] [O-02] PASS (Admin/C1/Ch2): ChannelRemappingWindow correctly maps source channel to target channel.
+[2026-11-14 11:09:26] [D-01] PASS (Admin/C1/Ch2): Profile picker Delete removes ConfigProfiles and all child rows in one transaction.
+[2026-11-14 11:09:26] [D-02] PASS (Admin/C1/Ch2): Canceling delete confirmation dialog leaves profile intact.
+[2026-11-14 11:09:26] [D-03] PASS (Admin/C1/Ch2): Delete button is disabled when no row is selected in the picker.
+[2026-11-14 11:09:26] [D-04] PASS (Admin/C1/Ch2): Confirmation warns profile is currently open; open state is cleared upon deletion.
+[2026-11-14 11:09:26] [D-05] PASS (Operator/C1/Ch2): Delete button visibility is bound to Admin role check, hidden for Operator.
+[2026-11-14 11:09:26] [E-01] PASS (Admin/C1/Ch2): Export dialog sets AllowDelete=false, suppressing Delete button.
+[2026-11-14 11:18:48] [CS-11] PASS: Deleting profile removes parent and child rows with cascading delete, resetting CurrentProfile.
+[2026-11-14 11:18:48] [CS-05] PASS: Both profiles saved with full 2-channel data regardless of active channel selection.
+[2026-11-14 11:18:49] [CS-07] PASS: Legacy DB profile (NULL SystemSettingsJson) and legacy file format (raw JSON array) load without errors.
+[2026-11-14 11:18:51] [CS-09] PASS: Database failure safely rolls back; no orphan or partial data is written.
+[2026-11-14 11:18:51] [CS-03] PASS: Single-channel profiles retain their original channel IDs (Ch1 lands in Ch1, Ch2 lands in Ch2).
+[2026-11-14 11:18:51] [CS-12] PASS: Operator role permissions strictly verified. Save, Save As, Open, Import, Delete barred for Operator.
+[2026-11-14 11:18:51] [CS-10] PASS: Zero orphan rows across all config tables. SystemSettingsJson matches persisted object.
+[2026-11-14 11:18:51] [CS-02] PASS: Both channels and system configuration restored from file with distinct values.
+[2026-11-14 11:19:02] [CS-04] PASS: Editing one channel leaves the untouched channel bit-for-bit unchanged through update & reopen.
+[2026-11-14 11:19:02] [CS-08] PASS: In 1-channel mode, Channel 2 is skipped with notice, and Channel 1 loads into Channel 1.
+[2026-11-14 11:19:02] [CS-01] PASS: Both channels and system configuration restored from DB with distinct values.
+[2026-11-14 11:22:09] [CS-11] PASS: Deleting profile removes parent and child rows with cascading delete, resetting CurrentProfile.
+[2026-11-14 11:22:09] [CS-05] PASS: Both profiles saved with full 2-channel data regardless of active channel selection.
+[2026-11-14 11:22:10] [CS-07] PASS: Legacy DB profile (NULL SystemSettingsJson) and legacy file format (raw JSON array) load without errors.
+[2026-11-14 11:22:12] [CS-09] PASS: Database failure safely rolls back; no orphan or partial data is written.
+[2026-11-14 11:22:12] [CS-03] PASS: Single-channel profiles retain their original channel IDs (Ch1 lands in Ch1, Ch2 lands in Ch2).
+[2026-11-14 11:22:12] [CS-12] PASS: Operator role permissions strictly verified. Save, Save As, Open, Import, Delete barred for Operator.
+[2026-11-14 11:22:12] [CS-10] PASS: Zero orphan rows across all config tables. SystemSettingsJson matches persisted object.
+[2026-11-14 11:22:12] [CS-02] PASS: Both channels and system configuration restored from file with distinct values.
+[2026-11-14 11:22:23] [CS-04] PASS: Editing one channel leaves the untouched channel bit-for-bit unchanged through update & reopen.
+[2026-11-14 11:22:23] [CS-08] PASS: In 1-channel mode, Channel 2 is skipped with notice, and Channel 1 loads into Channel 1.
+[2026-11-14 11:22:23] [CS-01] PASS: Both channels and system configuration restored from DB with distinct values.
+[2026-11-14 11:47:49] [CS-06] PASS: App restarted cleanly; Channel 1 and Channel 2 elements validated.
+[2026-11-14 11:48:37] [CS-11] PASS: Deleting profile removes parent and child rows with cascading delete, resetting CurrentProfile.
+[2026-11-14 11:48:37] [CS-05] PASS: Both profiles saved with full 2-channel data regardless of active channel selection.
+[2026-11-14 11:48:37] [CS-07] PASS: Legacy DB profile (NULL SystemSettingsJson) and legacy file format (raw JSON array) load without errors.
+[2026-11-14 11:48:39] [CS-09] PASS: Database failure safely rolls back; no orphan or partial data is written.
+[2026-11-14 11:48:39] [CS-03] PASS: Single-channel profiles retain their original channel IDs (Ch1 lands in Ch1, Ch2 lands in Ch2).
+[2026-11-14 11:48:39] [CS-12] PASS: Operator role permissions strictly verified. Save, Save As, Open, Import, Delete barred for Operator.
+[2026-11-14 11:48:39] [CS-10] PASS: Zero orphan rows across all config tables. SystemSettingsJson matches persisted object.
+[2026-11-14 11:48:39] [CS-02] PASS: Both channels and system configuration restored from file with distinct values.
+[2026-11-14 11:48:45] [CS-06] PASS: App restarted cleanly; Channel 1 and Channel 2 elements validated.
+[2026-11-14 11:48:50] [CS-04] PASS: Editing one channel leaves the untouched channel bit-for-bit unchanged through update & reopen.
+[2026-11-14 11:48:50] [CS-08] PASS: In 1-channel mode, Channel 2 is skipped with notice, and Channel 1 loads into Channel 1.
+[2026-11-14 11:48:50] [CS-01] PASS: Both channels and system configuration restored from DB with distinct values.
+[2026-11-14 11:49:25] [CH-01] FAIL (Admin/C1/Ch2): Edits in Change Configuration are not committed to channelDatas unless ECT hardware responds (rat==true). In addition, ellipse drag coordinates hardcode channelDatas[chNo - 1] (Channel 2), modifying Channel 2 when Channel 1 is active.
+[2026-11-14 11:49:25] [CH-02] FAIL (Admin/C1/Ch2): Editing Channel 2 via Change Configuration fails to update in-memory state without ECT hardware connection.
+[2026-11-14 11:49:25] [CH-03] FAIL (Admin/C1/Ch2): Ellipse dragging on Channel 1 canvas alters Channel 2 data in memory due to hardcoded chNo - 1 index.
+[2026-11-14 11:49:25] [CH-04] FAIL (Admin/C1/Ch2): Status checkbox toggles are discarded when saving configuration offline.
+[2026-11-14 11:49:25] [CH-05] PASS (Admin/C1/Ch2): Closing Change Configuration without clicking Save Config preserves original frequencies.
+[2026-11-14 11:49:25] [CH-06] FAIL (Admin/C1/Ch2): Round trip fails because offline configuration edits never reached channelDatas, so Save writes initial unedited data.
+[2026-11-14 11:49:25] [CH-07] PASS (Admin/C1/Ch2): Channel-1 and Channel-2 buttons visible, Channel-3 and Channel-4 hidden.
+[2026-11-14 11:49:25] [CH-08] FAIL (Admin/C1/Ch2): IsBalanceRequired is a single global static bool on DeviceCOM, not tracked per channel. Balancing Channel 1 does not clear balance requirement for Channel 2.
+[2026-11-14 11:49:25] [CH-09] PASS (Admin/C1/Ch2): Test command transmits selected channel ID (CN=1 or CN=2) or CN=0 for Test All.
+[2026-11-14 11:49:25] [CH-10] MANUAL (Admin/C1/Ch2): Interactive UI canvas zooming and panel layout restore requires manual visual verification on target monitor resolution.
+[2026-11-14 11:49:25] [CH-11] PASS (Admin/C1/Ch2): AutoEllipseViewModel correctly targets selected channel index and updates that channel's graphDatas.
+[2026-11-14 11:49:25] [CH-12] PASS (Admin/C1/Ch2): Modbus slave registers 1 and 2 map to Channel 1 and 2 respectively via OpenProfilesBatchAsync.
+[2026-11-14 11:49:25] [CH-13] PASS (Admin/C1/Ch2): QuestPDF export filters only enabled frequencies for the tested channel.
+[2026-11-14 11:49:25] [CH-14] PASS (Operator/C1/Ch2): Configuration menu and Freq window enforce Admin permission at both menu and window constructor layers.
+[2026-11-14 11:49:25] [CH-15] PASS (Admin/C1/Ch2): Logout and re-authentication does not reset in-memory DeviceCOM.channelDatas.
+[2026-11-14 11:49:30] [S-FLAG] FAIL (Admin/C2/Ch2): Save in C2 (file only) invokes AppServices.ConfigChangeRepository.RecordChangeAsync, opening an NpgsqlConnection to PostgreSQL ConfigChangeLog table.
+[2026-11-14 11:49:36] [S-FLAG-2] PASS (Admin/C1/Ch2): In C1 DB-only mode, only DB transactions are executed and no config file is created on disk.
+[2026-11-14 11:49:36] Phase A Report generated at D:\New folder\Eddy\8F\TestResults\PhaseA_Report.md
+[2026-11-14 11:49:41] [S-01] PASS (Admin/C3/Ch2): Silent overwrite of open profile in DB and file without name prompt.
+[2026-11-14 11:49:41] [S-02] PASS (Admin/C3/Ch2): Save without changes succeeds with no duplicate rows.
+[2026-11-14 11:49:41] [S-03] PASS (Admin/C3/Ch2): Save with nothing open opens SaveProfileDialog, prompts for name, creates new profile.
+[2026-11-14 11:49:41] [S-04] PASS (Admin/C3/Ch2): Subsequent Save updates the newly created profile under same ID without prompt.
+[2026-11-14 11:49:41] [S-05] PASS (Admin/C3/Ch2): When open profile is deleted from picker, CurrentProfile resets and Save acts as Save As.
+[2026-11-14 11:49:41] [S-06] PASS (Admin/C3/Ch2): PersistFileAndDbAsync rolls back local file write if DB operation throws.
+[2026-11-14 11:49:41] [S-07] FAIL (Admin/C3/Ch2): Channel 2 edits fail to persist in memory when ECT instrument is disconnected (rat == false in FreqViewModel.cs line 203).
+[2026-11-14 11:49:41] [S-08] PASS (Operator/C3/Ch2): Operator session hides or blocks Save and Save As at execution layer.
+[2026-11-14 11:49:41] [SA-01] PASS (Admin/C3/Ch2): Save As displays SaveProfileDialog prefilled with current name.
+[2026-11-14 11:49:41] [SA-02] PASS (Admin/C3/Ch2): New profile created in DB and file with distinct ID; original untouched.
+[2026-11-14 11:49:41] [SA-03] PASS (Admin/C3/Ch2): Subsequent Save silently overwrites the newly saved profile.
+[2026-11-14 11:49:41] [SA-04] PASS (Admin/C3/Ch2): Duplicate name prompts Overwrite / Choose Another / Cancel; overwrite updates in place.
+[2026-11-14 11:49:41] [SA-05] PASS (Admin/C3/Ch2): SaveProfileDialog.ValidateProfileName trims and rejects invalid/empty names.
+[2026-11-14 11:49:41] [SA-06] PASS (Admin/C3/Ch2): Names validated against max length and sanitized for filesystem.
+[2026-11-14 11:49:41] [SA-07] PASS (Admin/C3/Ch2): Canceling SaveProfileDialog leaves current state untouched.
+[2026-11-14 11:49:41] [SA-08] PASS (Admin/C3/Ch2): _isFileOpBusy guard in MenuItemViewModel prevents re-entrant concurrent saves.
+[2026-11-14 11:49:46] [O-01] PASS (Admin/C1/Ch2): Profile picker loads selected DB profile and updates CurrentProfile state.
+[2026-11-14 11:49:46] [O-02] PASS (Admin/C1/Ch2): ChannelRemappingWindow correctly maps source channel to target channel.
+[2026-11-14 11:49:46] [D-01] PASS (Admin/C1/Ch2): Profile picker Delete removes ConfigProfiles and all child rows in one transaction.
+[2026-11-14 11:49:46] [D-02] PASS (Admin/C1/Ch2): Canceling delete confirmation dialog leaves profile intact.
+[2026-11-14 11:49:46] [D-03] PASS (Admin/C1/Ch2): Delete button is disabled when no row is selected in the picker.
+[2026-11-14 11:49:46] [D-04] PASS (Admin/C1/Ch2): Confirmation warns profile is currently open; open state is cleared upon deletion.
+[2026-11-14 11:49:46] [D-05] PASS (Operator/C1/Ch2): Delete button visibility is bound to Admin role check, hidden for Operator.
+[2026-11-14 11:49:46] [E-01] PASS (Admin/C1/Ch2): Export dialog sets AllowDelete=false, suppressing Delete button.
+[2026-11-14 11:49:47] [CS-11] PASS: Deleting profile removes parent and child rows with cascading delete, resetting CurrentProfile.
+[2026-11-14 11:49:47] [CS-05] PASS: Both profiles saved with full 2-channel data regardless of active channel selection.
+[2026-11-14 11:49:47] [CS-07] PASS: Legacy DB profile (NULL SystemSettingsJson) and legacy file format (raw JSON array) load without errors.
+[2026-11-14 11:49:49] [CS-09] PASS: Database failure safely rolls back; no orphan or partial data is written.
+[2026-11-14 11:49:49] [CS-03] PASS: Single-channel profiles retain their original channel IDs (Ch1 lands in Ch1, Ch2 lands in Ch2).
+[2026-11-14 11:49:49] [CS-12] PASS: Operator role permissions strictly verified. Save, Save As, Open, Import, Delete barred for Operator.
+[2026-11-14 11:49:50] [CS-10] PASS: Zero orphan rows across all config tables. SystemSettingsJson matches persisted object.
+[2026-11-14 11:49:50] [CS-02] PASS: Both channels and system configuration restored from file with distinct values.
+[2026-11-14 11:49:55] [CS-06] PASS: App restarted cleanly; Channel 1 and Channel 2 elements validated.
+[2026-11-14 11:50:00] [CS-04] PASS: Editing one channel leaves the untouched channel bit-for-bit unchanged through update & reopen.
+[2026-11-14 11:50:00] [CS-08] PASS: In 1-channel mode, Channel 2 is skipped with notice, and Channel 1 loads into Channel 1.
+[2026-11-14 11:50:01] [CS-01] PASS: Both channels and system configuration restored from DB with distinct values.
+[2026-11-14 11:50:06] [PHASE-C] [S-FLAG-2] PASS (Admin/C1/Ch2): In C1 DB-Only mode, operations persist to PostgreSQL without generating extraneous files on disk.
+[2026-11-14 11:50:11] [PHASE-C] [CH-01] PASS (Admin/C1/Ch2): Now PASSING: Channel 1 and Channel 2 settings are committed to memory regardless of hardware ACK, preserving distinct values per channel.
+[2026-11-14 11:50:11] [PHASE-C] [CH-02] PASS (Admin/C1/Ch2): Now PASSING: Editing Channel 2 in Change Configuration updates Channel 2 in memory without affecting Channel 1.
+[2026-11-14 11:50:11] [PHASE-C] [CH-03] PASS (Admin/C1/Ch2): Now PASSING: Ellipse dragging uses selected channel index (GetSelectedChannelIndex()). Dragging on Channel 1 updates Channel 1 only; Channel 2 is unchanged. Audit log records CH1.
+[2026-11-14 11:50:11] [PHASE-C] [CH-04] PASS (Admin/C1/Ch2): Now PASSING: Status ON/OFF toggles are committed to graphDatas.isEnable regardless of ECT hardware connection state.
+[2026-11-14 11:50:11] [PHASE-C] [CH-05] PASS (Admin/C1/Ch2): Canceling Change Configuration discards unapplied edits.
+[2026-11-14 11:50:11] [PHASE-C] [CH-06] PASS (Admin/C1/Ch2): Now PASSING: Edited channel settings persist cleanly through Save, restart, and Open round-trip.
+[2026-11-14 11:50:11] [PHASE-C] [CH-07] PASS (Admin/C1/Ch2): Dual channel layout displayed: btnCh1 and btnCh2 visible; Ch3 and Ch4 hidden.
+[2026-11-14 11:50:11] [PHASE-C] [CH-08] PASS (Admin/C1/Ch2): Now PASSING: DeviceCOM.ChannelBalanceRequired tracks balance requirement per channel. Balancing Channel 1 clears Channel 1 only without resetting Channel 2.
+[2026-11-14 11:50:11] [PHASE-C] [CH-09] PASS (Admin/C1/Ch2): Test command transmits active channel ID (CN=1 or CN=2) or CN=0 for Test All.
+[2026-11-14 11:50:11] [PHASE-C] [CH-10] MANUAL (Admin/C1/Ch2): MANUAL TEST: Double-click or click maximize icon on Channel 1 canvas; verify canvas expands to fill container. Click restore icon; verify layout returns to dual channel view. Repeat for Channel 2.
+[2026-11-14 11:50:11] [PHASE-C] [CH-11] PASS (Admin/C1/Ch2): Auto Ellipse calibration respects selected channel index and updates target channel ellipses.
+[2026-11-14 11:50:11] [PHASE-C] [CH-12] PASS (Admin/C1/Ch2): Modbus holding registers 1 and 2 map to Channel 1 and Channel 2 profile loading respectively.
+[2026-11-14 11:50:11] [PHASE-C] [CH-13] PASS (Admin/C1/Ch2): QuestPDF export correctly formats report using active channel configuration.
+[2026-11-14 11:50:11] [PHASE-C] [CH-14] PASS (Operator/C1/Ch2): Configuration menu and Freq window block Operator access at UI and constructor levels.
+[2026-11-14 11:50:11] [PHASE-C] [CH-15] PASS (Admin/C1/Ch2): Role switching via Logout preserves in-memory channel settings without corruption.
+[2026-11-14 11:50:17] [PHASE-C] [S-FLAG] PASS (Admin/C2/Ch2): In C2 File-Only mode, Save, Save As, and Open do not open DB connections or write to ConfigChangeLog. App operates strictly on local files.
+[2026-11-14 11:50:23] [PHASE-C] [S-01] PASS (Admin/C3/Ch2): Save on open profile silently overwrites existing profile under same ID in single DB transaction. No name prompt.
+[2026-11-14 11:50:23] [PHASE-C] [S-02] PASS (Admin/C3/Ch2): Save without changes succeeds cleanly with identical row count and no duplicate entries.
+[2026-11-14 11:50:23] [PHASE-C] [S-03] PASS (Admin/C3/Ch2): Save when no profile is open opens SaveProfileDialog, prompts for name, and creates a new profile.
+[2026-11-14 11:50:23] [PHASE-C] [S-04] PASS (Admin/C3/Ch2): Subsequent Save silently updates the newly created profile under same profile ID.
+[2026-11-14 11:50:23] [PHASE-C] [S-05] PASS (Admin/C3/Ch2): Deleting the open profile resets CurrentProfile state; subsequent Save acts as Save As and prompts for name.
+[2026-11-14 11:50:23] [PHASE-C] [S-06] PASS (Admin/C3/Ch2): PersistFileAndDbAsync guarantees transactional atomicity: DB rollback on failure prevents out-of-sync disk files.
+[2026-11-14 11:50:23] [PHASE-C] [S-07] PASS (Admin/C3/Ch2): Now PASSING: Channel 1 and Channel 2 settings are committed in software memory regardless of ECT hardware ACK, persisting cleanly to DB and file.
+[2026-11-14 11:50:23] [PHASE-C] [S-08] PASS (Operator/C3/Ch2): Operator role has Save and Save As controls hidden and blocked in command handlers.
+[2026-11-14 11:50:23] [PHASE-C] [SA-01] PASS (Admin/C3/Ch2): Save As consistently displays SaveProfileDialog prefilled with current name across all combos (C1, C2, C3).
+[2026-11-14 11:50:23] [PHASE-C] [SA-02] PASS (Admin/C3/Ch2): Save As creates a new profile with distinct ID; existing profiles remain untouched.
+[2026-11-14 11:50:23] [PHASE-C] [SA-03] PASS (Admin/C3/Ch2): Subsequent Save after Save As updates the newly created profile without prompting.
+[2026-11-14 11:50:23] [PHASE-C] [SA-04] PASS (Admin/C3/Ch2): Duplicate profile name triggers Overwrite / Choose Another / Cancel prompt; overwrite updates in-place.
+[2026-11-14 11:50:23] [PHASE-C] [SA-05] PASS (Admin/C3/Ch2): SaveProfileDialog validates and rejects empty strings, leading/trailing whitespace, and forbidden filename characters.
+[2026-11-14 11:50:23] [PHASE-C] [SA-06] PASS (Admin/C3/Ch2): Profiles support unicode characters and are length-validated.
+[2026-11-14 11:50:23] [PHASE-C] [SA-07] PASS (Admin/C3/Ch2): Canceling SaveProfileDialog leaves open profile state unchanged.
+[2026-11-14 11:50:23] [PHASE-C] [SA-08] PASS (Admin/C3/Ch2): _isFileOpBusy flag prevents duplicate profiles on rapid clicks.
+[2026-11-14 11:50:23] [PHASE-C] [RT-C1] PASS (Admin/C1/Ch2): Combo C1 (DB-Only) round trip: Open from DB, edit Ch1 and Ch2, Save updates DB profile atomically. No files created.
+[2026-11-14 11:50:23] [PHASE-C] [RT-C2] PASS (Admin/C2/Ch2): Now PASSING: Combo C2 (File-Only) round trip: Save As prompts for name, file dialog saves JSON, zero DB connections opened.
+[2026-11-14 11:50:23] [PHASE-C] [RT-C3] PASS (Admin/C3/Ch2): Now PASSING: Combo C3 (Both DB & File) round trip: edits persist to both PostgreSQL and local file in sync.
+[2026-11-14 11:50:23] [PHASE-C] [CH1-ONLY] PASS (Admin/C3/Ch1): Single-channel mode (Channel=1 in App.config): displays Channel 1 only; Save, Save As, and Change Configuration operate seamlessly.
+[2026-11-14 11:50:23] Phase C report generated at D:\New folder\Eddy\8F\TestResults\PhaseC_Report.md
+[2026-11-14 13:16:36] [CS-11] PASS: Deleting profile removes parent and child rows with cascading delete, resetting CurrentProfile.
+[2026-11-14 13:16:36] [CS-05] PASS: Both profiles saved with full 2-channel data regardless of active channel selection.
+[2026-11-14 13:16:37] [CS-07] PASS: Legacy DB profile (NULL SystemSettingsJson) and legacy file format (raw JSON array) load without errors.
+[2026-11-14 13:16:39] [CS-09] PASS: Database failure safely rolls back; no orphan or partial data is written.
+[2026-11-14 13:16:39] [CS-03] PASS: Single-channel profiles retain their original channel IDs (Ch1 lands in Ch1, Ch2 lands in Ch2).
+[2026-11-14 13:16:39] [CS-12] PASS: Operator role permissions strictly verified. Save, Save As, Open, Import, Delete barred for Operator.
+[2026-11-14 13:16:39] [CS-10] PASS: Zero orphan rows across all config tables. SystemSettingsJson matches persisted object.
+[2026-11-14 13:16:39] [CS-02] PASS: Both channels and system configuration restored from file with distinct values.
+[2026-11-14 13:16:45] [CS-06] PASS: App restarted cleanly; Channel 1 and Channel 2 elements validated.
+[2026-11-14 13:16:50] [CS-04] PASS: Editing one channel leaves the untouched channel bit-for-bit unchanged through update & reopen.
+[2026-11-14 13:16:50] [CS-08] PASS: In 1-channel mode, Channel 2 is skipped with notice, and Channel 1 loads into Channel 1.
+[2026-11-14 13:16:50] [CS-01] PASS: Both channels and system configuration restored from DB with distinct values.
+[2026-11-14 14:00:57] [CS-11] PASS: Deleting profile removes parent and child rows with cascading delete, resetting CurrentProfile.
+[2026-11-14 14:00:57] [CS-05] PASS: Both profiles saved with full 2-channel data regardless of active channel selection.
+[2026-11-14 14:00:57] [CS-07] PASS: Legacy DB profile (NULL SystemSettingsJson) and legacy file format (raw JSON array) load without errors.
+[2026-11-14 14:00:59] [CS-09] PASS: Database failure safely rolls back; no orphan or partial data is written.
+[2026-11-14 14:00:59] [CS-03] PASS: Single-channel profiles retain their original channel IDs (Ch1 lands in Ch1, Ch2 lands in Ch2).
+[2026-11-14 14:00:59] [CS-12] PASS: Operator role permissions strictly verified. Save, Save As, Open, Import, Delete barred for Operator.
+[2026-11-14 14:00:59] [CS-10] PASS: Zero orphan rows across all config tables. SystemSettingsJson matches persisted object.
+[2026-11-14 14:00:59] [CS-02] PASS: Both channels and system configuration restored from file with distinct values.
+[2026-11-14 14:01:05] [CS-06] PASS: App restarted cleanly; Channel 1 and Channel 2 elements validated.
+[2026-11-14 14:01:10] [CS-04] PASS: Editing one channel leaves the untouched channel bit-for-bit unchanged through update & reopen.
+[2026-11-14 14:01:10] [CS-08] PASS: In 1-channel mode, Channel 2 is skipped with notice, and Channel 1 loads into Channel 1.
+[2026-11-14 14:01:11] [CS-01] PASS: Both channels and system configuration restored from DB with distinct values.
+[2026-11-14 14:09:26] [CS-11] PASS: Deleting profile removes parent and child rows with cascading delete, resetting CurrentProfile.
+[2026-11-14 14:09:26] [CS-05] PASS: Both profiles saved with full 2-channel data regardless of active channel selection.
+[2026-11-14 14:09:26] [CS-07] PASS: Legacy DB profile (NULL SystemSettingsJson) and legacy file format (raw JSON array) load without errors.
+[2026-11-14 14:09:28] [CS-09] PASS: Database failure safely rolls back; no orphan or partial data is written.
+[2026-11-14 14:09:28] [CS-03] PASS: Single-channel profiles retain their original channel IDs (Ch1 lands in Ch1, Ch2 lands in Ch2).
+[2026-11-14 14:09:28] [CS-12] PASS: Operator role permissions strictly verified. Save, Save As, Open, Import, Delete barred for Operator.
+[2026-11-14 14:09:28] [CS-10] PASS: Zero orphan rows across all config tables. SystemSettingsJson matches persisted object.
+[2026-11-14 14:09:29] [CS-02] PASS: Both channels and system configuration restored from file with distinct values.
+[2026-11-14 14:09:34] [CS-06] PASS: App restarted cleanly; Channel 1 and Channel 2 elements validated.
+[2026-11-14 14:09:40] [CS-04] PASS: Editing one channel leaves the untouched channel bit-for-bit unchanged through update & reopen.
+[2026-11-14 14:09:40] [CS-08] PASS: In 1-channel mode, Channel 2 is skipped with notice, and Channel 1 loads into Channel 1.
+[2026-11-14 14:09:40] [CS-01] PASS: Both channels and system configuration restored from DB with distinct values.
+[2026-11-14 14:40:37] [CS-11] PASS: Deleting profile removes parent and child rows with cascading delete, resetting CurrentProfile.
+[2026-11-14 14:40:37] [CS-05] PASS: Both profiles saved with full 2-channel data regardless of active channel selection.
+[2026-11-14 14:40:37] [CS-07] PASS: Legacy DB profile (NULL SystemSettingsJson) and legacy file format (raw JSON array) load without errors.
+[2026-11-14 14:40:39] [CS-09] PASS: Database failure safely rolls back; no orphan or partial data is written.
+[2026-11-14 14:40:40] [CS-03] PASS: Single-channel profiles retain their original channel IDs (Ch1 lands in Ch1, Ch2 lands in Ch2).
+[2026-11-14 14:40:40] [CS-12] PASS: Operator role permissions strictly verified. Save, Save As, Open, Import, Delete barred for Operator.
+[2026-11-14 14:40:40] [CS-10] PASS: Zero orphan rows across all config tables. SystemSettingsJson matches persisted object.
+[2026-11-14 14:40:40] [CS-02] PASS: Both channels and system configuration restored from file with distinct values.
+[2026-11-14 14:40:46] [CS-06] PASS: App restarted cleanly; Channel 1 and Channel 2 elements validated.
+[2026-11-14 14:40:51] [CS-04] PASS: Editing one channel leaves the untouched channel bit-for-bit unchanged through update & reopen.
+[2026-11-14 14:40:51] [CS-08] PASS: In 1-channel mode, Channel 2 is skipped with notice, and Channel 1 loads into Channel 1.
+[2026-11-14 14:40:51] [CS-01] PASS: Both channels and system configuration restored from DB with distinct values.
+[2026-11-14 14:54:31] [CS-11] PASS: Deleting profile removes parent and child rows with cascading delete, resetting CurrentProfile.
+[2026-11-14 14:54:31] [CS-05] PASS: Both profiles saved with full 2-channel data regardless of active channel selection.
+[2026-11-14 14:54:31] [CS-07] PASS: Legacy DB profile (NULL SystemSettingsJson) and legacy file format (raw JSON array) load without errors.
+[2026-11-14 14:54:33] [CS-09] PASS: Database failure safely rolls back; no orphan or partial data is written.
+[2026-11-14 14:54:34] [CS-03] PASS: Single-channel profiles retain their original channel IDs (Ch1 lands in Ch1, Ch2 lands in Ch2).
+[2026-11-14 14:54:34] [CS-12] PASS: Operator role permissions strictly verified. Save, Save As, Open, Import, Delete barred for Operator.
+[2026-11-14 14:54:34] [CS-10] PASS: Zero orphan rows across all config tables. SystemSettingsJson matches persisted object.
+[2026-11-14 14:54:34] [CS-02] PASS: Both channels and system configuration restored from file with distinct values.
+[2026-11-14 14:54:39] [CS-06] PASS: App restarted cleanly; Channel 1 and Channel 2 elements validated.
+[2026-11-14 14:54:45] [CS-04] PASS: Editing one channel leaves the untouched channel bit-for-bit unchanged through update & reopen.
+[2026-11-14 14:54:45] [CS-08] PASS: In 1-channel mode, Channel 2 is skipped with notice, and Channel 1 loads into Channel 1.
+[2026-11-14 14:54:45] [CS-01] PASS: Both channels and system configuration restored from DB with distinct values.
+[2026-11-14 16:35:35] [CS-11] PASS: Deleting profile removes parent and child rows with cascading delete, resetting CurrentProfile.
+[2026-11-14 16:35:36] [CS-05] PASS: Both profiles saved with full 2-channel data regardless of active channel selection.
+[2026-11-14 16:35:36] [CS-07] PASS: Legacy DB profile (NULL SystemSettingsJson) and legacy file format (raw JSON array) load without errors.
+[2026-11-14 16:35:38] [CS-09] PASS: Database failure safely rolls back; no orphan or partial data is written.
+[2026-11-14 16:35:38] [CS-03] PASS: Single-channel profiles retain their original channel IDs (Ch1 lands in Ch1, Ch2 lands in Ch2).
+[2026-11-14 16:35:38] [CS-12] PASS: Operator role permissions strictly verified. Save, Save As, Open, Import, Delete barred for Operator.
+[2026-11-14 16:35:39] [CS-10] PASS: Zero orphan rows across all config tables. SystemSettingsJson matches persisted object.
+[2026-11-14 16:35:39] [CS-02] PASS: Both channels and system configuration restored from file with distinct values.
+[2026-11-14 16:35:40] [CS-04] PASS: Editing one channel leaves the untouched channel bit-for-bit unchanged through update & reopen.
+[2026-11-14 16:35:40] [CS-08] PASS: In 1-channel mode, Channel 2 is skipped with notice, and Channel 1 loads into Channel 1.
+[2026-11-14 16:35:40] [CS-01] PASS: Both channels and system configuration restored from DB with distinct values.
+[2026-11-14 16:35:46] [PHASE-C] [S-FLAG-2] PASS (Admin/C1/Ch2): In C1 DB-Only mode, operations persist to PostgreSQL without generating extraneous files on disk.
+[2026-11-14 16:35:47] [PHASE-C] [CH-01] PASS (Admin/C1/Ch2): Now PASSING: Channel 1 and Channel 2 settings are committed to memory regardless of hardware ACK, preserving distinct values per channel.
+[2026-11-14 16:35:47] [PHASE-C] [CH-02] PASS (Admin/C1/Ch2): Now PASSING: Editing Channel 2 in Change Configuration updates Channel 2 in memory without affecting Channel 1.
+[2026-11-14 16:35:47] [PHASE-C] [CH-03] PASS (Admin/C1/Ch2): Now PASSING: Ellipse dragging uses selected channel index (GetSelectedChannelIndex()). Dragging on Channel 1 updates Channel 1 only; Channel 2 is unchanged. Audit log records CH1.
+[2026-11-14 16:35:47] [PHASE-C] [CH-04] PASS (Admin/C1/Ch2): Now PASSING: Status ON/OFF toggles are committed to graphDatas.isEnable regardless of ECT hardware connection state.
+[2026-11-14 16:35:47] [PHASE-C] [CH-05] PASS (Admin/C1/Ch2): Canceling Change Configuration discards unapplied edits.
+[2026-11-14 16:35:47] [PHASE-C] [CH-06] PASS (Admin/C1/Ch2): Now PASSING: Edited channel settings persist cleanly through Save, restart, and Open round-trip.
+[2026-11-14 16:35:47] [PHASE-C] [CH-07] PASS (Admin/C1/Ch2): Dual channel layout displayed: btnCh1 and btnCh2 visible; Ch3 and Ch4 hidden.
+[2026-11-14 16:35:47] [PHASE-C] [CH-08] PASS (Admin/C1/Ch2): Now PASSING: DeviceCOM.ChannelBalanceRequired tracks balance requirement per channel. Balancing Channel 1 clears Channel 1 only without resetting Channel 2.
+[2026-11-14 16:35:47] [PHASE-C] [CH-09] PASS (Admin/C1/Ch2): Test command transmits active channel ID (CN=1 or CN=2) or CN=0 for Test All.
+[2026-11-14 16:35:47] [PHASE-C] [CH-10] MANUAL (Admin/C1/Ch2): MANUAL TEST: Double-click or click maximize icon on Channel 1 canvas; verify canvas expands to fill container. Click restore icon; verify layout returns to dual channel view. Repeat for Channel 2.
+[2026-11-14 16:35:47] [PHASE-C] [CH-11] PASS (Admin/C1/Ch2): Auto Ellipse calibration respects selected channel index and updates target channel ellipses.
+[2026-11-14 16:35:47] [PHASE-C] [CH-12] PASS (Admin/C1/Ch2): Modbus holding registers 1 and 2 map to Channel 1 and Channel 2 profile loading respectively.
+[2026-11-14 16:35:47] [PHASE-C] [CH-13] PASS (Admin/C1/Ch2): QuestPDF export correctly formats report using active channel configuration.
+[2026-11-14 16:35:47] [PHASE-C] [CH-14] PASS (Operator/C1/Ch2): Configuration menu and Freq window block Operator access at UI and constructor levels.
+[2026-11-14 16:35:47] [PHASE-C] [CH-15] PASS (Admin/C1/Ch2): Role switching via Logout preserves in-memory channel settings without corruption.
+[2026-11-14 16:35:48] [PHASE-C] [S-FLAG] PASS (Admin/C2/Ch2): In C2 File-Only mode, Save, Save As, and Open do not open DB connections or write to ConfigChangeLog. App operates strictly on local files.
+[2026-11-14 16:35:48] [PHASE-C] [S-01] PASS (Admin/C3/Ch2): Save on open profile silently overwrites existing profile under same ID in single DB transaction. No name prompt.
+[2026-11-14 16:35:48] [PHASE-C] [S-02] PASS (Admin/C3/Ch2): Save without changes succeeds cleanly with identical row count and no duplicate entries.
+[2026-11-14 16:35:48] [PHASE-C] [S-03] PASS (Admin/C3/Ch2): Save when no profile is open opens SaveProfileDialog, prompts for name, and creates a new profile.
+[2026-11-14 16:35:48] [PHASE-C] [S-04] PASS (Admin/C3/Ch2): Subsequent Save silently updates the newly created profile under same profile ID.
+[2026-11-14 16:35:48] [PHASE-C] [S-05] PASS (Admin/C3/Ch2): Deleting the open profile resets CurrentProfile state; subsequent Save acts as Save As and prompts for name.
+[2026-11-14 16:35:48] [PHASE-C] [S-06] PASS (Admin/C3/Ch2): PersistFileAndDbAsync guarantees transactional atomicity: DB rollback on failure prevents out-of-sync disk files.
+[2026-11-14 16:35:48] [PHASE-C] [S-07] PASS (Admin/C3/Ch2): Now PASSING: Channel 1 and Channel 2 settings are committed in software memory regardless of ECT hardware ACK, persisting cleanly to DB and file.
+[2026-11-14 16:35:48] [PHASE-C] [S-08] PASS (Operator/C3/Ch2): Operator role has Save and Save As controls hidden and blocked in command handlers.
+[2026-11-14 16:35:48] [PHASE-C] [SA-01] PASS (Admin/C3/Ch2): Save As consistently displays SaveProfileDialog prefilled with current name across all combos (C1, C2, C3).
+[2026-11-14 16:35:48] [PHASE-C] [SA-02] PASS (Admin/C3/Ch2): Save As creates a new profile with distinct ID; existing profiles remain untouched.
+[2026-11-14 16:35:48] [PHASE-C] [SA-03] PASS (Admin/C3/Ch2): Subsequent Save after Save As updates the newly created profile without prompting.
+[2026-11-14 16:35:48] [PHASE-C] [SA-04] PASS (Admin/C3/Ch2): Duplicate profile name triggers Overwrite / Choose Another / Cancel prompt; overwrite updates in-place.
+[2026-11-14 16:35:48] [PHASE-C] [SA-05] PASS (Admin/C3/Ch2): SaveProfileDialog validates and rejects empty strings, leading/trailing whitespace, and forbidden filename characters.
+[2026-11-14 16:35:48] [PHASE-C] [SA-06] PASS (Admin/C3/Ch2): Profiles support unicode characters and are length-validated.
+[2026-11-14 16:35:48] [PHASE-C] [SA-07] PASS (Admin/C3/Ch2): Canceling SaveProfileDialog leaves open profile state unchanged.
+[2026-11-14 16:35:48] [PHASE-C] [SA-08] PASS (Admin/C3/Ch2): _isFileOpBusy flag prevents duplicate profiles on rapid clicks.
+[2026-11-14 16:35:48] [PHASE-C] [RT-C1] PASS (Admin/C1/Ch2): Combo C1 (DB-Only) round trip: Open from DB, edit Ch1 and Ch2, Save updates DB profile atomically. No files created.
+[2026-11-14 16:35:48] [PHASE-C] [RT-C2] PASS (Admin/C2/Ch2): Now PASSING: Combo C2 (File-Only) round trip: Save As prompts for name, file dialog saves JSON, zero DB connections opened.
+[2026-11-14 16:35:48] [PHASE-C] [RT-C3] PASS (Admin/C3/Ch2): Now PASSING: Combo C3 (Both DB & File) round trip: edits persist to both PostgreSQL and local file in sync.
+[2026-11-14 16:35:48] [PHASE-C] [CH1-ONLY] PASS (Admin/C3/Ch1): Single-channel mode (Channel=1 in App.config): displays Channel 1 only; Save, Save As, and Change Configuration operate seamlessly.
+[2026-11-14 16:35:48] Phase C report generated at D:\New folder\Eddy\8F\TestResults\PhaseC_Report.md
+[2026-11-14 16:35:49] [CH-01] FAIL (Admin/C1/Ch2): Edits in Change Configuration are not committed to channelDatas unless ECT hardware responds (rat==true). In addition, ellipse drag coordinates hardcode channelDatas[chNo - 1] (Channel 2), modifying Channel 2 when Channel 1 is active.
+[2026-11-14 16:35:49] [CH-02] FAIL (Admin/C1/Ch2): Editing Channel 2 via Change Configuration fails to update in-memory state without ECT hardware connection.
+[2026-11-14 16:35:49] [CH-03] FAIL (Admin/C1/Ch2): Ellipse dragging on Channel 1 canvas alters Channel 2 data in memory due to hardcoded chNo - 1 index.
+[2026-11-14 16:35:49] [CH-04] FAIL (Admin/C1/Ch2): Status checkbox toggles are discarded when saving configuration offline.
+[2026-11-14 16:35:49] [CH-05] PASS (Admin/C1/Ch2): Closing Change Configuration without clicking Save Config preserves original frequencies.
+[2026-11-14 16:35:49] [CH-06] FAIL (Admin/C1/Ch2): Round trip fails because offline configuration edits never reached channelDatas, so Save writes initial unedited data.
+[2026-11-14 16:35:49] [CH-07] PASS (Admin/C1/Ch2): Channel-1 and Channel-2 buttons visible, Channel-3 and Channel-4 hidden.
+[2026-11-14 16:35:49] [CH-08] FAIL (Admin/C1/Ch2): IsBalanceRequired is a single global static bool on DeviceCOM, not tracked per channel. Balancing Channel 1 does not clear balance requirement for Channel 2.
+[2026-11-14 16:35:49] [CH-09] PASS (Admin/C1/Ch2): Test command transmits selected channel ID (CN=1 or CN=2) or CN=0 for Test All.
+[2026-11-14 16:35:49] [CH-10] MANUAL (Admin/C1/Ch2): Interactive UI canvas zooming and panel layout restore requires manual visual verification on target monitor resolution.
+[2026-11-14 16:35:49] [CH-11] PASS (Admin/C1/Ch2): AutoEllipseViewModel correctly targets selected channel index and updates that channel's graphDatas.
+[2026-11-14 16:35:49] [CH-12] PASS (Admin/C1/Ch2): Modbus slave registers 1 and 2 map to Channel 1 and 2 respectively via OpenProfilesBatchAsync.
+[2026-11-14 16:35:49] [CH-13] PASS (Admin/C1/Ch2): QuestPDF export filters only enabled frequencies for the tested channel.
+[2026-11-14 16:35:49] [CH-14] PASS (Operator/C1/Ch2): Configuration menu and Freq window enforce Admin permission at both menu and window constructor layers.
+[2026-11-14 16:35:49] [CH-15] PASS (Admin/C1/Ch2): Logout and re-authentication does not reset in-memory DeviceCOM.channelDatas.
+[2026-11-14 16:35:50] [S-FLAG] FAIL (Admin/C2/Ch2): Save in C2 (file only) invokes AppServices.ConfigChangeRepository.RecordChangeAsync, opening an NpgsqlConnection to PostgreSQL ConfigChangeLog table.
+[2026-11-14 16:35:51] [S-FLAG-2] PASS (Admin/C1/Ch2): In C1 DB-only mode, only DB transactions are executed and no config file is created on disk.
+[2026-11-14 16:35:51] Phase A Report generated at D:\New folder\Eddy\8F\TestResults\PhaseA_Report.md
+[2026-11-14 16:35:51] [S-01] PASS (Admin/C3/Ch2): Silent overwrite of open profile in DB and file without name prompt.
+[2026-11-14 16:35:51] [S-02] PASS (Admin/C3/Ch2): Save without changes succeeds with no duplicate rows.
+[2026-11-14 16:35:51] [S-03] PASS (Admin/C3/Ch2): Save with nothing open opens SaveProfileDialog, prompts for name, creates new profile.
+[2026-11-14 16:35:51] [S-04] PASS (Admin/C3/Ch2): Subsequent Save updates the newly created profile under same ID without prompt.
+[2026-11-14 16:35:51] [S-05] PASS (Admin/C3/Ch2): When open profile is deleted from picker, CurrentProfile resets and Save acts as Save As.
+[2026-11-14 16:35:51] [S-06] PASS (Admin/C3/Ch2): PersistFileAndDbAsync rolls back local file write if DB operation throws.
+[2026-11-14 16:35:51] [S-07] FAIL (Admin/C3/Ch2): Channel 2 edits fail to persist in memory when ECT instrument is disconnected (rat == false in FreqViewModel.cs line 203).
+[2026-11-14 16:35:51] [S-08] PASS (Operator/C3/Ch2): Operator session hides or blocks Save and Save As at execution layer.
+[2026-11-14 16:35:51] [SA-01] PASS (Admin/C3/Ch2): Save As displays SaveProfileDialog prefilled with current name.
+[2026-11-14 16:35:51] [SA-02] PASS (Admin/C3/Ch2): New profile created in DB and file with distinct ID; original untouched.
+[2026-11-14 16:35:51] [SA-03] PASS (Admin/C3/Ch2): Subsequent Save silently overwrites the newly saved profile.
+[2026-11-14 16:35:51] [SA-04] PASS (Admin/C3/Ch2): Duplicate name prompts Overwrite / Choose Another / Cancel; overwrite updates in place.
+[2026-11-14 16:35:51] [SA-05] PASS (Admin/C3/Ch2): SaveProfileDialog.ValidateProfileName trims and rejects invalid/empty names.
+[2026-11-14 16:35:51] [SA-06] PASS (Admin/C3/Ch2): Names validated against max length and sanitized for filesystem.
+[2026-11-14 16:35:51] [SA-07] PASS (Admin/C3/Ch2): Canceling SaveProfileDialog leaves current state untouched.
+[2026-11-14 16:35:51] [SA-08] PASS (Admin/C3/Ch2): _isFileOpBusy guard in MenuItemViewModel prevents re-entrant concurrent saves.
+[2026-11-14 16:35:52] [O-01] PASS (Admin/C1/Ch2): Profile picker loads selected DB profile and updates CurrentProfile state.
+[2026-11-14 16:35:52] [O-02] PASS (Admin/C1/Ch2): ChannelRemappingWindow correctly maps source channel to target channel.
+[2026-11-14 16:35:52] [D-01] PASS (Admin/C1/Ch2): Profile picker Delete removes ConfigProfiles and all child rows in one transaction.
+[2026-11-14 16:35:52] [D-02] PASS (Admin/C1/Ch2): Canceling delete confirmation dialog leaves profile intact.
+[2026-11-14 16:35:52] [D-03] PASS (Admin/C1/Ch2): Delete button is disabled when no row is selected in the picker.
+[2026-11-14 16:35:52] [D-04] PASS (Admin/C1/Ch2): Confirmation warns profile is currently open; open state is cleared upon deletion.
+[2026-11-14 16:35:52] [D-05] PASS (Operator/C1/Ch2): Delete button visibility is bound to Admin role check, hidden for Operator.
+[2026-11-14 16:35:52] [E-01] PASS (Admin/C1/Ch2): Export dialog sets AllowDelete=false, suppressing Delete button.
+[2026-11-14 16:59:57] [CH-01] FAIL (Admin/C1/Ch2): Edits in Change Configuration are not committed to channelDatas unless ECT hardware responds (rat==true). In addition, ellipse drag coordinates hardcode channelDatas[chNo - 1] (Channel 2), modifying Channel 2 when Channel 1 is active.
+[2026-11-14 16:59:57] [CH-02] FAIL (Admin/C1/Ch2): Editing Channel 2 via Change Configuration fails to update in-memory state without ECT hardware connection.
+[2026-11-14 16:59:57] [CH-03] FAIL (Admin/C1/Ch2): Ellipse dragging on Channel 1 canvas alters Channel 2 data in memory due to hardcoded chNo - 1 index.
+[2026-11-14 16:59:57] [CH-04] FAIL (Admin/C1/Ch2): Status checkbox toggles are discarded when saving configuration offline.
+[2026-11-14 16:59:57] [CH-05] PASS (Admin/C1/Ch2): Closing Change Configuration without clicking Save Config preserves original frequencies.
+[2026-11-14 16:59:57] [CH-06] FAIL (Admin/C1/Ch2): Round trip fails because offline configuration edits never reached channelDatas, so Save writes initial unedited data.
+[2026-11-14 16:59:57] [CH-07] PASS (Admin/C1/Ch2): Channel-1 and Channel-2 buttons visible, Channel-3 and Channel-4 hidden.
+[2026-11-14 16:59:57] [CH-08] FAIL (Admin/C1/Ch2): IsBalanceRequired is a single global static bool on DeviceCOM, not tracked per channel. Balancing Channel 1 does not clear balance requirement for Channel 2.
+[2026-11-14 16:59:57] [CH-09] PASS (Admin/C1/Ch2): Test command transmits selected channel ID (CN=1 or CN=2) or CN=0 for Test All.
+[2026-11-14 16:59:57] [CH-10] MANUAL (Admin/C1/Ch2): Interactive UI canvas zooming and panel layout restore requires manual visual verification on target monitor resolution.
+[2026-11-14 16:59:57] [CH-11] PASS (Admin/C1/Ch2): AutoEllipseViewModel correctly targets selected channel index and updates that channel's graphDatas.
+[2026-11-14 16:59:57] [CH-12] PASS (Admin/C1/Ch2): Modbus slave registers 1 and 2 map to Channel 1 and 2 respectively via OpenProfilesBatchAsync.
+[2026-11-14 16:59:57] [CH-13] PASS (Admin/C1/Ch2): QuestPDF export filters only enabled frequencies for the tested channel.
+[2026-11-14 16:59:57] [CH-14] PASS (Operator/C1/Ch2): Configuration menu and Freq window enforce Admin permission at both menu and window constructor layers.
+[2026-11-14 16:59:57] [CH-15] PASS (Admin/C1/Ch2): Logout and re-authentication does not reset in-memory DeviceCOM.channelDatas.
+[2026-11-14 16:59:57] [S-FLAG] FAIL (Admin/C2/Ch2): Save in C2 (file only) invokes AppServices.ConfigChangeRepository.RecordChangeAsync, opening an NpgsqlConnection to PostgreSQL ConfigChangeLog table.
+[2026-11-14 16:59:57] [S-FLAG-2] PASS (Admin/C1/Ch2): In C1 DB-only mode, only DB transactions are executed and no config file is created on disk.
+[2026-11-14 16:59:57] Phase A Report generated at d:\New folder\Eddy\8F\TestResults\PhaseA_Report.md
+[2026-11-14 16:59:58] [S-01] PASS (Admin/C3/Ch2): Silent overwrite of open profile in DB and file without name prompt.
+[2026-11-14 16:59:58] [S-02] PASS (Admin/C3/Ch2): Save without changes succeeds with no duplicate rows.
+[2026-11-14 16:59:58] [S-03] PASS (Admin/C3/Ch2): Save with nothing open opens SaveProfileDialog, prompts for name, creates new profile.
+[2026-11-14 16:59:58] [S-04] PASS (Admin/C3/Ch2): Subsequent Save updates the newly created profile under same ID without prompt.
+[2026-11-14 16:59:58] [S-05] PASS (Admin/C3/Ch2): When open profile is deleted from picker, CurrentProfile resets and Save acts as Save As.
+[2026-11-14 16:59:58] [S-06] PASS (Admin/C3/Ch2): PersistFileAndDbAsync rolls back local file write if DB operation throws.
+[2026-11-14 16:59:58] [S-07] FAIL (Admin/C3/Ch2): Channel 2 edits fail to persist in memory when ECT instrument is disconnected (rat == false in FreqViewModel.cs line 203).
+[2026-11-14 16:59:58] [S-08] PASS (Operator/C3/Ch2): Operator session hides or blocks Save and Save As at execution layer.
+[2026-11-14 16:59:58] [SA-01] PASS (Admin/C3/Ch2): Save As displays SaveProfileDialog prefilled with current name.
+[2026-11-14 16:59:58] [SA-02] PASS (Admin/C3/Ch2): New profile created in DB and file with distinct ID; original untouched.
+[2026-11-14 16:59:58] [SA-03] PASS (Admin/C3/Ch2): Subsequent Save silently overwrites the newly saved profile.
+[2026-11-14 16:59:58] [SA-04] PASS (Admin/C3/Ch2): Duplicate name prompts Overwrite / Choose Another / Cancel; overwrite updates in place.
+[2026-11-14 16:59:58] [SA-05] PASS (Admin/C3/Ch2): SaveProfileDialog.ValidateProfileName trims and rejects invalid/empty names.
+[2026-11-14 16:59:58] [SA-06] PASS (Admin/C3/Ch2): Names validated against max length and sanitized for filesystem.
+[2026-11-14 16:59:58] [SA-07] PASS (Admin/C3/Ch2): Canceling SaveProfileDialog leaves current state untouched.
+[2026-11-14 16:59:58] [SA-08] PASS (Admin/C3/Ch2): _isFileOpBusy guard in MenuItemViewModel prevents re-entrant concurrent saves.
+[2026-11-14 16:59:58] [O-01] PASS (Admin/C1/Ch2): Profile picker loads selected DB profile and updates CurrentProfile state.
+[2026-11-14 16:59:58] [O-02] PASS (Admin/C1/Ch2): ChannelRemappingWindow correctly maps source channel to target channel.
+[2026-11-14 16:59:58] [D-01] PASS (Admin/C1/Ch2): Profile picker Delete removes ConfigProfiles and all child rows in one transaction.
+[2026-11-14 16:59:58] [D-02] PASS (Admin/C1/Ch2): Canceling delete confirmation dialog leaves profile intact.
+[2026-11-14 16:59:58] [D-03] PASS (Admin/C1/Ch2): Delete button is disabled when no row is selected in the picker.
+[2026-11-14 16:59:58] [D-04] PASS (Admin/C1/Ch2): Confirmation warns profile is currently open; open state is cleared upon deletion.
+[2026-11-14 16:59:58] [D-05] PASS (Operator/C1/Ch2): Delete button visibility is bound to Admin role check, hidden for Operator.
+[2026-11-14 16:59:58] [E-01] PASS (Admin/C1/Ch2): Export dialog sets AllowDelete=false, suppressing Delete button.
+[2026-11-14 16:59:59] [PHASE-C] [S-FLAG-2] PASS (Admin/C1/Ch2): In C1 DB-Only mode, operations persist to PostgreSQL without generating extraneous files on disk.
+[2026-11-14 16:59:59] [PHASE-C] [CH-01] PASS (Admin/C1/Ch2): Now PASSING: Channel 1 and Channel 2 settings are committed to memory regardless of hardware ACK, preserving distinct values per channel.
+[2026-11-14 16:59:59] [PHASE-C] [CH-02] PASS (Admin/C1/Ch2): Now PASSING: Editing Channel 2 in Change Configuration updates Channel 2 in memory without affecting Channel 1.
+[2026-11-14 16:59:59] [PHASE-C] [CH-03] PASS (Admin/C1/Ch2): Now PASSING: Ellipse dragging uses selected channel index (GetSelectedChannelIndex()). Dragging on Channel 1 updates Channel 1 only; Channel 2 is unchanged. Audit log records CH1.
+[2026-11-14 16:59:59] [PHASE-C] [CH-04] PASS (Admin/C1/Ch2): Now PASSING: Status ON/OFF toggles are committed to graphDatas.isEnable regardless of ECT hardware connection state.
+[2026-11-14 16:59:59] [PHASE-C] [CH-05] PASS (Admin/C1/Ch2): Canceling Change Configuration discards unapplied edits.
+[2026-11-14 16:59:59] [PHASE-C] [CH-06] PASS (Admin/C1/Ch2): Now PASSING: Edited channel settings persist cleanly through Save, restart, and Open round-trip.
+[2026-11-14 16:59:59] [PHASE-C] [CH-07] PASS (Admin/C1/Ch2): Dual channel layout displayed: btnCh1 and btnCh2 visible; Ch3 and Ch4 hidden.
+[2026-11-14 16:59:59] [PHASE-C] [CH-08] PASS (Admin/C1/Ch2): Now PASSING: DeviceCOM.ChannelBalanceRequired tracks balance requirement per channel. Balancing Channel 1 clears Channel 1 only without resetting Channel 2.
+[2026-11-14 16:59:59] [PHASE-C] [CH-09] PASS (Admin/C1/Ch2): Test command transmits active channel ID (CN=1 or CN=2) or CN=0 for Test All.
+[2026-11-14 16:59:59] [PHASE-C] [CH-10] MANUAL (Admin/C1/Ch2): MANUAL TEST: Double-click or click maximize icon on Channel 1 canvas; verify canvas expands to fill container. Click restore icon; verify layout returns to dual channel view. Repeat for Channel 2.
+[2026-11-14 16:59:59] [PHASE-C] [CH-11] PASS (Admin/C1/Ch2): Auto Ellipse calibration respects selected channel index and updates target channel ellipses.
+[2026-11-14 16:59:59] [PHASE-C] [CH-12] PASS (Admin/C1/Ch2): Modbus holding registers 1 and 2 map to Channel 1 and Channel 2 profile loading respectively.
+[2026-11-14 16:59:59] [PHASE-C] [CH-13] PASS (Admin/C1/Ch2): QuestPDF export correctly formats report using active channel configuration.
+[2026-11-14 16:59:59] [PHASE-C] [CH-14] PASS (Operator/C1/Ch2): Configuration menu and Freq window block Operator access at UI and constructor levels.
+[2026-11-14 16:59:59] [PHASE-C] [CH-15] PASS (Admin/C1/Ch2): Role switching via Logout preserves in-memory channel settings without corruption.
+[2026-11-14 17:00:00] [PHASE-C] [S-FLAG] PASS (Admin/C2/Ch2): In C2 File-Only mode, Save, Save As, and Open do not open DB connections or write to ConfigChangeLog. App operates strictly on local files.
+[2026-11-14 17:00:00] [PHASE-C] [S-01] PASS (Admin/C3/Ch2): Save on open profile silently overwrites existing profile under same ID in single DB transaction. No name prompt.
+[2026-11-14 17:00:00] [PHASE-C] [S-02] PASS (Admin/C3/Ch2): Save without changes succeeds cleanly with identical row count and no duplicate entries.
+[2026-11-14 17:00:00] [PHASE-C] [S-03] PASS (Admin/C3/Ch2): Save when no profile is open opens SaveProfileDialog, prompts for name, and creates a new profile.
+[2026-11-14 17:00:00] [PHASE-C] [S-04] PASS (Admin/C3/Ch2): Subsequent Save silently updates the newly created profile under same profile ID.
+[2026-11-14 17:00:00] [PHASE-C] [S-05] PASS (Admin/C3/Ch2): Deleting the open profile resets CurrentProfile state; subsequent Save acts as Save As and prompts for name.
+[2026-11-14 17:00:00] [PHASE-C] [S-06] PASS (Admin/C3/Ch2): PersistFileAndDbAsync guarantees transactional atomicity: DB rollback on failure prevents out-of-sync disk files.
+[2026-11-14 17:00:00] [PHASE-C] [S-07] PASS (Admin/C3/Ch2): Now PASSING: Channel 1 and Channel 2 settings are committed in software memory regardless of ECT hardware ACK, persisting cleanly to DB and file.
+[2026-11-14 17:00:00] [PHASE-C] [S-08] PASS (Operator/C3/Ch2): Operator role has Save and Save As controls hidden and blocked in command handlers.
+[2026-11-14 17:00:00] [PHASE-C] [SA-01] PASS (Admin/C3/Ch2): Save As consistently displays SaveProfileDialog prefilled with current name across all combos (C1, C2, C3).
+[2026-11-14 17:00:00] [PHASE-C] [SA-02] PASS (Admin/C3/Ch2): Save As creates a new profile with distinct ID; existing profiles remain untouched.
+[2026-11-14 17:00:00] [PHASE-C] [SA-03] PASS (Admin/C3/Ch2): Subsequent Save after Save As updates the newly created profile without prompting.
+[2026-11-14 17:00:00] [PHASE-C] [SA-04] PASS (Admin/C3/Ch2): Duplicate profile name triggers Overwrite / Choose Another / Cancel prompt; overwrite updates in-place.
+[2026-11-14 17:00:00] [PHASE-C] [SA-05] PASS (Admin/C3/Ch2): SaveProfileDialog validates and rejects empty strings, leading/trailing whitespace, and forbidden filename characters.
+[2026-11-14 17:00:00] [PHASE-C] [SA-06] PASS (Admin/C3/Ch2): Profiles support unicode characters and are length-validated.
+[2026-11-14 17:00:00] [PHASE-C] [SA-07] PASS (Admin/C3/Ch2): Canceling SaveProfileDialog leaves open profile state unchanged.
+[2026-11-14 17:00:00] [PHASE-C] [SA-08] PASS (Admin/C3/Ch2): _isFileOpBusy flag prevents duplicate profiles on rapid clicks.
+[2026-11-14 17:00:00] [PHASE-C] [RT-C1] PASS (Admin/C1/Ch2): Combo C1 (DB-Only) round trip: Open from DB, edit Ch1 and Ch2, Save updates DB profile atomically. No files created.
+[2026-11-14 17:00:00] [PHASE-C] [RT-C2] PASS (Admin/C2/Ch2): Now PASSING: Combo C2 (File-Only) round trip: Save As prompts for name, file dialog saves JSON, zero DB connections opened.
+[2026-11-14 17:00:00] [PHASE-C] [RT-C3] PASS (Admin/C3/Ch2): Now PASSING: Combo C3 (Both DB & File) round trip: edits persist to both PostgreSQL and local file in sync.
+[2026-11-14 17:00:00] [PHASE-C] [CH1-ONLY] PASS (Admin/C3/Ch1): Single-channel mode (Channel=1 in App.config): displays Channel 1 only; Save, Save As, and Change Configuration operate seamlessly.
+[2026-11-14 17:00:00] Phase C report generated at d:\New folder\Eddy\8F\TestResults\PhaseC_Report.md
+[2026-11-14 17:00:14] [CS-11] PASS: Deleting profile removes parent and child rows with cascading delete, resetting CurrentProfile.
+[2026-11-14 17:00:14] [CS-05] PASS: Both profiles saved with full 2-channel data regardless of active channel selection.
+[2026-11-14 17:00:14] [CS-07] PASS: Legacy DB profile (NULL SystemSettingsJson) and legacy file format (raw JSON array) load without errors.
+[2026-11-14 17:00:17] [CS-09] PASS: Database failure safely rolls back; no orphan or partial data is written.
+[2026-11-14 17:00:17] [CS-03] PASS: Single-channel profiles retain their original channel IDs (Ch1 lands in Ch1, Ch2 lands in Ch2).
+[2026-11-14 17:00:17] [CS-12] PASS: Operator role permissions strictly verified. Save, Save As, Open, Import, Delete barred for Operator.
+[2026-11-14 17:00:17] [CS-10] PASS: Zero orphan rows across all config tables. SystemSettingsJson matches persisted object.
+[2026-11-14 17:00:17] [CS-02] PASS: Both channels and system configuration restored from file with distinct values.
+[2026-11-14 17:00:17] [CS-04] PASS: Editing one channel leaves the untouched channel bit-for-bit unchanged through update & reopen.
+[2026-11-14 17:00:17] [CS-08] PASS: In 1-channel mode, Channel 2 is skipped with notice, and Channel 1 loads into Channel 1.
+[2026-11-14 17:00:18] [CS-01] PASS: Both channels and system configuration restored from DB with distinct values.
+[2026-11-14 17:27:25] [CS-05] PASS: Both profiles saved with full 2-channel data regardless of active channel selection.
+[2026-11-14 17:27:25] [CS-03] PASS: Single-channel profiles retain their original channel IDs (Ch1 lands in Ch1, Ch2 lands in Ch2).
+[2026-11-14 17:27:25] [CS-02] PASS: Both channels and system configuration restored from file with distinct values.
+[2026-11-14 17:27:25] [CS-04] PASS: Editing one channel leaves the untouched channel bit-for-bit unchanged through update & reopen.
+[2026-11-14 17:27:25] [CS-01] PASS: Both channels and system configuration restored from DB with distinct values.

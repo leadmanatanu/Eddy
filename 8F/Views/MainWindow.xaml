@@ -34,6 +34,7 @@
                 <Menu.ItemContainerStyle>
                     <Style TargetType="{x:Type MenuItem}">
                         <Setter Property="Command" Value="{Binding Command}" />
+                        <Setter Property="AutomationProperties.AutomationId" Value="{Binding Header}" />
                     </Style>
                 </Menu.ItemContainerStyle>
                 <Menu.ItemTemplate>
@@ -72,12 +73,12 @@
                     <ColumnDefinition/>
                 </Grid.ColumnDefinitions>
 
-                <Border Cursor="Hand" Name="btnCh1"  Tag="1" MouseDown="btnCh_Click" Margin="3" Background="#305371" Grid.Column="0" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
-                    <Label Foreground="Black" FontSize="20" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Channel-1" ></Label>
+                <Border Cursor="Hand" Name="btnCh1" AutomationProperties.AutomationId="btnCh1" Tag="1" MouseDown="btnCh_Click" Margin="3" Background="#305371" Grid.Column="0" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
+                    <Label AutomationProperties.AutomationId="lblCh1" Foreground="Black" FontSize="20" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Channel-1" ></Label>
                 </Border>
 
-                <Border Cursor="Hand" Name="btnCh2"  Tag="2" MouseDown="btnCh_Click" Margin="3" Background="#305371" Grid.Column="1" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
-                    <Label Foreground="Black" FontSize="20" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Channel-2" ></Label>
+                <Border Cursor="Hand" Name="btnCh2" AutomationProperties.AutomationId="btnCh2" Tag="2" MouseDown="btnCh_Click" Margin="3" Background="#305371" Grid.Column="1" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
+                    <Label AutomationProperties.AutomationId="lblCh2" Foreground="Black" FontSize="20" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Channel-2" ></Label>
                 </Border>
 
                 <Border Cursor="Hand" Name="btnCh3"  Tag="3" MouseDown="btnCh_Click" Margin="3" Background="#305371" Grid.Column="2" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
@@ -754,7 +755,7 @@ Canvas.Top="227" />
                 <ColumnDefinition Width="1*" />
             </Grid.ColumnDefinitions>
 
-            <Border Cursor="Hand" Height="80" Name="btnBalance" MouseDown="btnBalance_Click" Margin="8" Background="#305371" Grid.Column="0" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
+            <Border Cursor="Hand" Height="80" Name="btnBalance" AutomationProperties.AutomationId="btnBalance" MouseDown="btnBalance_Click" Margin="8" Background="#305371" Grid.Column="0" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
                 <Label Foreground="White" FontSize="18" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Balance" ></Label>
             </Border>
 
@@ -762,7 +763,7 @@ Canvas.Top="227" />
                 <Label Foreground="White" FontSize="16" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Balance&#x0a;All" ></Label>
             </Border>
 
-            <Border Cursor="Hand" Height="80" Name="btnTest" MouseDown="btnTest_Click" Margin="8" Background="#305371" Grid.Column="2" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
+            <Border Cursor="Hand" Height="80" Name="btnTest" AutomationProperties.AutomationId="btnTest" MouseDown="btnTest_Click" Margin="8" Background="#305371" Grid.Column="2" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
                 <Label Foreground="White" FontSize="18" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Test" ></Label>
             </Border>
 
@@ -770,7 +771,7 @@ Canvas.Top="227" />
                 <Label Foreground="White" FontSize="18" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Test All" ></Label>
             </Border>
 
-            <Border Cursor="Hand"  Height="80" Name="btnClear" MouseDown="btnClear_Click" Margin="8" Background="#305371" Grid.Column="4" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
+            <Border Cursor="Hand"  Height="80" Name="btnClear" AutomationProperties.AutomationId="btnClear" MouseDown="btnClear_Click" Margin="8" Background="#305371" Grid.Column="4" Grid.Row="0" BorderBrush="#FF000000" BorderThickness="1" CornerRadius="10">
                 <Label Foreground="White" FontSize="18" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Content="Clear" ></Label>
             </Border>
 

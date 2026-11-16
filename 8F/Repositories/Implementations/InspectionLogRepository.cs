@@ -557,8 +557,10 @@ namespace _8F.Services
                     ""Name"" text NOT NULL,
                     ""OperatorName"" text,
                     ""CreatedAt"" timestamp without time zone NOT NULL DEFAULT now(),
-                    ""UpdatedAt"" timestamp without time zone NOT NULL DEFAULT now()
+                    ""UpdatedAt"" timestamp without time zone NOT NULL DEFAULT now(),
+                    ""SystemSettingsJson"" text
                 );
+                ALTER TABLE public.""ConfigProfiles"" ADD COLUMN IF NOT EXISTS ""SystemSettingsJson"" text;
 
                 CREATE TABLE IF NOT EXISTS public.""ConfigChannels"" (
                     ""Id"" integer NOT NULL GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -615,9 +617,10 @@ namespace _8F.Services
         }
 
         /// <summary>
-        /// Saves a full ChannelData configuration profile transactionally across 4 tables.
+        /// <summary>
+        /// Saves a full ChannelData configuration profile transactionally across 4 tables with optional system settings.
         /// </summary>
-        public async Task<int> SaveConfigProfileAsync(string name, string? operatorName, List<ChannelData> channelDatas)
+        public async Task<int> SaveConfigProfileAsync(string name, string? operatorName, List<ChannelData> channelDatas, SystemSettings? systemSettings = null)
         {
             await EnsureConfigTablesCreatedAsync();
 
@@ -626,104 +629,26 @@ namespace _8F.Services
 
             try
             {
+                string resolvedName = string.IsNullOrWhiteSpace(name) ? "Untitled Config" : name.Trim();
+                string? settingsJson = systemSettings != null ? JsonSerializer.Serialize(systemSettings) : null;
+
                 // 1. Insert ConfigProfile
                 const string sqlProfile = @"
-                    INSERT INTO public.""ConfigProfiles"" (""Name"", ""OperatorName"", ""CreatedAt"", ""UpdatedAt"")
-                    VALUES (@Name, @OperatorName, @CreatedAt, @UpdatedAt)
+                    INSERT INTO public.""ConfigProfiles"" (""Name"", ""OperatorName"", ""CreatedAt"", ""UpdatedAt"", ""SystemSettingsJson"")
+                    VALUES (@Name, @OperatorName, @CreatedAt, @UpdatedAt, @SystemSettingsJson)
                     RETURNING ""Id"";";
 
                 await using var cmdProfile = new NpgsqlCommand(sqlProfile, conn, tx);
-                cmdProfile.Parameters.AddWithValue("@Name", string.IsNullOrWhiteSpace(name) ? "Untitled Config" : name);
+                cmdProfile.Parameters.AddWithValue("@Name", resolvedName);
                 cmdProfile.Parameters.AddWithValue("@OperatorName", (object?)operatorName ?? DBNull.Value);
                 cmdProfile.Parameters.AddWithValue("@CreatedAt", DateTime.UtcNow);
                 cmdProfile.Parameters.AddWithValue("@UpdatedAt", DateTime.UtcNow);
+                cmdProfile.Parameters.AddWithValue("@SystemSettingsJson", (object?)settingsJson ?? DBNull.Value);
 
                 int profileId = Convert.ToInt32(await cmdProfile.ExecuteScalarAsync());
 
-                // 2. Insert ConfigChannels
-                foreach (var ch in channelDatas)
-                {
-                    const string sqlChannel = @"
-                        INSERT INTO public.""ConfigChannels"" (""ConfigProfileId"", ""ChannelNumber"", ""IsSelected"", ""TxStrength"")
-                        VALUES (@ConfigProfileId, @ChannelNumber, @IsSelected, @TxStrength)
-                        RETURNING ""Id"";";
-
-                    await using var cmdChannel = new NpgsqlCommand(sqlChannel, conn, tx);
-                    cmdChannel.Parameters.AddWithValue("@ConfigProfileId", profileId);
-                    cmdChannel.Parameters.AddWithValue("@ChannelNumber", ch.Id);
-                    cmdChannel.Parameters.AddWithValue("@IsSelected", ch.IsSeleted);
-                    cmdChannel.Parameters.AddWithValue("@TxStrength", ch.TxStrength);
-
-                    int channelDbId = Convert.ToInt32(await cmdChannel.ExecuteScalarAsync());
-
-                    // 3. Insert ConfigFrequencies
-                    if (ch.graphDatas != null)
-                    {
-                        foreach (var graph in ch.graphDatas)
-                        {
-                            const string sqlFreq = @"
-                                INSERT INTO public.""ConfigFrequencies"" (
-                                    ""ConfigChannelId"", ""FrequencyNumber"", ""Name"", ""Freq"", ""Gain"", ""Phase"", ""IsEnable"",
-                                    ""Strength"", ""PostGain"", ""Height"", ""Width"", ""Ex"", ""Ey"", ""Angel"",
-                                    ""HeightO"", ""WidthO"", ""ExO"", ""EyO"", ""AngelO""
-                                ) VALUES (
-                                    @ConfigChannelId, @FrequencyNumber, @Name, @Freq, @Gain, @Phase, @IsEnable,
-                                    @Strength, @PostGain, @Height, @Width, @Ex, @Ey, @Angel,
-                                    @HeightO, @WidthO, @ExO, @EyO, @AngelO
-                                ) RETURNING ""Id"";";
-
-                            await using var cmdFreq = new NpgsqlCommand(sqlFreq, conn, tx);
-                            cmdFreq.Parameters.AddWithValue("@ConfigChannelId", channelDbId);
-                            cmdFreq.Parameters.AddWithValue("@FrequencyNumber", graph.Id);
-                            cmdFreq.Parameters.AddWithValue("@Name", graph.Name ?? $"D{graph.Id}");
-                            cmdFreq.Parameters.AddWithValue("@Freq", graph.freq);
-                            cmdFreq.Parameters.AddWithValue("@Gain", graph.gain);
-                            cmdFreq.Parameters.AddWithValue("@Phase", graph.phase);
-                            cmdFreq.Parameters.AddWithValue("@IsEnable", graph.isEnable);
-                            cmdFreq.Parameters.AddWithValue("@Strength", graph.strength);
-                            cmdFreq.Parameters.AddWithValue("@PostGain", graph.postGain);
-
-                            cmdFreq.Parameters.AddWithValue("@Height", graph.height);
-                            cmdFreq.Parameters.AddWithValue("@Width", graph.width);
-                            cmdFreq.Parameters.AddWithValue("@Ex", graph.ex);
-                            cmdFreq.Parameters.AddWithValue("@Ey", graph.ey);
-                            cmdFreq.Parameters.AddWithValue("@Angel", graph.angel);
-
-                            cmdFreq.Parameters.AddWithValue("@HeightO", graph.height_O);
-                            cmdFreq.Parameters.AddWithValue("@WidthO", graph.width_O);
-                            cmdFreq.Parameters.AddWithValue("@ExO", graph.ex_O);
-                            cmdFreq.Parameters.AddWithValue("@EyO", graph.ey_O);
-                            cmdFreq.Parameters.AddWithValue("@AngelO", graph.angel_O);
-
-                            int freqDbId = Convert.ToInt32(await cmdFreq.ExecuteScalarAsync());
-
-                            // 4. Insert ConfigEllipses
-                            if (graph.ellipses != null)
-                            {
-                                foreach (var ell in graph.ellipses)
-                                {
-                                    const string sqlEll = @"
-                                        INSERT INTO public.""ConfigEllipses"" (
-                                            ""ConfigFrequencyId"", ""EllipseIndex"", ""Height"", ""Width"", ""Ex"", ""Ey"", ""Angel""
-                                        ) VALUES (
-                                            @ConfigFrequencyId, @EllipseIndex, @Height, @Width, @Ex, @Ey, @Angel
-                                        );";
-
-                                    await using var cmdEll = new NpgsqlCommand(sqlEll, conn, tx);
-                                    cmdEll.Parameters.AddWithValue("@ConfigFrequencyId", freqDbId);
-                                    cmdEll.Parameters.AddWithValue("@EllipseIndex", ell.Id);
-                                    cmdEll.Parameters.AddWithValue("@Height", ell.height);
-                                    cmdEll.Parameters.AddWithValue("@Width", ell.width);
-                                    cmdEll.Parameters.AddWithValue("@Ex", ell.ex);
-                                    cmdEll.Parameters.AddWithValue("@Ey", ell.ey);
-                                    cmdEll.Parameters.AddWithValue("@Angel", ell.angel);
-
-                                    await cmdEll.ExecuteNonQueryAsync();
-                                }
-                            }
-                        }
-                    }
-                }
+                // 2. Insert child rows across ConfigChannels, ConfigFrequencies, ConfigEllipses
+                await InsertProfileChildrenAsync(conn, tx, profileId, channelDatas);
 
                 await tx.CommitAsync();
                 return profileId;
@@ -736,14 +661,237 @@ namespace _8F.Services
             }
         }
 
+        public Task<int> SaveConfigProfileAsync(string name, string? operatorName, List<ChannelData> channelDatas) =>
+            SaveConfigProfileAsync(name, operatorName, channelDatas, null);
+
         /// <summary>
-        /// Retrieves a saved ChannelData configuration profile from PostgreSQL by profile ID.
+        /// Updates an existing configuration profile and replaces its child rows inside a single transaction.
+        /// Preserves CreatedAt and OperatorName; returns false if the profile ID does not exist.
         /// </summary>
-        public async Task<List<ChannelData>> GetConfigProfileAsync(int profileId)
+        public async Task<bool> UpdateConfigProfileAsync(int profileId, string name, List<ChannelData> channelDatas, SystemSettings? systemSettings = null)
         {
-            List<ChannelData> channels = new();
+            await EnsureConfigTablesCreatedAsync();
 
             await using var conn = await GetOpenConnectionAsync();
+            await using var tx = await conn.BeginTransactionAsync();
+
+            try
+            {
+                string? settingsJson = systemSettings != null ? JsonSerializer.Serialize(systemSettings) : null;
+
+                const string sqlProfile = @"
+                    UPDATE public.""ConfigProfiles""
+                    SET ""Name"" = @Name,
+                        ""UpdatedAt"" = @UpdatedAt,
+                        ""SystemSettingsJson"" = COALESCE(@SystemSettingsJson, ""SystemSettingsJson"")
+                    WHERE ""Id"" = @ProfileId;";
+
+                await using var cmdProfile = new NpgsqlCommand(sqlProfile, conn, tx);
+                cmdProfile.Parameters.AddWithValue("@Name", string.IsNullOrWhiteSpace(name) ? "Untitled Config" : name.Trim());
+                cmdProfile.Parameters.AddWithValue("@UpdatedAt", DateTime.UtcNow);
+                cmdProfile.Parameters.AddWithValue("@SystemSettingsJson", (object?)settingsJson ?? DBNull.Value);
+                cmdProfile.Parameters.AddWithValue("@ProfileId", profileId);
+
+                int affected = await cmdProfile.ExecuteNonQueryAsync();
+                if (affected == 0)
+                {
+                    await tx.RollbackAsync();
+                    return false;
+                }
+
+                await DeleteProfileChildrenAsync(conn, tx, profileId);
+                await InsertProfileChildrenAsync(conn, tx, profileId, channelDatas);
+
+                await tx.CommitAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                await tx.RollbackAsync();
+                System.Diagnostics.Debug.WriteLine($"Error updating config profile {profileId}: {ex.Message}");
+                throw;
+            }
+        }
+
+        public Task<bool> UpdateConfigProfileAsync(int profileId, string name, List<ChannelData> channelDatas) =>
+            UpdateConfigProfileAsync(profileId, name, channelDatas, null);
+
+        /// <summary>
+        /// Deletes a configuration profile and all child rows inside a single transaction.
+        /// Returns false if the profile no longer exists.
+        /// </summary>
+        public async Task<bool> DeleteProfileAsync(int profileId)
+        {
+            await EnsureConfigTablesCreatedAsync();
+
+            await using var conn = await GetOpenConnectionAsync();
+            await using var tx = await conn.BeginTransactionAsync();
+
+            try
+            {
+                await DeleteProfileChildrenAsync(conn, tx, profileId);
+
+                const string sqlProfile = @"DELETE FROM public.""ConfigProfiles"" WHERE ""Id"" = @ProfileId;";
+                await using var cmdProfile = new NpgsqlCommand(sqlProfile, conn, tx);
+                cmdProfile.Parameters.AddWithValue("@ProfileId", profileId);
+
+                int affected = await cmdProfile.ExecuteNonQueryAsync();
+                await tx.CommitAsync();
+                return affected > 0;
+            }
+            catch (Exception ex)
+            {
+                await tx.RollbackAsync();
+                System.Diagnostics.Debug.WriteLine($"Error deleting config profile {profileId}: {ex.Message}");
+                throw;
+            }
+        }
+
+        private static async Task DeleteProfileChildrenAsync(NpgsqlConnection conn, NpgsqlTransaction tx, int profileId)
+        {
+            // Explicit bottom-up deletion guarantees clean child removal regardless of ON DELETE CASCADE state
+            const string sqlDeleteEllipses = @"
+                DELETE FROM public.""ConfigEllipses""
+                WHERE ""ConfigFrequencyId"" IN (
+                    SELECT f.""Id"" FROM public.""ConfigFrequencies"" f
+                    INNER JOIN public.""ConfigChannels"" c ON c.""Id"" = f.""ConfigChannelId""
+                    WHERE c.""ConfigProfileId"" = @ProfileId
+                );";
+            await using (var cmd = new NpgsqlCommand(sqlDeleteEllipses, conn, tx))
+            {
+                cmd.Parameters.AddWithValue("@ProfileId", profileId);
+                await cmd.ExecuteNonQueryAsync();
+            }
+
+            const string sqlDeleteFreqs = @"
+                DELETE FROM public.""ConfigFrequencies""
+                WHERE ""ConfigChannelId"" IN (
+                    SELECT c.""Id"" FROM public.""ConfigChannels"" c
+                    WHERE c.""ConfigProfileId"" = @ProfileId
+                );";
+            await using (var cmd = new NpgsqlCommand(sqlDeleteFreqs, conn, tx))
+            {
+                cmd.Parameters.AddWithValue("@ProfileId", profileId);
+                await cmd.ExecuteNonQueryAsync();
+            }
+
+            const string sqlDeleteChannels = @"DELETE FROM public.""ConfigChannels"" WHERE ""ConfigProfileId"" = @ProfileId;";
+            await using (var cmd = new NpgsqlCommand(sqlDeleteChannels, conn, tx))
+            {
+                cmd.Parameters.AddWithValue("@ProfileId", profileId);
+                await cmd.ExecuteNonQueryAsync();
+            }
+        }
+
+        private static async Task InsertProfileChildrenAsync(NpgsqlConnection conn, NpgsqlTransaction tx, int profileId, List<ChannelData> channelDatas)
+        {
+            if (channelDatas == null) return;
+
+            foreach (var ch in channelDatas)
+            {
+                const string sqlChannel = @"
+                    INSERT INTO public.""ConfigChannels"" (""ConfigProfileId"", ""ChannelNumber"", ""IsSelected"", ""TxStrength"")
+                    VALUES (@ConfigProfileId, @ChannelNumber, @IsSelected, @TxStrength)
+                    RETURNING ""Id"";";
+
+                await using var cmdChannel = new NpgsqlCommand(sqlChannel, conn, tx);
+                cmdChannel.Parameters.AddWithValue("@ConfigProfileId", profileId);
+                cmdChannel.Parameters.AddWithValue("@ChannelNumber", ch.Id);
+                cmdChannel.Parameters.AddWithValue("@IsSelected", ch.IsSeleted);
+                cmdChannel.Parameters.AddWithValue("@TxStrength", ch.TxStrength);
+
+                int channelDbId = Convert.ToInt32(await cmdChannel.ExecuteScalarAsync());
+
+                if (ch.graphDatas == null) continue;
+
+                foreach (var graph in ch.graphDatas)
+                {
+                    const string sqlFreq = @"
+                        INSERT INTO public.""ConfigFrequencies"" (
+                            ""ConfigChannelId"", ""FrequencyNumber"", ""Name"", ""Freq"", ""Gain"", ""Phase"", ""IsEnable"",
+                            ""Strength"", ""PostGain"", ""Height"", ""Width"", ""Ex"", ""Ey"", ""Angel"",
+                            ""HeightO"", ""WidthO"", ""ExO"", ""EyO"", ""AngelO""
+                        ) VALUES (
+                            @ConfigChannelId, @FrequencyNumber, @Name, @Freq, @Gain, @Phase, @IsEnable,
+                            @Strength, @PostGain, @Height, @Width, @Ex, @Ey, @Angel,
+                            @HeightO, @WidthO, @ExO, @EyO, @AngelO
+                        ) RETURNING ""Id"";";
+
+                    await using var cmdFreq = new NpgsqlCommand(sqlFreq, conn, tx);
+                    cmdFreq.Parameters.AddWithValue("@ConfigChannelId", channelDbId);
+                    cmdFreq.Parameters.AddWithValue("@FrequencyNumber", graph.Id);
+                    cmdFreq.Parameters.AddWithValue("@Name", graph.Name ?? $"D{graph.Id}");
+                    cmdFreq.Parameters.AddWithValue("@Freq", graph.freq);
+                    cmdFreq.Parameters.AddWithValue("@Gain", graph.gain);
+                    cmdFreq.Parameters.AddWithValue("@Phase", graph.phase);
+                    cmdFreq.Parameters.AddWithValue("@IsEnable", graph.isEnable);
+                    cmdFreq.Parameters.AddWithValue("@Strength", graph.strength);
+                    cmdFreq.Parameters.AddWithValue("@PostGain", graph.postGain);
+
+                    cmdFreq.Parameters.AddWithValue("@Height", graph.height);
+                    cmdFreq.Parameters.AddWithValue("@Width", graph.width);
+                    cmdFreq.Parameters.AddWithValue("@Ex", graph.ex);
+                    cmdFreq.Parameters.AddWithValue("@Ey", graph.ey);
+                    cmdFreq.Parameters.AddWithValue("@Angel", graph.angel);
+
+                    cmdFreq.Parameters.AddWithValue("@HeightO", graph.height_O);
+                    cmdFreq.Parameters.AddWithValue("@WidthO", graph.width_O);
+                    cmdFreq.Parameters.AddWithValue("@ExO", graph.ex_O);
+                    cmdFreq.Parameters.AddWithValue("@EyO", graph.ey_O);
+                    cmdFreq.Parameters.AddWithValue("@AngelO", graph.angel_O);
+
+                    int freqDbId = Convert.ToInt32(await cmdFreq.ExecuteScalarAsync());
+
+                    if (graph.ellipses == null) continue;
+
+                    foreach (var ell in graph.ellipses)
+                    {
+                        const string sqlEll = @"
+                            INSERT INTO public.""ConfigEllipses"" (
+                                ""ConfigFrequencyId"", ""EllipseIndex"", ""Height"", ""Width"", ""Ex"", ""Ey"", ""Angel""
+                            ) VALUES (
+                                @ConfigFrequencyId, @EllipseIndex, @Height, @Width, @Ex, @Ey, @Angel
+                            );";
+
+                        await using var cmdEll = new NpgsqlCommand(sqlEll, conn, tx);
+                        cmdEll.Parameters.AddWithValue("@ConfigFrequencyId", freqDbId);
+                        cmdEll.Parameters.AddWithValue("@EllipseIndex", ell.Id);
+                        cmdEll.Parameters.AddWithValue("@Height", ell.height);
+                        cmdEll.Parameters.AddWithValue("@Width", ell.width);
+                        cmdEll.Parameters.AddWithValue("@Ex", ell.ex);
+                        cmdEll.Parameters.AddWithValue("@Ey", ell.ey);
+                        cmdEll.Parameters.AddWithValue("@Angel", ell.angel);
+
+                        await cmdEll.ExecuteNonQueryAsync();
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Retrieves a saved ChannelData configuration profile and system settings from PostgreSQL by profile ID.
+        /// </summary>
+        public async Task<(List<ChannelData> Channels, SystemSettings? Settings)> GetFullConfigProfileAsync(int profileId)
+        {
+            List<ChannelData> channels = new();
+            SystemSettings? settings = null;
+
+            await using var conn = await GetOpenConnectionAsync();
+
+            const string sqlProfile = @"SELECT ""SystemSettingsJson"" FROM public.""ConfigProfiles"" WHERE ""Id"" = @ProfileId LIMIT 1;";
+            await using (var cmdProfile = new NpgsqlCommand(sqlProfile, conn))
+            {
+                cmdProfile.Parameters.AddWithValue("@ProfileId", profileId);
+                var rawJson = await cmdProfile.ExecuteScalarAsync();
+                if (rawJson != null && rawJson != DBNull.Value && !string.IsNullOrWhiteSpace(rawJson.ToString()))
+                {
+                    try
+                    {
+                        settings = JsonSerializer.Deserialize<SystemSettings>(rawJson.ToString()!);
+                    }
+                    catch { }
+                }
+            }
 
             const string sqlChannels = @"
                 SELECT ""Id"", ""ChannelNumber"", ""IsSelected"", ""TxStrength""
@@ -851,6 +999,15 @@ namespace _8F.Services
                 channels.Add(ch);
             }
 
+            return (channels, settings);
+        }
+
+        /// <summary>
+        /// Retrieves a saved ChannelData configuration profile from PostgreSQL by profile ID.
+        /// </summary>
+        public async Task<List<ChannelData>> GetConfigProfileAsync(int profileId)
+        {
+            var (channels, _) = await GetFullConfigProfileAsync(profileId);
             return channels;
         }
 
@@ -865,6 +1022,42 @@ namespace _8F.Services
             cmd.Parameters.AddWithValue("@ProfileId", profileId);
             var result = await cmd.ExecuteScalarAsync();
             return result != null && result != DBNull.Value ? result.ToString() : null;
+        }
+
+        /// <summary>
+        /// Looks up a saved configuration profile by trimmed case-insensitive name.
+        /// </summary>
+        public async Task<ConfigProfileSummary?> GetConfigProfileByNameAsync(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name)) return null;
+
+            await EnsureConfigTablesCreatedAsync();
+            await using var conn = await GetOpenConnectionAsync();
+
+            const string sql = @"
+                SELECT ""Id"", ""Name"", ""OperatorName"", ""CreatedAt"", ""UpdatedAt""
+                FROM public.""ConfigProfiles""
+                WHERE LOWER(TRIM(""Name"")) = LOWER(TRIM(@Name))
+                ORDER BY ""Id"" DESC
+                LIMIT 1;";
+
+            await using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@Name", name.Trim());
+            await using var reader = await cmd.ExecuteReaderAsync();
+
+            if (await reader.ReadAsync())
+            {
+                return new ConfigProfileSummary
+                {
+                    Id = reader.GetInt32(0),
+                    Name = reader.GetString(1),
+                    OperatorName = reader.IsDBNull(2) ? null : reader.GetString(2),
+                    CreatedAt = reader.GetDateTime(3),
+                    UpdatedAt = reader.GetDateTime(4)
+                };
+            }
+
+            return null;
         }
 
         /// <summary>

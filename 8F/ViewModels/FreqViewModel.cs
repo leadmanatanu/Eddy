@@ -200,32 +200,34 @@ namespace _8F.ViewModels
                         rat = PortCOM != null && PortCOM.WriteDataInBytes(data);
                     }
 
+                    // Save in software regardless of hardware response
+                    ch.TxStrength = txStrength;
+                    foreach (var f in ch.graphDatas)
+                    {
+                        var tf = GraphDataList.FirstOrDefault(d => d.Id == f.Id);
+                        if (tf != null)
+                        {
+                            f.freq = tf.freq;
+                            f.gain = tf.gain;
+                            f.phase = tf.phase;
+                            f.isEnable = tf.isEnable;
+                        }
+                    }
+
+                    IsSaved = true;
+
+                    if (OwnerWindow is MainWindow mw)
+                    {
+                        mw.ImplementChanges(1);
+                    }
+
                     if (rat)
                     {
                         StatusMessage = "Configuration Saved!!!";
-                        IsSaved = true;
-
-                        ch.TxStrength = txStrength;
-                        foreach (var f in ch.graphDatas)
-                        {
-                            var tf = GraphDataList.FirstOrDefault(d => d.Id == f.Id);
-                            if (tf != null)
-                            {
-                                f.freq = tf.freq;
-                                f.gain = tf.gain;
-                                f.phase = tf.phase;
-                                f.isEnable = tf.isEnable;
-                            }
-                        }
-
-                        if (OwnerWindow is MainWindow mw)
-                        {
-                            mw.ImplementChanges(1);
-                        }
                     }
                     else
                     {
-                        StatusMessage = "Configuration Saved but no response from the ECT Instrument, please reboot it and write the configuration again!!!";
+                        StatusMessage = "Configuration Saved in software, but no response from ECT Instrument.";
                     }
                 }
                 else
@@ -253,9 +255,9 @@ namespace _8F.ViewModels
             List<string> validationMsg = new List<string>();
             foreach (var item in list)
             {
-                if (item.freq < 100 || item.freq > 1000000)
+                if (item.freq < 10 || item.freq > 1000000)
                 {
-                    validationMsg.Add($"Frequency for {item.Name} must be between 100 and 1,000,000 Hz.");
+                    validationMsg.Add($"Frequency for {item.Name} must be between 10 and 1,000,000 Hz.");
                 }
                 if (item.gain < 0 || item.gain > 90)
                 {

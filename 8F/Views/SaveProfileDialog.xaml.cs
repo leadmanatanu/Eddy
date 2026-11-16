@@ -1,3 +1,4 @@
+using System.IO;
 using System.Windows;
 using System.Windows.Input;
 
@@ -7,15 +8,35 @@ namespace _8F
     {
         public string ProfileName { get; private set; } = string.Empty;
 
-        public SaveProfileDialog(string defaultName = "")
+        public SaveProfileDialog(string defaultName = "", string title = "Save Configuration Profile to Database")
         {
             InitializeComponent();
-            txtProfileName.Text = defaultName;
+            txtTitle.Text = title;
+            txtProfileName.Text = defaultName ?? string.Empty;
             Loaded += (s, e) =>
             {
                 txtProfileName.Focus();
                 txtProfileName.SelectAll();
             };
+        }
+
+        public static bool ValidateProfileName(string? rawName, out string trimmedName, out string errorMessage)
+        {
+            trimmedName = (rawName ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(trimmedName))
+            {
+                errorMessage = "Please enter a valid profile name.";
+                return false;
+            }
+
+            if (trimmedName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+            {
+                errorMessage = "Profile name contains invalid characters (such as \\ / : * ? \" < > |). Please choose another name.";
+                return false;
+            }
+
+            errorMessage = string.Empty;
+            return true;
         }
 
         private void Border_MouseDown(object sender, MouseButtonEventArgs e)
@@ -28,10 +49,11 @@ namespace _8F
 
         private void btnSave_Click(object sender, RoutedEventArgs e)
         {
-            string name = txtProfileName.Text.Trim();
-            if (string.IsNullOrWhiteSpace(name))
+            if (!ValidateProfileName(txtProfileName.Text, out string name, out string error))
             {
-                MessageBox.Show("Please enter a valid profile name.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(this, error, "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                txtProfileName.Focus();
+                txtProfileName.SelectAll();
                 return;
             }
 

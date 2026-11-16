@@ -1,0 +1,512 @@
+{
+  "Version": 2,
+  "ProfileName": "CS02_Profile",
+  "SystemConfig": {
+    "ChannelCount": 2,
+    "FrequencyNo": 4,
+    "Factor": 60.0,
+    "DefaultHeight": 160,
+    "DefaultWidth": 140,
+    "DefaultHeight_O": 520,
+    "DefaultWidth_O": 510,
+    "DefaultAngel_O": 35,
+    "AppMode": 1,
+    "Mode": 0
+  },
+  "Channels": [
+    {
+      "Id": 1,
+      "IsSeleted": true,
+      "TxStrength": 90,
+      "graphDatas": [
+        {
+          "strength": 100,
+          "postGain": 10,
+          "height": 130.0,
+          "width": 130.0,
+          "ex": 0.0,
+          "ey": 0.0,
+          "angel": 30.0,
+          "ellipses": [
+            {
+              "Id": 1,
+              "height": 130.0,
+              "width": 130.0,
+              "ex": 0.0,
+              "ey": 0.0,
+              "angel": 30.0
+            }
+          ],
+          "height_O": 650.0,
+          "width_O": 650.0,
+          "ex_O": 0.0,
+          "ey_O": 0.0,
+          "angel_O": 30.0,
+          "Id": 1,
+          "Name": "D1",
+          "freq": 1510,
+          "gain": 25,
+          "phase": 35,
+          "isEnable": true
+        },
+        {
+          "strength": 100,
+          "postGain": 10,
+          "height": 130.0,
+          "width": 130.0,
+          "ex": 0.0,
+          "ey": 0.0,
+          "angel": 30.0,
+          "ellipses": [
+            {
+              "Id": 1,
+              "height": 130.0,
+              "width": 130.0,
+              "ex": 0.0,
+              "ey": 0.0,
+              "angel": 30.0
+            }
+          ],
+          "height_O": 650.0,
+          "width_O": 650.0,
+          "ex_O": 0.0,
+          "ey_O": 0.0,
+          "angel_O": 30.0,
+          "Id": 2,
+          "Name": "D2",
+          "freq": 1520,
+          "gain": 25,
+          "phase": 35,
+          "isEnable": true
+        },
+        {
+          "strength": 100,
+          "postGain": 10,
+          "height": 130.0,
+          "width": 130.0,
+          "ex": 0.0,
+          "ey": 0.0,
+          "angel": 30.0,
+          "ellipses": [
+            {
+              "Id": 1,
+              "height": 130.0,
+              "width": 130.0,
+              "ex": 0.0,
+              "ey": 0.0,
+              "angel": 30.0
+            }
+          ],
+          "height_O": 650.0,
+          "width_O": 650.0,
+          "ex_O": 0.0,
+          "ey_O": 0.0,
+          "angel_O": 30.0,
+          "Id": 3,
+          "Name": "D3",
+          "freq": 1530,
+          "gain": 25,
+          "phase": 35,
+          "isEnable": true
+        },
+        {
+          "strength": 100,
+          "postGain": 10,
+          "height": 130.0,
+          "width": 130.0,
+          "ex": 0.0,
+          "ey": 0.0,
+          "angel": 30.0,
+          "ellipses": [
+            {
+              "Id": 1,
+              "height": 130.0,
+              "width": 130.0,
+              "ex": 0.0,
+              "ey": 0.0,
+              "angel": 30.0
+            }
+          ],
+          "height_O": 650.0,
+          "width_O": 650.0,
+          "ex_O": 0.0,
+          "ey_O": 0.0,
+          "angel_O": 30.0,
+          "Id": 4,
+          "Name": "D4",
+          "freq": 1540,
+          "gain": 25,
+          "phase": 35,
+          "isEnable": true
+        },
+        {
+          "strength": 100,
+          "postGain": 10,
+          "height": 130.0,
+          "width": 130.0,
+          "ex": 0.0,
+          "ey": 0.0,
+          "angel": 30.0,
+          "ellipses": [
+            {
+              "Id": 1,
+              "height": 130.0,
+              "width": 130.0,
+              "ex": 0.0,
+              "ey": 0.0,
+              "angel": 30.0
+            }
+          ],
+          "height_O": 650.0,
+          "width_O": 650.0,
+          "ex_O": 0.0,
+          "ey_O": 0.0,
+          "angel_O": 30.0,
+          "Id": 5,
+          "Name": "D5",
+          "freq": 1550,
+          "gain": 25,
+          "phase": 35,
+          "isEnable": false
+        },
+        {
+          "strength": 100,
+          "postGain": 10,
+          "height": 130.0,
+          "width": 130.0,
+          "ex": 0.0,
+          "ey": 0.0,
+          "angel": 30.0,
+          "ellipses": [
+            {
+              "Id": 1,
+              "height": 130.0,
+              "width": 130.0,
+              "ex": 0.0,
+              "ey": 0.0,
+              "angel": 30.0
+            }
+          ],
+          "height_O": 650.0,
+          "width_O": 650.0,
+          "ex_O": 0.0,
+          "ey_O": 0.0,
+          "angel_O": 30.0,
+          "Id": 6,
+          "Name": "D6",
+          "freq": 1560,
+          "gain": 25,
+          "phase": 35,
+          "isEnable": false
+        },
+        {
+          "strength": 100,
+          "postGain": 10,
+          "height": 130.0,
+          "width": 130.0,
+          "ex": 0.0,
+          "ey": 0.0,
+          "angel": 30.0,
+          "ellipses": [
+            {
+              "Id": 1,
+              "height": 130.0,
+              "width": 130.0,
+              "ex": 0.0,
+              "ey": 0.0,
+              "angel": 30.0
+            }
+          ],
+          "height_O": 650.0,
+          "width_O": 650.0,
+          "ex_O": 0.0,
+          "ey_O": 0.0,
+          "angel_O": 30.0,
+          "Id": 7,
+          "Name": "D7",
+          "freq": 1570,
+          "gain": 25,
+          "phase": 35,
+          "isEnable": false
+        },
+        {
+          "strength": 100,
+          "postGain": 10,
+          "height": 130.0,
+          "width": 130.0,
+          "ex": 0.0,
+          "ey": 0.0,
+          "angel": 30.0,
+          "ellipses": [
+            {
+              "Id": 1,
+              "height": 130.0,
+              "width": 130.0,
+              "ex": 0.0,
+              "ey": 0.0,
+              "angel": 30.0
+            }
+          ],
+          "height_O": 650.0,
+          "width_O": 650.0,
+          "ex_O": 0.0,
+          "ey_O": 0.0,
+          "angel_O": 30.0,
+          "Id": 8,
+          "Name": "D8",
+          "freq": 1580,
+          "gain": 25,
+          "phase": 35,
+          "isEnable": false
+        }
+      ]
+    },
+    {
+      "Id": 2,
+      "IsSeleted": false,
+      "TxStrength": 75,
+      "graphDatas": [
+        {
+          "strength": 100,
+          "postGain": 10,
+          "height": 140.0,
+          "width": 140.0,
+          "ex": 0.0,
+          "ey": 0.0,
+          "angel": 30.0,
+          "ellipses": [
+            {
+              "Id": 1,
+              "height": 140.0,
+              "width": 140.0,
+              "ex": 0.0,
+              "ey": 0.0,
+              "angel": 30.0
+            }
+          ],
+          "height_O": 650.0,
+          "width_O": 650.0,
+          "ex_O": 0.0,
+          "ey_O": 0.0,
+          "angel_O": 30.0,
+          "Id": 1,
+          "Name": "D1",
+          "freq": 4510,
+          "gain": 40,
+          "phase": 80,
+          "isEnable": true
+        },
+        {
+          "strength": 100,
+          "postGain": 10,
+          "height": 140.0,
+          "width": 140.0,
+          "ex": 0.0,
+          "ey": 0.0,
+          "angel": 30.0,
+          "ellipses": [
+            {
+              "Id": 1,
+              "height": 140.0,
+              "width": 140.0,
+              "ex": 0.0,
+              "ey": 0.0,
+              "angel": 30.0
+            }
+          ],
+          "height_O": 650.0,
+          "width_O": 650.0,
+          "ex_O": 0.0,
+          "ey_O": 0.0,
+          "angel_O": 30.0,
+          "Id": 2,
+          "Name": "D2",
+          "freq": 4520,
+          "gain": 40,
+          "phase": 80,
+          "isEnable": true
+        },
+        {
+          "strength": 100,
+          "postGain": 10,
+          "height": 140.0,
+          "width": 140.0,
+          "ex": 0.0,
+          "ey": 0.0,
+          "angel": 30.0,
+          "ellipses": [
+            {
+              "Id": 1,
+              "height": 140.0,
+              "width": 140.0,
+              "ex": 0.0,
+              "ey": 0.0,
+              "angel": 30.0
+            }
+          ],
+          "height_O": 650.0,
+          "width_O": 650.0,
+          "ex_O": 0.0,
+          "ey_O": 0.0,
+          "angel_O": 30.0,
+          "Id": 3,
+          "Name": "D3",
+          "freq": 4530,
+          "gain": 40,
+          "phase": 80,
+          "isEnable": true
+        },
+        {
+          "strength": 100,
+          "postGain": 10,
+          "height": 140.0,
+          "width": 140.0,
+          "ex": 0.0,
+          "ey": 0.0,
+          "angel": 30.0,
+          "ellipses": [
+            {
+              "Id": 1,
+              "height": 140.0,
+              "width": 140.0,
+              "ex": 0.0,
+              "ey": 0.0,
+              "angel": 30.0
+            }
+          ],
+          "height_O": 650.0,
+          "width_O": 650.0,
+          "ex_O": 0.0,
+          "ey_O": 0.0,
+          "angel_O": 30.0,
+          "Id": 4,
+          "Name": "D4",
+          "freq": 4540,
+          "gain": 40,
+          "phase": 80,
+          "isEnable": true
+        },
+        {
+          "strength": 100,
+          "postGain": 10,
+          "height": 140.0,
+          "width": 140.0,
+          "ex": 0.0,
+          "ey": 0.0,
+          "angel": 30.0,
+          "ellipses": [
+            {
+              "Id": 1,
+              "height": 140.0,
+              "width": 140.0,
+              "ex": 0.0,
+              "ey": 0.0,
+              "angel": 30.0
+            }
+          ],
+          "height_O": 650.0,
+          "width_O": 650.0,
+          "ex_O": 0.0,
+          "ey_O": 0.0,
+          "angel_O": 30.0,
+          "Id": 5,
+          "Name": "D5",
+          "freq": 4550,
+          "gain": 40,
+          "phase": 80,
+          "isEnable": false
+        },
+        {
+          "strength": 100,
+          "postGain": 10,
+          "height": 140.0,
+          "width": 140.0,
+          "ex": 0.0,
+          "ey": 0.0,
+          "angel": 30.0,
+          "ellipses": [
+            {
+              "Id": 1,
+              "height": 140.0,
+              "width": 140.0,
+              "ex": 0.0,
+              "ey": 0.0,
+              "angel": 30.0
+            }
+          ],
+          "height_O": 650.0,
+          "width_O": 650.0,
+          "ex_O": 0.0,
+          "ey_O": 0.0,
+          "angel_O": 30.0,
+          "Id": 6,
+          "Name": "D6",
+          "freq": 4560,
+          "gain": 40,
+          "phase": 80,
+          "isEnable": false
+        },
+        {
+          "strength": 100,
+          "postGain": 10,
+          "height": 140.0,
+          "width": 140.0,
+          "ex": 0.0,
+          "ey": 0.0,
+          "angel": 30.0,
+          "ellipses": [
+            {
+              "Id": 1,
+              "height": 140.0,
+              "width": 140.0,
+              "ex": 0.0,
+              "ey": 0.0,
+              "angel": 30.0
+            }
+          ],
+          "height_O": 650.0,
+          "width_O": 650.0,
+          "ex_O": 0.0,
+          "ey_O": 0.0,
+          "angel_O": 30.0,
+          "Id": 7,
+          "Name": "D7",
+          "freq": 4570,
+          "gain": 40,
+          "phase": 80,
+          "isEnable": false
+        },
+        {
+          "strength": 100,
+          "postGain": 10,
+          "height": 140.0,
+          "width": 140.0,
+          "ex": 0.0,
+          "ey": 0.0,
+          "angel": 30.0,
+          "ellipses": [
+            {
+              "Id": 1,
+              "height": 140.0,
+              "width": 140.0,
+              "ex": 0.0,
+              "ey": 0.0,
+              "angel": 30.0
+            }
+          ],
+          "height_O": 650.0,
+          "width_O": 650.0,
+          "ex_O": 0.0,
+          "ey_O": 0.0,
+          "angel_O": 30.0,
+          "Id": 8,
+          "Name": "D8",
+          "freq": 4580,
+          "gain": 40,
+          "phase": 80,
+          "isEnable": false
+        }
+      ]
+    }
+  ]
+}

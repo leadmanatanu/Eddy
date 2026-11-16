@@ -1,6 +1,7 @@
 using _8F.Models;
 using _8F.Services;
 using _8F.Repositories;
+using _8F.Helpers;
 using Newtonsoft.Json;
 using System;
 using System.Collections.ObjectModel;
@@ -52,6 +53,20 @@ namespace _8F
         DispatcherTimer? dispatcherTimer;
         public int chNo;
         public string filename { get; set; } = string.Empty;
+        public CurrentProfileState CurrentProfile { get; } = new();
+        public void ClearOpenProfileState()
+        {
+            CurrentProfile.Clear();
+            filename = string.Empty;
+            int activeChannels = modbusSlaveService?.ChannelCount ?? chNo;
+            for (int i = 0; i < activeChannels && i < _loadedChannels.Length; i++)
+            {
+                _loadedChannels[i].ProfileId = 0;
+                _loadedChannels[i].ProfileName = string.Empty;
+                modbusSlaveService?.WriteRegisterSilent(Services.Implementations.ModbusSlaveService.ChannelIndexToAddress(i), 0);
+            }
+            UpdateConfigProfileDisplay();
+        }
         double factor = 20;
 
         int ScreenId = 1;
@@ -64,7 +79,7 @@ namespace _8F
         int FrequencyNo = 8;
         public string WebPage = string.Empty;
 
-        int modeApp = 0;
+        public int modeApp = 0;
         int mode = 0;
         //bool IsBalanceAll = false;
         public SolidColorBrush disableColor = new SolidColorBrush(Colors.DarkGray);
@@ -79,6 +94,17 @@ namespace _8F
         {
             string? val = System.Configuration.ConfigurationManager.AppSettings[key];
             if (string.IsNullOrWhiteSpace(val)) return defaultValue;
+            if (string.Equals(val.Trim(), "false", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(val.Trim(), "fasle", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(val.Trim(), "0", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+            if (string.Equals(val.Trim(), "true", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(val.Trim(), "1", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
             return bool.TryParse(val, out bool result) ? result : defaultValue;
         }
 
@@ -266,7 +292,6 @@ namespace _8F
             {
                 try
                 {
-                    modbusSlaveService.ChannelProfilesReceivedAsync += OnModbusChannelProfilesBatchReceivedAsync;
                     modbusSlaveService.Start(modbusServerPort, modbusHeartbeatIntervalMs);
                 }
                 catch (Exception ex)
@@ -280,7 +305,7 @@ namespace _8F
                 ModbusLogger.Info("[Modbus TCP Slave] Server is NOT started: 'IsModbusServerEnable' is set to false in App.config.");
             }
 
-            factor = Convert.ToDouble(System.Configuration.ConfigurationManager.AppSettings["Factor"]);
+            factor = double.TryParse(System.Configuration.ConfigurationManager.AppSettings["Factor"], out var f) && f > 0 ? f : 1.0;
             DeviceCOM.DefaultWidth = Convert.ToInt16(System.Configuration.ConfigurationManager.AppSettings["Width"]);
             DeviceCOM.DefaultHeight = Convert.ToInt16(System.Configuration.ConfigurationManager.AppSettings["Height"]);
             DeviceCOM.DefaultWidth_O = Convert.ToInt16(System.Configuration.ConfigurationManager.AppSettings["Width_O"]);
@@ -295,12 +320,14 @@ namespace _8F
             {
                 el11.Visibility = Visibility.Hidden;
             }
-            CommunicationType = Convert.ToInt16(System.Configuration.ConfigurationManager.AppSettings["CommunicationType"]);
-            int baudRate = Convert.ToInt32(System.Configuration.ConfigurationManager.AppSettings["BaudRate"]);
-            string portName = System.Configuration.ConfigurationManager.AppSettings["PortName"] ?? string.Empty;
+            CommunicationType = int.TryParse(System.Configuration.ConfigurationManager.AppSettings["CommunicationType"], out var ct) ? ct : 0;
+            int baudRate = int.TryParse(System.Configuration.ConfigurationManager.AppSettings["BaudRate"], out var br) && br > 0 ? br : 115200;
+            string portName = !string.IsNullOrWhiteSpace(System.Configuration.ConfigurationManager.AppSettings["PortName"])
+                ? System.Configuration.ConfigurationManager.AppSettings["PortName"]!
+                : "COM1";
 
             string IpAddress = System.Configuration.ConfigurationManager.AppSettings["IP"] ?? string.Empty;
-            int Port = Convert.ToInt32(System.Configuration.ConfigurationManager.AppSettings["Port"]);
+            int Port = int.TryParse(System.Configuration.ConfigurationManager.AppSettings["Port"], out var pt) && pt > 0 ? pt : 5000;
 
             DeviceCOM.ConnectionString = DbConnectionProvider.ConnectionString;
 
@@ -1659,9 +1686,8 @@ namespace _8F
 
         public bool ImplementChanges(int ChangeType, int? targetChannelId = null)
         {
-            if (portCOM == null) return false;
             var rat = false;
-            if (ChangeType == 0 && !targetChannelId.HasValue)
+            if (portCOM != null && ChangeType == 0 && !targetChannelId.HasValue)
             {
                 FrequencyCount frequencyCount = new FrequencyCount() { FC = 1, C = FrequencyNo, NC = chNo };
                 Mode _mode = new Mode() { FC = 2, M = 0 };
@@ -1886,7 +1912,7 @@ namespace _8F
                         }
                     }
 
-                    if (ChangeType == 0)
+                    if (portCOM != null && ChangeType == 0)
                     {
 
                         bool rat1 = false;
@@ -1979,7 +2005,7 @@ namespace _8F
                 }
             }
 
-            return rat;
+            return portCOM != null ? rat : false;
         }
 
         public void AddEllipses(Canvas cnBr1, GraphData graphData)
@@ -2004,7 +2030,7 @@ namespace _8F
                 el11.Stroke = new SolidColorBrush(Colors.DarkOrange);
                 rtAngel11.CenterX = (el11.Width / 2);
                 rtAngel11.CenterY = (el11.Height / 2);
-                rtAngel11.Angle = graphData.angel_O * -1;
+                rtAngel11.Angle = EllipseMath.ToScreenRotationDegrees(graphData.angel_O);
 
                 Ellipse el1_1 = new Ellipse();
                 el1_1.Height = graphData.height_O / factor;
@@ -2023,7 +2049,7 @@ namespace _8F
                 RotateTransform rtAngel1_1 = new RotateTransform();
                 rtAngel1_1.CenterX = (el1_1.Width / 2);
                 rtAngel1_1.CenterY = (el1_1.Height / 2);
-                rtAngel1_1.Angle = graphData.angel_O * -1;
+                rtAngel1_1.Angle = EllipseMath.ToScreenRotationDegrees(graphData.angel_O);
 
                 TransformGroup transformGroup_1 = new TransformGroup();
                 transformGroup_1.Children.Add(rtAngel1_1);
@@ -2055,7 +2081,7 @@ namespace _8F
                 RotateTransform rtAngel1 = new RotateTransform();
                 rtAngel1.CenterX = (el1.Width / 2);
                 rtAngel1.CenterY = (el1.Height / 2);
-                rtAngel1.Angle = item.angel * -1;
+                rtAngel1.Angle = EllipseMath.ToScreenRotationDegrees(item.angel);
 
                 TransformGroup transformGroup = new TransformGroup();
                 transformGroup.Children.Add(rtAngel1);
@@ -2082,8 +2108,19 @@ namespace _8F
         private string _circleSettingChannel = string.Empty;
         private Point _dragStartCenter;
         private int _draggedFreqId;
+        private int _draggedChannelIdx;
 
+        public int GetSelectedChannelIndex()
+        {
+            var selCh = DeviceCOM.channelDatas.FirstOrDefault(c => c.IsSeleted);
+            if (selCh != null && selCh.Id >= 1 && selCh.Id <= DeviceCOM.channelDatas.Count)
+            {
+                return selCh.Id - 1;
+            }
+            return 0;
+        }
 
+        public int GetSelectedChannelNumber() => GetSelectedChannelIndex() + 1;
 
         private void Ellipse_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
@@ -2095,9 +2132,12 @@ namespace _8F
 
             int FreqId = Convert.ToInt32(((Ellipse)sender).DataContext);
             _draggedFreqId = FreqId;
-            if (chNo >= 1 && chNo <= DeviceCOM.channelDatas.Count && FreqId >= 1 && FreqId <= DeviceCOM.channelDatas[chNo - 1].graphDatas.Count)
+            _draggedChannelIdx = GetSelectedChannelIndex();
+
+            if (_draggedChannelIdx >= 0 && _draggedChannelIdx < DeviceCOM.channelDatas.Count &&
+                FreqId >= 1 && FreqId <= DeviceCOM.channelDatas[_draggedChannelIdx].graphDatas.Count)
             {
-                var ell = DeviceCOM.channelDatas[chNo - 1].graphDatas[FreqId - 1].ellipses[0];
+                var ell = DeviceCOM.channelDatas[_draggedChannelIdx].graphDatas[FreqId - 1].ellipses[0];
                 _dragStartCenter = new Point(ell.ex, ell.ey);
             }
 
@@ -2108,8 +2148,6 @@ namespace _8F
             // find the TranslateTransform inside RenderTransform
             TransformGroup? tg = ellipse.RenderTransform as TransformGroup;
             dragTransform = tg?.Children.OfType<TranslateTransform>().FirstOrDefault();
-
-
         }
 
         private void Ellipse_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
@@ -2118,28 +2156,31 @@ namespace _8F
             (sender as UIElement)?.ReleaseMouseCapture();
             dragTransform = null;
 
-            if (_draggedFreqId > 0 && chNo >= 1 && chNo <= DeviceCOM.channelDatas.Count && _draggedFreqId <= DeviceCOM.channelDatas[chNo - 1].graphDatas.Count)
+            int chIdx = _draggedChannelIdx;
+            int chNum = chIdx + 1;
+
+            if (_draggedFreqId > 0 && chIdx >= 0 && chIdx < DeviceCOM.channelDatas.Count &&
+                _draggedFreqId <= DeviceCOM.channelDatas[chIdx].graphDatas.Count)
             {
-                var ell = DeviceCOM.channelDatas[chNo - 1].graphDatas[_draggedFreqId - 1].ellipses[0];
+                var ell = DeviceCOM.channelDatas[chIdx].graphDatas[_draggedFreqId - 1].ellipses[0];
                 if (Math.Abs(ell.ex - _dragStartCenter.X) > 0.1 || Math.Abs(ell.ey - _dragStartCenter.Y) > 0.1)
                 {
-                    string gName = DeviceCOM.channelDatas[chNo - 1].graphDatas[_draggedFreqId - 1].Name;
+                    string gName = DeviceCOM.channelDatas[chIdx].graphDatas[_draggedFreqId - 1].Name;
                     string summary = $"{gName} ellipse dragged from ({_dragStartCenter.X:0.#}, {_dragStartCenter.Y:0.#}) to ({ell.ex:0.#}, {ell.ey:0.#})";
                     var diffList = new[]
                     {
                         new FieldDiff
                         {
-                            Field = $"CH{chNo} {gName} Center",
+                            Field = $"CH{chNum} {gName} Center",
                             OldValue = $"({_dragStartCenter.X:0.#},{_dragStartCenter.Y:0.#})",
                             NewValue = $"({ell.ex:0.#},{ell.ey:0.#})"
                         }
                     };
-                    _ = AppServices.ConfigChangeRepository.RecordChangeAsync("Ellipse Drag", $"CH{chNo}", summary, System.Text.Json.JsonSerializer.Serialize(diffList));
+                    _ = AppServices.ConfigChangeRepository.RecordChangeAsync("Ellipse Drag", $"CH{chNum}", summary, System.Text.Json.JsonSerializer.Serialize(diffList));
                 }
                 _draggedFreqId = 0;
             }
         }
-
 
         private void Ellipse_MouseMove(object sender, MouseEventArgs e)
         {
@@ -2157,12 +2198,20 @@ namespace _8F
             mouseStart = currentPos;
 
             int FreqId = Convert.ToInt32(((Ellipse)sender).DataContext);
+            int chIdx = _draggedChannelIdx;
 
-            DeviceCOM.channelDatas[chNo - 1].graphDatas[FreqId - 1].ellipses[0].ex = (dragTransform.X * factor) + DeviceCOM.channelDatas[chNo - 1].graphDatas[FreqId - 1].ellipses[0].width / 2;
-
-            DeviceCOM.channelDatas[chNo - 1].graphDatas[FreqId - 1].ellipses[0].ey = (-1) * ((dragTransform.Y * factor) + DeviceCOM.channelDatas[chNo - 1].graphDatas[FreqId - 1].ellipses[0].height / 2);
-
-
+            if (chIdx >= 0 && chIdx < DeviceCOM.channelDatas.Count &&
+                FreqId >= 1 && FreqId <= DeviceCOM.channelDatas[chIdx].graphDatas.Count)
+            {
+                var g = DeviceCOM.channelDatas[chIdx].graphDatas[FreqId - 1];
+                g.ellipses[0].ex = (dragTransform.X * factor) + g.ellipses[0].width / 2;
+                g.ellipses[0].ey = (-1) * ((dragTransform.Y * factor) + g.ellipses[0].height / 2);
+                g.ex = g.ellipses[0].ex;
+                g.ey = g.ellipses[0].ey;
+                g.width = g.ellipses[0].width;
+                g.height = g.ellipses[0].height;
+                g.angel = g.ellipses[0].angel;
+            }
         }
 
 
@@ -2204,22 +2253,62 @@ namespace _8F
 
         public void SelectCh1()
         {
-
-
-            var currentChannel = DeviceCOM.channelDatas.FirstOrDefault(c => c.IsSeleted == true);
-            if (currentChannel?.Id != 1)
+            foreach (var c in DeviceCOM.channelDatas)
             {
-                if (currentChannel != null) currentChannel.IsSeleted = false;
-                var nextCh = DeviceCOM.channelDatas.FirstOrDefault(c => c.Id == 1);
-                if (nextCh != null) nextCh.IsSeleted = true;
-                btnCh1.Background = new SolidColorBrush(Colors.DarkGray);
-                btnCh2.Background = new SolidColorBrush(Colors.DarkGray);
-                btnCh3.Background = new SolidColorBrush(Colors.DarkGray);
-                btnCh4.Background = new SolidColorBrush(Colors.DarkGray);
-
-                btnCh1.Background = new SolidColorBrush(Colors.Green);
-
+                c.IsSeleted = (c.Id == 1);
             }
+            btnCh1.Background = new SolidColorBrush(Colors.Green);
+            btnCh2.Background = new SolidColorBrush(Colors.DarkGray);
+            btnCh3.Background = new SolidColorBrush(Colors.DarkGray);
+            btnCh4.Background = new SolidColorBrush(Colors.DarkGray);
+
+            ImplementChanges(1);
+            DeviceCOM.IsResponseRefreshRequired = true;
+        }
+
+        public SystemSettings GetCurrentSystemSettings()
+        {
+            return new SystemSettings
+            {
+                ChannelCount = chNo,
+                FrequencyNo = FrequencyNo,
+                Factor = factor,
+                DefaultHeight = DeviceCOM.DefaultHeight,
+                DefaultWidth = DeviceCOM.DefaultWidth,
+                DefaultHeight_O = DeviceCOM.DefaultHeight_O,
+                DefaultWidth_O = DeviceCOM.DefaultWidth_O,
+                DefaultAngel_O = DeviceCOM.DefaultAngel_O,
+                AppMode = modeApp,
+                Mode = mode
+            };
+        }
+
+        public void ApplySystemSettings(SystemSettings? settings)
+        {
+            if (settings == null) return;
+            if (settings.Factor > 0) factor = settings.Factor;
+            if (settings.FrequencyNo > 0) FrequencyNo = settings.FrequencyNo;
+            if (settings.DefaultHeight > 0) DeviceCOM.DefaultHeight = settings.DefaultHeight;
+            if (settings.DefaultWidth > 0) DeviceCOM.DefaultWidth = settings.DefaultWidth;
+            if (settings.DefaultHeight_O > 0) DeviceCOM.DefaultHeight_O = settings.DefaultHeight_O;
+            if (settings.DefaultWidth_O > 0) DeviceCOM.DefaultWidth_O = settings.DefaultWidth_O;
+            DeviceCOM.DefaultAngel_O = settings.DefaultAngel_O;
+            modeApp = settings.AppMode;
+            mode = settings.Mode;
+        }
+
+        public void ApplySafeSystemSettings(SystemSettings? settings)
+        {
+            if (settings == null) return;
+            if (settings.Factor > 0) factor = settings.Factor;
+            if (settings.FrequencyNo > 0) FrequencyNo = settings.FrequencyNo;
+            if (settings.DefaultHeight > 0) DeviceCOM.DefaultHeight = settings.DefaultHeight;
+            if (settings.DefaultWidth > 0) DeviceCOM.DefaultWidth = settings.DefaultWidth;
+            if (settings.DefaultHeight_O > 0) DeviceCOM.DefaultHeight_O = settings.DefaultHeight_O;
+            if (settings.DefaultWidth_O > 0) DeviceCOM.DefaultWidth_O = settings.DefaultWidth_O;
+            DeviceCOM.DefaultAngel_O = settings.DefaultAngel_O;
+            if (settings.Mode > 0) mode = settings.Mode;
+            // Preserves running ChannelCount (chNo) and AppMode (modeApp)
         }
 
         private void btnCh_Click(object sender, RoutedEventArgs e)
@@ -2236,6 +2325,7 @@ namespace _8F
                 btnCh3.Background = new SolidColorBrush(Colors.DarkGray);
                 btnCh4.Background = new SolidColorBrush(Colors.DarkGray);
                 ((Border)sender).Background = new SolidColorBrush(Colors.Green);
+                CurrentProfile.SwitchActiveChannel((int)chId);
                 ImplementChanges(1);
                 DeviceCOM.IsResponseRefreshRequired = true;
             }
@@ -2278,6 +2368,7 @@ namespace _8F
                 {
                     DeviceCOM.IsBalanceAll = IsBalaneAll;
                     DeviceCOM.IsBalanceBusyEnable = true;
+                    DeviceCOM.ClearBalanceRequired(ChId);
                 }
                 else
                 {
@@ -2330,10 +2421,10 @@ namespace _8F
                 }
                 else
                 {
-                    if (DeviceCOM.IsBalanceRequired)
+                    if (DeviceCOM.GetIsBalanceRequired(ChId))
                     {
                         MessageBox.Show("Unable to test because of balance command is required!", "Error Information");
-                        DeviceCOM.IsBalanceRequired = false;
+                        DeviceCOM.ClearBalanceRequired(ChId);
                     }
                     if (DeviceCOM.IsBinRequired)
                     {
@@ -3006,10 +3097,10 @@ namespace _8F
                         }
                         else
                         {
-                            if (DeviceCOM.IsBalanceRequired)
+                            if (DeviceCOM.GetIsBalanceRequired(0))
                             {
                                 MessageBox.Show("Unable to test because of balance command is required!", "Error Information");
-                                DeviceCOM.IsBalanceRequired = false;
+                                DeviceCOM.ClearBalanceRequired(0);
                             }
                             if (DeviceCOM.IsBinRequired)
                             {
@@ -3062,261 +3153,116 @@ namespace _8F
         }
 
         /// <summary>
-        /// Single-channel helper that delegates to OpenProfilesBatchAsync.
+        /// Single-channel helper that delegates to ProfileLoadService.
         /// </summary>
         public async Task<bool> OpenProfileForChannelAsync(int channelIndex, ushort profileId, bool isUnattended = true)
         {
-            var batch = new Dictionary<int, ushort> { { channelIndex, profileId } };
-            return await OpenProfilesBatchAsync(batch, isUnattended);
+            if (profileId == 0) return true;
+            int targetChannel = channelIndex + 1;
+            var result = await AppServices.ProfileLoadService.LoadFromDbAsync(
+                profileId,
+                targetChannel,
+                isUnattended ? ProfileLoadSource.ModbusMaster : ProfileLoadSource.ModbusPanel,
+                isInteractive: false);
+
+            if (!isUnattended && !result.Success)
+            {
+                MessageBox.Show(result.Message, "Profile Load Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            return result.Success;
         }
 
         /// <summary>
         /// Batched channel profile loader.
-        /// Extracts and applies channel settings using ConfigurationImporter.ApplyRemapping,
-        /// updates _loadedChannels tracking on success, and executes ECT instrument ImplementChanges ONCE per batch.
+        /// Iterates each channel write in the batch and loads through ProfileLoadService.
         /// </summary>
         public async Task<bool> OpenProfilesBatchAsync(IReadOnlyDictionary<int, ushort> channelWrites, bool isUnattended = true)
         {
             if (channelWrites == null || channelWrites.Count == 0) return false;
-
-            // Guard: System busy or inspection logging active
-            if (DeviceCOM.IsLogEnable || DeviceCOM.IsSystemBusy)
+            bool allSuccess = true;
+            foreach (var (chIdx, pid) in channelWrites)
             {
-                string busyMsg = $"Cannot load profile(s): System is busy (IsSystemBusy={DeviceCOM.IsSystemBusy}) or inspection logging is active (IsLogEnable={DeviceCOM.IsLogEnable}).";
-                ModbusLogger.Warn($"[Modbus Auto-Load] Warning: {busyMsg}");
-                if (!isUnattended)
-                {
-                    await Dispatcher.InvokeAsync(() =>
-                    {
-                        MessageBox.Show("Cannot change profile while system is busy or inspection logging is active. Please stop logging first.", "System Busy", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    });
-                }
-                return false;
+                bool success = await OpenProfileForChannelAsync(chIdx, pid, isUnattended);
+                if (!success) allSuccess = false;
             }
-
-            await _profileLoadSemaphore.WaitAsync();
-            try
-            {
-                IConfigProfileRepository repo = new InspectionLogRepository();
-
-                // 1. Fetch DB profiles for all distinct valid Profile IDs in the batch
-                var distinctIds = channelWrites.Values.Where(id => id > 0).Distinct().ToList();
-                var profileMap = new Dictionary<ushort, List<ChannelData>>();
-                var nameMap = new Dictionary<ushort, string>();
-
-                foreach (var pid in distinctIds)
-                {
-                    try
-                    {
-                        var channels = await Task.Run(() => repo.GetConfigProfileAsync(pid));
-                        var name = await Task.Run(() => repo.GetProfileNameAsync(pid));
-                        if (channels != null && channels.Count > 0)
-                        {
-                            profileMap[pid] = channels;
-                            nameMap[pid] = !string.IsNullOrWhiteSpace(name) ? name : $"Profile #{pid}";
-                        }
-                        else
-                        {
-                            ModbusLogger.Warn($"[Modbus Auto-Load] Warning: Profile #{pid} not found in database.");
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        ModbusLogger.Error($"[Modbus Auto-Load] Error fetching Profile #{pid} from database", ex);
-                    }
-                }
-
-                // 2. Validate each channel write in the batch
-                var validUpdates = new List<(int ChannelIndex, int ChannelNumber, ushort ProfileId, string ProfileName, ChannelData SourceChannel)>();
-
-                foreach (var (chIdx, pid) in channelWrites)
-                {
-                    if (chIdx < 0 || chIdx >= 4)
-                    {
-                        ModbusLogger.Warn($"[Modbus Auto-Load] Warning: Channel index {chIdx} is out of range (0..3).");
-                        continue;
-                    }
-
-                    int chNum = chIdx + 1;
-
-                    if (pid == 0)
-                    {
-                        ModbusLogger.Warn($"[Modbus Auto-Load] Warning: Channel {chNum} Profile ID 0 is invalid/unassigned. Channel {chNum} unchanged.");
-                        if (!isUnattended)
-                        {
-                            await Dispatcher.InvokeAsync(() =>
-                            {
-                                MessageBox.Show("Profile ID 0 is invalid. Please enter a valid profile ID greater than 0.", "Invalid Profile ID", MessageBoxButton.OK, MessageBoxImage.Warning);
-                            });
-                        }
-                        continue;
-                    }
-
-                    if (!profileMap.TryGetValue(pid, out var dbChannels) || dbChannels == null)
-                    {
-                        ModbusLogger.Warn($"[Modbus Auto-Load] Warning: Profile #{pid} not found in database. Channel {chNum} unchanged.");
-                        if (!isUnattended)
-                        {
-                            await Dispatcher.InvokeAsync(() =>
-                            {
-                                MessageBox.Show($"Profile #{pid} was not found in the database.", "Profile Not Found", MessageBoxButton.OK, MessageBoxImage.Warning);
-                            });
-                        }
-                        continue;
-                    }
-
-                    string pName = nameMap.GetValueOrDefault(pid, $"Profile #{pid}");
-
-                    // Locate channel with Id == chNum in the fetched whole-machine profile
-                    var srcChannel = dbChannels.FirstOrDefault(c => c.Id == chNum);
-                    if (srcChannel == null)
-                    {
-                        ModbusLogger.Warn($"[Modbus Auto-Load] Warning: Profile #{pid} ('{pName}') does not contain Channel {chNum}. Channel {chNum} unchanged.");
-                        if (!isUnattended)
-                        {
-                            await Dispatcher.InvokeAsync(() =>
-                            {
-                                MessageBox.Show($"Profile #{pid} ('{pName}') does not contain Channel {chNum}.", "Channel Not Found", MessageBoxButton.OK, MessageBoxImage.Warning);
-                            });
-                        }
-                        continue;
-                    }
-
-                    // Handle empty channel data
-                    if (srcChannel.graphDatas == null || srcChannel.graphDatas.Count == 0)
-                    {
-                        ModbusLogger.Warn($"[Modbus Auto-Load] Warning: Profile #{pid} ('{pName}') Channel {chNum} has no frequency/graph data. Channel {chNum} unchanged.");
-                        continue;
-                    }
-
-                    validUpdates.Add((chIdx, chNum, pid, pName, srcChannel));
-                }
-
-                if (validUpdates.Count == 0)
-                {
-                    return false;
-                }
-
-                // 3. Apply changes to DeviceCOM.channelDatas using ConfigurationImporter.ApplyRemapping on Dispatcher
-                await Dispatcher.InvokeAsync(() =>
-                {
-                    if (DeviceCOM.channelDatas == null || DeviceCOM.channelDatas.Count < 4)
-                    {
-                        DeviceCOM.channelDatas = new List<ChannelData>
-                        {
-                            new ChannelData { Id = 1, IsSeleted = true, TxStrength = 100, graphDatas = new List<GraphData>() },
-                            new ChannelData { Id = 2, IsSeleted = true, TxStrength = 100, graphDatas = new List<GraphData>() },
-                            new ChannelData { Id = 3, IsSeleted = true, TxStrength = 100, graphDatas = new List<GraphData>() },
-                            new ChannelData { Id = 4, IsSeleted = true, TxStrength = 100, graphDatas = new List<GraphData>() }
-                        };
-                    }
-
-                    foreach (var update in validUpdates)
-                    {
-                        var mappings = new Dictionary<int, List<int>> { { update.ChannelNumber, new List<int> { update.ChannelNumber } } };
-                        ConfigurationImporter.ApplyRemapping(new List<ChannelData> { update.SourceChannel }, mappings, isImportAsIs: false);
-
-                        _loadedChannels[update.ChannelIndex].ProfileId = update.ProfileId;
-                        _loadedChannels[update.ChannelIndex].ProfileName = update.ProfileName;
-                    }
-
-                    UpdateConfigProfileDisplay();
-                    ClearGraphData();
-
-                    ModbusLogger.Info($"[ChannelDatas Dump] {ConfigurationImporter.DumpChannelDatas(DeviceCOM.channelDatas)}");
-                });
-
-                // 4. Implement changes to ECT hardware instrument with 5-second timeout protection
-                // Safe optimization: if only 1 channel was modified, transmit only that channel (~500ms);
-                // if multiple channels were modified, transmit the batch once (~2000ms instead of 4 x 2000ms = 8000ms).
-                int? targetCh = validUpdates.Count == 1 ? validUpdates[0].ChannelNumber : null;
-                bool rat = false;
-                try
-                {
-                    var implementTask = Task.Run(() =>
-                    {
-                        return Dispatcher.Invoke(() => ImplementChanges(0, targetCh));
-                    });
-
-                    if (await Task.WhenAny(implementTask, Task.Delay(5000)) == implementTask)
-                    {
-                        rat = await implementTask;
-                    }
-                    else
-                    {
-                        ModbusLogger.Warn($"[Modbus Auto-Load] Timeout (5s) waiting for ECT instrument response on batch write ({validUpdates.Count} channels). UI remaining responsive.");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    ModbusLogger.Error("[Modbus Auto-Load] Error applying changes to ECT instrument for batch write", ex);
-                }
-
-                if (!rat)
-                {
-                    ModbusLogger.Warn("[Modbus Auto-Load] Configuration loaded into app, but no response from ECT instrument.");
-                }
-
-                foreach (var update in validUpdates)
-                {
-                    ModbusLogger.Info($"[Modbus Auto-Load] Successfully loaded Profile #{update.ProfileId} ('{update.ProfileName}') into Channel {update.ChannelNumber}.");
-                }
-
-                if (!isUnattended)
-                {
-                    await Dispatcher.InvokeAsync(() =>
-                    {
-                        var names = string.Join(", ", validUpdates.Select(u => $"Ch{u.ChannelNumber}: '{u.ProfileName}'"));
-                        MessageBox.Show($"Profile(s) loaded successfully!\n{names}", "Profile Loaded", MessageBoxButton.OK, MessageBoxImage.Information);
-                    });
-                }
-
-                return true;
-            }
-            finally
-            {
-                _profileLoadSemaphore.Release();
-            }
+            return allSuccess;
         }
 
-        private void UpdateConfigProfileDisplay()
+        public void UpdateConfigProfileDisplay()
         {
-            int activeChannels = modbusSlaveService?.ChannelCount ?? chNo;
-            if (activeChannels < Services.Implementations.ModbusSlaveService.MinChannelCount) activeChannels = Services.Implementations.ModbusSlaveService.MinChannelCount;
-            if (activeChannels > Services.Implementations.ModbusSlaveService.MaxChannelCount) activeChannels = Services.Implementations.ModbusSlaveService.MaxChannelCount;
+            int channelCount = chNo;
+            if (channelCount < 1) channelCount = 1;
+            if (channelCount > 4) channelCount = 4;
 
             string displayName;
-            if (activeChannels == 1)
+            if (channelCount == 1)
             {
-                displayName = $"DB: {_loadedChannels[0].ProfileName}";
+                var info = CurrentProfile.GetForChannel(1);
+                if (info != null && info.HasOpenProfile)
+                {
+                    bool isFile = !string.IsNullOrWhiteSpace(info.FilePath) && (!info.ProfileId.HasValue || info.ProfileId.Value == 0);
+                    string name = isFile
+                        ? System.IO.Path.GetFileName(info.FilePath!)
+                        : (!string.IsNullOrWhiteSpace(info.Name) ? info.Name : $"Profile #{info.ProfileId}");
+                    displayName = isFile ? name : $"DB: {name}";
+                }
+                else
+                {
+                    displayName = "DB: -";
+                }
             }
             else
             {
-                bool allSame = true;
-                ushort firstId = _loadedChannels[0].ProfileId;
-                string firstName = _loadedChannels[0].ProfileName;
-
-                for (int i = 1; i < activeChannels; i++)
+                bool anyFile = false;
+                for (int c = 1; c <= channelCount; c++)
                 {
-                    if (_loadedChannels[i].ProfileId != firstId)
+                    var info = CurrentProfile.GetForChannel(c);
+                    if (info != null && info.HasOpenProfile && !string.IsNullOrWhiteSpace(info.FilePath) && (!info.ProfileId.HasValue || info.ProfileId.Value == 0))
                     {
-                        allSame = false;
+                        anyFile = true;
                         break;
                     }
                 }
 
-                if (allSame && firstId > 0)
+                if (!anyFile)
                 {
-                    displayName = $"DB: {firstName}";
+                    var parts = new List<string>();
+                    for (int c = 1; c <= channelCount; c++)
+                    {
+                        var info = CurrentProfile.GetForChannel(c);
+                        string name = (info != null && info.HasOpenProfile)
+                            ? (!string.IsNullOrWhiteSpace(info.Name) ? info.Name : (info.ProfileId.HasValue ? $"Profile #{info.ProfileId}" : "-"))
+                            : "-";
+                        parts.Add($"Ch{c} {name}");
+                    }
+                    displayName = $"DB: {string.Join(", ", parts)}";
                 }
                 else
                 {
                     var parts = new List<string>();
-                    for (int i = 0; i < activeChannels; i++)
+                    for (int c = 1; c <= channelCount; c++)
                     {
-                        parts.Add($"Ch{i + 1} {_loadedChannels[i].ProfileName}");
+                        var info = CurrentProfile.GetForChannel(c);
+                        if (info != null && info.HasOpenProfile)
+                        {
+                            bool isFile = !string.IsNullOrWhiteSpace(info.FilePath) && (!info.ProfileId.HasValue || info.ProfileId.Value == 0);
+                            if (isFile)
+                            {
+                                string fileName = System.IO.Path.GetFileName(info.FilePath!);
+                                parts.Add($"Ch{c} {fileName}");
+                            }
+                            else
+                            {
+                                string name = !string.IsNullOrWhiteSpace(info.Name) ? info.Name : (info.ProfileId.HasValue ? $"Profile #{info.ProfileId}" : "-");
+                                parts.Add($"DB: Ch{c} {name}");
+                            }
+                        }
+                        else
+                        {
+                            parts.Add($"Ch{c} -");
+                        }
                     }
-                    displayName = $"DB: {string.Join(", ", parts)}";
+                    displayName = string.Join(", ", parts);
                 }
             }
 
@@ -3334,30 +3280,13 @@ namespace _8F
         /// </summary>
         public async Task<bool> ManualLoadProfileForEquivalenceTestAsync(int profileId)
         {
-            IConfigProfileRepository repo = new InspectionLogRepository();
-            var dbChannels = await repo.GetConfigProfileAsync(profileId);
-            var name = await repo.GetProfileNameAsync(profileId);
-            if (dbChannels == null || dbChannels.Count == 0) return false;
-
-            await Dispatcher.InvokeAsync(() =>
-            {
-                var mapped = ConfigurationImporter.ApplyRemapping(dbChannels, new Dictionary<int, List<int>>(), isImportAsIs: true);
-                DeviceCOM.channelDatas = mapped;
-                string resolvedName = !string.IsNullOrWhiteSpace(name) ? name : $"Profile #{profileId}";
-                int activeChannels = modbusSlaveService?.ChannelCount ?? chNo;
-                for (int i = 0; i < activeChannels; i++)
-                {
-                    _loadedChannels[i].ProfileId = (ushort)profileId;
-                    _loadedChannels[i].ProfileName = resolvedName;
-                }
-                filename = $"DB: {resolvedName}";
-                SelectCh1();
-                ClearGraphData();
-                lblConfigFileName.Content = $"DB: {resolvedName}";
-                ModbusLogger.Info($"[ChannelDatas Dump] {ConfigurationImporter.DumpChannelDatas(DeviceCOM.channelDatas)}");
-            });
-
-            return true;
+            int targetChannel = GetSelectedChannelNumber();
+            var result = await AppServices.ProfileLoadService.LoadFromDbAsync(
+                profileId,
+                targetChannel,
+                Services.Interfaces.ProfileLoadSource.MenuOpenDb,
+                isInteractive: false);
+            return result.Success;
         }
     }
 

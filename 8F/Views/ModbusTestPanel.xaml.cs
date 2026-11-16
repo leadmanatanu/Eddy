@@ -1,7 +1,9 @@
 using System;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Media;
 using System.Windows.Threading;
+using _8F.Auth;
 using _8F.Services.Implementations;
 using _8F.Services.Interfaces;
 
@@ -136,6 +138,44 @@ namespace _8F.Views
             }
         }
 
+        private async void btnStartServer_Click(object sender, RoutedEventArgs e)
+        {
+            if (_modbusService == null) return;
+            if (_modbusService.IsRunning) return;
+            try
+            {
+                lblStatus.Text = "Starting...";
+                lblStatus.Foreground = System.Windows.Media.Brushes.Orange;
+                await _modbusService.StartAsync();
+                UpdateServerStatus();
+                RefreshRegisterDisplays();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to start Modbus Server: {ex.Message}", "Start Server Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                UpdateServerStatus();
+            }
+        }
+
+        private async void btnStopServer_Click(object sender, RoutedEventArgs e)
+        {
+            if (_modbusService == null) return;
+            if (!_modbusService.IsRunning) return;
+            try
+            {
+                lblStatus.Text = "Stopping...";
+                lblStatus.Foreground = System.Windows.Media.Brushes.Orange;
+                await _modbusService.StopAsync();
+                UpdateServerStatus();
+                RefreshRegisterDisplays();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error stopping Modbus Server: {ex.Message}", "Stop Server Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                UpdateServerStatus();
+            }
+        }
+
         private void btnRefreshHeartbeat_Click(object sender, RoutedEventArgs e) => RefreshRegisterDisplays();
         private void btnRefresh1_Click(object sender, RoutedEventArgs e) => RefreshRegisterDisplays();
         private void btnRefresh2_Click(object sender, RoutedEventArgs e) => RefreshRegisterDisplays();
@@ -151,35 +191,51 @@ namespace _8F.Views
         {
             if (_modbusService == null || !_modbusService.IsRunning)
             {
-                MessageBox.Show("Modbus TCP Slave server is not running. Please enable 'IsModbusServerEnable' in App.config.", "Modbus Server Off", MessageBoxButton.OK, MessageBoxImage.Warning);
+                lblPanelMessage.Foreground = new SolidColorBrush(Colors.Red);
+                lblPanelMessage.Text = "Modbus TCP Slave server is not running.";
                 return;
             }
 
             if (channelIndex >= _modbusService.ChannelCount)
             {
-                MessageBox.Show($"Channel {channelIndex + 1} is not active in current configuration.", "Channel Inactive", MessageBoxButton.OK, MessageBoxImage.Warning);
+                lblPanelMessage.Foreground = new SolidColorBrush(Colors.Red);
+                lblPanelMessage.Text = $"Channel {channelIndex + 1} is not active in current configuration.";
                 return;
             }
 
-            if (ushort.TryParse(input.Trim(), out ushort val))
+            if (!ushort.TryParse(input.Trim(), out ushort val))
             {
-                ushort address = ModbusSlaveService.ChannelIndexToAddress(channelIndex);
-                _modbusService.WriteRegister(address, val);
-                RefreshRegisterDisplays();
+                lblPanelMessage.Foreground = new SolidColorBrush(Colors.Red);
+                lblPanelMessage.Text = "Please enter a valid integer between 0 and 65535.";
+                return;
+            }
 
-                if (Owner is MainWindow mainWin)
-                {
-                    await mainWin.OpenProfileForChannelAsync(channelIndex, val, isUnattended: false);
-                    RefreshRegisterDisplays();
-                }
-                else
-                {
-                    MessageBox.Show($"Holding register {address} (Channel {channelIndex + 1}) updated to {val}!", "Modbus Write", MessageBoxButton.OK, MessageBoxImage.Information);
-                }
+            int targetChannel = channelIndex + 1;
+
+            if (val == 0)
+            {
+                lblPanelMessage.Foreground = new SolidColorBrush(Colors.Gray);
+                lblPanelMessage.Text = $"Channel {targetChannel} Profile ID 0 received: loads nothing.";
+                return;
+            }
+
+            var result = await AppServices.ProfileLoadService.LoadFromDbAsync(
+                val,
+                targetChannel,
+                ProfileLoadSource.ModbusPanel,
+                isInteractive: false);
+
+            RefreshRegisterDisplays();
+
+            if (result.Success)
+            {
+                lblPanelMessage.Foreground = new SolidColorBrush(Colors.Green);
+                lblPanelMessage.Text = $"Profile #{val} ('{result.ProfileName}') loaded successfully into Channel {targetChannel}.";
             }
             else
             {
-                MessageBox.Show("Please enter a valid ushort integer value between 0 and 65535.", "Invalid Input", MessageBoxButton.OK, MessageBoxImage.Error);
+                lblPanelMessage.Foreground = new SolidColorBrush(Colors.Red);
+                lblPanelMessage.Text = $"Failed to load Profile #{val} into Channel {targetChannel}: {result.Message}";
             }
         }
 
@@ -187,7 +243,7 @@ namespace _8F.Views
         {
             if (_modbusService == null || !_modbusService.IsRunning)
             {
-                MessageBox.Show("Modbus TCP Slave server is not running. Please enable 'IsModbusServerEnable' in App.config.", "Modbus Server Off", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Modbus TCP Slave server is not running. Please click 'Start Server' or enable 'IsModbusServerEnable' in App.config.", "Modbus Server Off", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using _8F.Helpers;
 
 namespace _8F.Services
 {
@@ -17,25 +18,10 @@ namespace _8F.Services
         public bool IsValid { get; set; } = true;
     }
 
-    /// <summary>
-    /// Service for computing threshold ellipse parameters using a literal C# port of the C++ get_parameters() function.
-    /// </summary>
     public static class EllipseFitter
     {
         public const double MIN_DIMENSION = 100.0; // Minimum width/height floor for 8F ECT instrument
 
-        /// <summary>
-        /// Computes rotated-ellipse threshold parameters from 2D point cloud data using the literal C++ get_parameters() formulas:
-        /// 1. theta = atan2(slope, 1) — rotation angle from fitted line slope.
-        /// 2. Orthogonal Projection: Projects all sample points onto fitted line (y = slope*x + y_intercept).
-        /// 3. Extreme endpoints: Finds index_end[0] (farthest from index 0) and index_end[1] (farthest from index_end[0]).
-        /// 4. end_dist: Perpendicular distance from extreme projected points back to original sample points.
-        /// 5. Weighted Center: Xc = (end_dist[0]*x_end[0] + end_dist[1]*x_end[1]) / (end_dist[0] + end_dist[1]), Yc = slope*Xc + y_intercept.
-        /// 6. Major axis semi-diameter 'a': Distance from (Xc, Yc) to end point with smaller end_dist.
-        /// 7. Furthest point (x_fur, y_fur): Point with maximum perpendicular deviation from projected line.
-        /// 8. Minor axis endpoints: Solves two-line intersection formulas for (x_b, y_b) using slope_b from major axis endpoints to (x_fur, y_fur).
-        /// 9. Minor axis semi-diameter 'b': Larger distance from (Xc, Yc) to (x_b[0], y_b[0]) and (x_b[1], y_b[1]).
-        /// </summary>
         public static AutoEllipseResult FitEllipse(string frequencyName, int frequencyId, IEnumerable<(double X, double Y)> points, double a_stretch = 1.0, double b_stretch = 1.0)
         {
             var pointList = points?.ToList() ?? new List<(double X, double Y)>();
@@ -91,8 +77,7 @@ namespace _8F.Services
                 y_intercept = meanY - slope * meanX;
             }
 
-            double thetaRad = Math.Atan2(slope, 1.0);
-            double thetaDeg = thetaRad * (180.0 / Math.PI);
+            double thetaDeg = EllipseMath.SlopeToAngleDegrees(slope); // saved Angle, clockwise positive on screen
 
             double[] x_proj = new double[m];
             double[] y_proj = new double[m];
@@ -252,7 +237,7 @@ namespace _8F.Services
 
                 foreach (var (px, py) in pointList)
                 {
-                    if (!IsInsideEllipse(px, py, a, b, Xc, Yc, thetaRad))
+                    if (!EllipseMath.IsInside(px, py, Xc, Yc, a * 2.0, b * 2.0, thetaDeg))
                     {
                         b = b / (1 - gsf);
                         gsf *= 0.5;
@@ -300,21 +285,17 @@ namespace _8F.Services
 
         /// <summary>
         /// Checks whether 2D point (x, y) is inside rotated ellipse centered at (Xc, Yc) with semi-axes (a, b) and rotation thetaRad (radians).
-        /// Corrects the bug in reference C++ auto_ellipse_formation_version3.cpp where tempX/tempY were unassigned zero variables during rotation.
+        /// Uses unified EllipseMath.
         /// </summary>
         public static bool IsInsideEllipse(double x, double y, double a, double b, double Xc, double Yc, double thetaRad)
         {
-            if (a <= 1e-9 || b <= 1e-9) return false;
+            double angleDeg = -(thetaRad * (180.0 / Math.PI));
+            return EllipseMath.IsInside(x, y, Xc, Yc, a * 2.0, b * 2.0, angleDeg);
+        }
 
-            double shiftedX = x - Xc;
-            double shiftedY = y - Yc;
-
-            double rotatedX = (shiftedX * Math.Cos(thetaRad)) + (shiftedY * Math.Sin(thetaRad));
-            double rotatedY = (-shiftedX * Math.Sin(thetaRad)) + (shiftedY * Math.Cos(thetaRad));
-
-            double dist = sq(rotatedX / a) + sq(rotatedY / b);
-
-            return dist < 1.0;
+        public static bool IsInsideEllipseDegrees(double x, double y, double a, double b, double Xc, double Yc, double angleDegrees)
+        {
+            return EllipseMath.IsInside(x, y, Xc, Yc, a * 2.0, b * 2.0, angleDegrees);
         }
 
         private static double sq(double val) => val * val;

@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <Compile Remove="scratch\**" />
+    <Compile Remove="8F.UiTests\**" />
   </ItemGroup>
 
   <ItemGroup>

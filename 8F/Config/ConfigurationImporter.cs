@@ -4,11 +4,84 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Newtonsoft.Json;
+using _8F.Models;
 
 namespace _8F.Services
 {
     public static class ConfigurationImporter
     {
+        public static ChannelData CloneChannel(ChannelData src)
+        {
+            if (src == null) return new ChannelData();
+            var clone = new ChannelData
+            {
+                Id = src.Id,
+                IsSeleted = src.IsSeleted,
+                TxStrength = src.TxStrength,
+                graphDatas = new List<GraphData>()
+            };
+            if (src.graphDatas != null)
+            {
+                foreach (var g in src.graphDatas)
+                {
+                    var gClone = new GraphData
+                    {
+                        Id = g.Id,
+                        Name = g.Name,
+                        freq = g.freq,
+                        gain = g.gain,
+                        phase = g.phase,
+                        isEnable = g.isEnable,
+                        strength = g.strength,
+                        postGain = g.postGain,
+                        height = g.height,
+                        width = g.width,
+                        ex = g.ex,
+                        ey = g.ey,
+                        angel = g.angel,
+                        height_O = g.height_O,
+                        width_O = g.width_O,
+                        ex_O = g.ex_O,
+                        ey_O = g.ey_O,
+                        angel_O = g.angel_O,
+                        ellipses = g.ellipses?.Select(e => new Ellips
+                        {
+                            Id = e.Id,
+                            height = e.height,
+                            width = e.width,
+                            ex = e.ex,
+                            ey = e.ey,
+                            angel = e.angel
+                        }).ToList() ?? new List<Ellips>()
+                    };
+                    clone.graphDatas.Add(gClone);
+                }
+            }
+            return clone;
+        }
+
+        public static (List<ChannelData>? Channels, SystemSettings? Settings, string? ProfileName) ImportProfileFromJson(string jsonContent)
+        {
+            if (string.IsNullOrWhiteSpace(jsonContent)) return (null, null, null);
+
+            try
+            {
+                var trimmed = jsonContent.Trim();
+                if (trimmed.StartsWith("{"))
+                {
+                    var container = JsonConvert.DeserializeObject<ProfileConfigFile>(jsonContent);
+                    if (container?.Channels != null && container.Channels.Count > 0)
+                    {
+                        return (container.Channels, container.SystemConfig, container.ProfileName);
+                    }
+                }
+            }
+            catch { }
+
+            var channels = ImportFromJson(jsonContent);
+            return (channels, null, null);
+        }
+
         public static List<ChannelData> ApplyRemapping(List<ChannelData> incomingChannels, Dictionary<int, List<int>> mappings, bool isImportAsIs)
         {
             if (isImportAsIs || mappings == null || mappings.Count == 0)
@@ -101,6 +174,7 @@ namespace _8F.Services
                 }
             }
         }
+
         public static List<ChannelData>? ImportFromJson(string jsonContent)
         {
             if (string.IsNullOrWhiteSpace(jsonContent)) return null;
@@ -230,6 +304,7 @@ namespace _8F.Services
             public double Height { get; set; }
             public double RotationAngle { get; set; }
         }
+
         public static string DumpChannelDatas(List<ChannelData>? channels)
         {
             if (channels == null) return "null";

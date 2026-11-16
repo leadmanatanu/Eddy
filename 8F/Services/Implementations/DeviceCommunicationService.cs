@@ -45,7 +45,65 @@ namespace _8F.Services
         public static Part part = new();
         public static List<Counter> counter = new();
         public static bool IsLogDisable = false;
-        public static bool IsBalanceRequired = false;
+        private static bool _isBalanceRequired = false;
+        public static Dictionary<int, bool> ChannelBalanceRequired = new()
+        {
+            { 1, false },
+            { 2, false },
+            { 3, false },
+            { 4, false }
+        };
+
+        public static bool IsBalanceRequired
+        {
+            get => _isBalanceRequired || ChannelBalanceRequired.Values.Any(v => v);
+            set
+            {
+                _isBalanceRequired = value;
+                if (!value)
+                {
+                    foreach (var k in ChannelBalanceRequired.Keys.ToList())
+                        ChannelBalanceRequired[k] = false;
+                }
+            }
+        }
+
+        public static bool GetIsBalanceRequired(int channelId = 0)
+        {
+            if (channelId <= 0)
+                return _isBalanceRequired || ChannelBalanceRequired.Values.Any(v => v);
+            if (ChannelBalanceRequired.TryGetValue(channelId, out bool req))
+                return req || _isBalanceRequired;
+            return _isBalanceRequired;
+        }
+
+        public static void ClearBalanceRequired(int channelId = 0)
+        {
+            if (channelId <= 0)
+            {
+                _isBalanceRequired = false;
+                foreach (var k in ChannelBalanceRequired.Keys.ToList())
+                    ChannelBalanceRequired[k] = false;
+            }
+            else
+            {
+                ChannelBalanceRequired[channelId] = false;
+            }
+        }
+
+        public static void SetBalanceRequired(int channelId = 0)
+        {
+            if (channelId <= 0)
+            {
+                _isBalanceRequired = true;
+                foreach (var k in ChannelBalanceRequired.Keys.ToList())
+                    ChannelBalanceRequired[k] = true;
+            }
+            else
+            {
+                ChannelBalanceRequired[channelId] = true;
+            }
+        }
         public static bool IsBinRequired = false;
         public static int ERRCode = 0;
         public static string Code = string.Empty;

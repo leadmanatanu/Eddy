@@ -19,12 +19,22 @@ namespace _8F
         public Dictionary<int, List<int>> TargetMappings { get; private set; } = new();
 
         private readonly List<ChannelData> _incomingChannels;
+        private readonly int? _defaultTargetChannel;
         private readonly Dictionary<int, List<CheckBox>> _rowCheckBoxes = new();
 
-        public ChannelRemappingWindow(List<ChannelData> incomingChannels, string sourceLabel)
+        public ChannelRemappingWindow(
+            List<ChannelData> incomingChannels,
+            string sourceLabel,
+            int? defaultTargetChannel = null)
         {
             InitializeComponent();
             _incomingChannels = incomingChannels ?? new List<ChannelData>();
+            _defaultTargetChannel = defaultTargetChannel;
+
+            Title = "Channel Remapping";
+            if (lblHeaderTitle != null) lblHeaderTitle.Content = "Import Channel Remapping";
+            if (btnImportAsIs != null) btnImportAsIs.Content = "Import As-Is (Exact Match)";
+
             lblSourceDescription.Text = $"Source Data: \"{sourceLabel}\". Configure target channel assignments below:";
             BuildMappingRows();
         }
@@ -36,7 +46,18 @@ namespace _8F
 
             if (_incomingChannels.Count == 0) return;
 
-            foreach (var srcCh in _incomingChannels)
+            var visibleChannels = _incomingChannels;
+
+            int preferredSourceId = 1;
+            if (_defaultTargetChannel.HasValue)
+            {
+                var match = visibleChannels.FirstOrDefault(c => c.Id == _defaultTargetChannel.Value);
+                preferredSourceId = match != null ? match.Id : visibleChannels.OrderBy(c => c.Id).First().Id;
+            }
+
+            const int maxTargets = 4;
+
+            foreach (var srcCh in visibleChannels)
             {
                 Border rowBorder = new Border
                 {
@@ -70,8 +91,12 @@ namespace _8F
                 };
 
                 List<CheckBox> checkBoxes = new();
-                for (int targetCh = 1; targetCh <= 4; targetCh++)
+                for (int targetCh = 1; targetCh <= maxTargets; targetCh++)
                 {
+                    bool isDefaultChecked = _defaultTargetChannel.HasValue
+                        ? (srcCh.Id == preferredSourceId && targetCh == _defaultTargetChannel.Value)
+                        : (targetCh == srcCh.Id);
+
                     CheckBox chk = new CheckBox
                     {
                         Content = $"Target Ch {targetCh}",
@@ -81,7 +106,7 @@ namespace _8F
                         Margin = new Thickness(0, 0, 16, 0),
                         VerticalAlignment = VerticalAlignment.Center,
                         Tag = targetCh,
-                        IsChecked = (targetCh == srcCh.Id) // Default: exact-match
+                        IsChecked = isDefaultChecked
                     };
 
                     chk.Checked += Chk_CheckedChanged;
@@ -108,15 +133,17 @@ namespace _8F
 
         private void ValidateConflicts()
         {
+            const int maxTargets = 4;
+
             Dictionary<int, List<int>> targetCounts = new();
-            for (int t = 1; t <= 4; t++) targetCounts[t] = new List<int>();
+            for (int t = 1; t <= maxTargets; t++) targetCounts[t] = new List<int>();
 
             foreach (var kvp in _rowCheckBoxes)
             {
                 int srcId = kvp.Key;
                 foreach (var chk in kvp.Value)
                 {
-                    if (chk.IsChecked == true && chk.Tag is int targetId)
+                    if (chk.IsChecked == true && chk.Tag is int targetId && targetCounts.ContainsKey(targetId))
                     {
                         targetCounts[targetId].Add(srcId);
                     }

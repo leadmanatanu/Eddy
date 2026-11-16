@@ -38,8 +38,10 @@ namespace _8F.Services.Interfaces
         void WriteRegister(ushort address, ushort value);
         void WriteRegister(ushort value);
         void WriteRegisterSilent(ushort address, ushort value);
-        void Start(int port = 502, int heartbeatIntervalMs = 1000);
+        void Start(int port = 502, int heartbeatIntervalMs = 1000, int? channelCount = null);
         void Stop();
+        Task StartAsync(int port = 502, int heartbeatIntervalMs = 1000, int? channelCount = null);
+        Task StopAsync();
         event EventHandler<ushort>? RegisterValueChanged;
         event EventHandler<ushort>? HeartbeatValueChanged;
         event Func<int, ushort, Task>? ChannelProfileIdReceivedAsync;

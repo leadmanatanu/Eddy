@@ -36,11 +36,21 @@
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- Status Line -->
-                <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,0,0,6">
-                    <TextBlock Text="Status: " FontSize="13" FontWeight="SemiBold" Foreground="#333333"/>
-                    <TextBlock Name="lblStatus" Text="Stopped" FontSize="13" FontWeight="Bold" Foreground="Red"/>
-                </StackPanel>
+                <!-- Status Line with Start/Stop Controls -->
+                <Grid Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,0,0,6">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="6"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="Status: " FontSize="13" FontWeight="SemiBold" Foreground="#333333"/>
+                        <TextBlock Name="lblStatus" Text="Stopped" FontSize="13" FontWeight="Bold" Foreground="Red"/>
+                    </StackPanel>
+                    <Button Name="btnStartServer" Grid.Column="1" Content="Start Server" Width="90" Height="26" Click="btnStartServer_Click" Background="#28A745" Foreground="White" FontWeight="Bold" Cursor="Hand"/>
+                    <Button Name="btnStopServer" Grid.Column="3" Content="Stop Server" Width="90" Height="26" Click="btnStopServer_Click" Background="#DC3545" Foreground="White" FontWeight="Bold" Cursor="Hand"/>
+                </Grid>
 
                 <!-- Listening Endpoints -->
                 <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,0,0,6">
@@ -69,6 +79,7 @@
                 <StackPanel Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2">
                     <TextBlock Text="Traffic Counters:" FontSize="11" FontWeight="SemiBold" Foreground="#666666"/>
                     <TextBlock Name="lblCounters" Text="Requests: 0 | Exceptions: 0 | Unknown IDs: 0" FontSize="11" Foreground="#555555"/>
+                    <TextBlock Name="lblPanelMessage" Text="" FontSize="11" FontWeight="Bold" Foreground="#D9534F" Margin="0,4,0,0" TextWrapping="Wrap"/>
                 </StackPanel>
             </Grid>
         </Border>

@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Threading;
+using _8F.Helpers;
 
 namespace _8F.Models
 {
@@ -37,22 +38,7 @@ namespace _8F.Models
 
         public bool Contains(double x, double y)
         {
-            double rad = angel * Math.PI / 180.0;
-            double cos = Math.Cos(rad);
-            double sin = Math.Sin(rad);
-
-            double dx = x - ex;
-            double dy = y - ey;
-
-            double rotX = dx * cos + dy * sin;
-            double rotY = -dx * sin + dy * cos;
-
-            double a = width / 2.0;
-            double b = height / 2.0;
-
-            if (a <= 0 || b <= 0) return false;
-            return ((rotX * rotX) / (a * a) + (rotY * rotY) / (b * b)) <= 1.0;
+            return EllipseMath.IsInside(x, y, ex, ey, width, height, angel);
         }
     }
-
 }

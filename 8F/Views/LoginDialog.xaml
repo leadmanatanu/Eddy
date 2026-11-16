@@ -61,11 +61,12 @@
 
             <!-- Password Field -->
             <PasswordBox Grid.Row="3" Name="txtPassword" Height="36" FontSize="16" VerticalContentAlignment="Center" Padding="6,0" Margin="4,0,4,12" KeyDown="txtPassword_KeyDown"/>
+            <TextBox Grid.Row="3" Name="txtAutomationPassword" Width="0" Height="0" Opacity="0" AutomationProperties.AutomationId="txtAutomationPassword" />
 
             <!-- Action Buttons -->
             <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="4,0,4,0">
-                <Button Name="btnOK" Content="OK" Width="90" Height="34" Style="{StaticResource MagkraftButtonStyle}" IsDefault="True" Click="btnOK_Click" Margin="0,0,10,0"/>
-                <Button Name="btnCancel" Content="Exit" Width="90" Height="34" Style="{StaticResource MagkraftSecondaryButtonStyle}" IsCancel="True" Click="btnCancel_Click"/>
+                <Button Name="btnOK" AutomationProperties.AutomationId="btnLoginOK" Content="OK" Width="90" Height="34" Style="{StaticResource MagkraftButtonStyle}" IsDefault="True" Click="btnOK_Click" Margin="0,0,10,0"/>
+                <Button Name="btnCancel" AutomationProperties.AutomationId="btnLoginCancel" Content="Exit" Width="90" Height="34" Style="{StaticResource MagkraftSecondaryButtonStyle}" IsCancel="True" Click="btnCancel_Click"/>
             </StackPanel>
         </Grid>
     </Border>

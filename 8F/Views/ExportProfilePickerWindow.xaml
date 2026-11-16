@@ -44,6 +44,38 @@
         <Style x:Key="MagkraftSecondaryButtonStyle" TargetType="Button" BasedOn="{StaticResource MagkraftButtonStyle}">
             <Setter Property="Background" Value="#64748B"/>
         </Style>
+
+        <Style x:Key="MagkraftDangerButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#B91C1C"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="BorderBrush" Value="#FF000000"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="10">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Background" Value="#94A3B8"/>
+                                <Setter Property="Foreground" Value="#E2E8F0"/>
+                                <Setter Property="BorderBrush" Value="#CBD5E1"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#991B1B"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <Border Name="brRef" Margin="4" Background="#DBDBDB" BorderBrush="#B0B0B0" BorderThickness="1" CornerRadius="20" MouseDown="Window_MouseDown">
@@ -58,8 +90,8 @@
 
             <!-- 1. Header Title -->
             <Grid Grid.Row="0" Margin="0,4,0,8">
-                <Label Content="Export Saved Configuration Profile" FontSize="20" FontWeight="Bold" Foreground="#0F172A" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                <Button Name="btnCloseHeader" Content="Close" Width="70" Height="30" Style="{StaticResource MagkraftSecondaryButtonStyle}" FontSize="13" Click="btnCancel_Click" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                <Label Content="{Binding HeaderTitle}" FontSize="20" FontWeight="Bold" Foreground="#0F172A" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                <Button Name="btnCloseHeader" Content="Close" Width="70" Height="30" Style="{StaticResource MagkraftSecondaryButtonStyle}" FontSize="13" Command="{Binding CancelCommand}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
             </Grid>
 
             <Separator Grid.Row="1" Margin="0,0,0,10" Background="#A0A0A0"/>
@@ -67,6 +99,7 @@
             <!-- 2. DataGrid Container -->
             <Border Grid.Row="2" Background="#FFFFFF" BorderBrush="#A0A0A0" BorderThickness="1" CornerRadius="10" Padding="6" Margin="4,0,4,10">
                 <DataGrid Name="dgProfiles" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single"
+                          ItemsSource="{Binding Profiles}" SelectedItem="{Binding SelectedProfile, Mode=TwoWay}"
                           Background="#FFFFFF" RowBackground="#FFFFFF" AlternatingRowBackground="#F8FAFC"
                           Foreground="#0F172A" GridLinesVisibility="All" HorizontalGridLinesBrush="#CBD5E1" VerticalGridLinesBrush="#CBD5E1"
                           HeadersVisibility="Column" FontSize="13" ColumnHeaderHeight="32" RowHeight="30"
@@ -97,14 +130,15 @@
 
             <!-- 3. Status Bar Notice -->
             <Border Grid.Row="3" Background="#E2E8F0" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="6" Padding="8,4" Margin="4,0,4,10">
-                <TextBlock Name="lblStatus" Text="Select a profile and click Export." Foreground="#0F172A" FontSize="13" FontWeight="SemiBold"/>
+                <TextBlock Name="lblStatus" Text="{Binding StatusText}" Foreground="#0F172A" FontSize="13" FontWeight="SemiBold"/>
             </Border>
 
             <!-- 4. Action Buttons -->
             <Grid Grid.Row="4" Margin="4,0,4,4">
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button Name="btnExport" Content="Export Profile" Width="150" Height="36" Style="{StaticResource MagkraftButtonStyle}" FontSize="14" Click="btnExport_Click" Margin="0,0,10,0"/>
-                    <Button Name="btnCancel" Content="Cancel" Width="100" Height="36" Style="{StaticResource MagkraftSecondaryButtonStyle}" FontSize="14" Click="btnCancel_Click"/>
+                    <Button Name="btnDelete" AutomationProperties.AutomationId="btnPickerDelete" Content="Delete" Width="105" Height="36" Style="{StaticResource MagkraftDangerButtonStyle}" Visibility="{Binding DeleteButtonVisibility}" Command="{Binding DeleteCommand}" Margin="0,0,14,0"/>
+                    <Button Name="btnExport" AutomationProperties.AutomationId="btnPickerPrimary" Content="{Binding PrimaryButtonText}" Width="150" Height="36" Style="{StaticResource MagkraftButtonStyle}" Command="{Binding PrimaryCommand}" Margin="0,0,10,0"/>
+                    <Button Name="btnCancel" AutomationProperties.AutomationId="btnPickerCancel" Content="Cancel" Width="100" Height="36" Style="{StaticResource MagkraftSecondaryButtonStyle}" Command="{Binding CancelCommand}"/>
                 </StackPanel>
             </Grid>
         </Grid>

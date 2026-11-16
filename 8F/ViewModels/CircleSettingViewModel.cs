@@ -184,6 +184,16 @@ namespace _8F.ViewModels
                     });
                 }
 
+                if (graph.ellipses.Count > 0)
+                {
+                    var primary = graph.ellipses[0];
+                    graph.height = primary.height;
+                    graph.width = primary.width;
+                    graph.ex = primary.ex;
+                    graph.ey = primary.ey;
+                    graph.angel = primary.angel;
+                }
+
                 ellipseWrite.FD.Add(freq);
             }
 

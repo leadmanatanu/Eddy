@@ -130,8 +130,11 @@ CREATE TABLE IF NOT EXISTS public."ConfigProfiles"
     "Name" text NOT NULL,
     "OperatorName" text,
     "CreatedAt" timestamp without time zone NOT NULL DEFAULT now(),
-    "UpdatedAt" timestamp without time zone NOT NULL DEFAULT now()
+    "UpdatedAt" timestamp without time zone NOT NULL DEFAULT now(),
+    "SystemSettingsJson" text
 );
+
+ALTER TABLE public."ConfigProfiles" ADD COLUMN IF NOT EXISTS "SystemSettingsJson" text;
 
 ALTER TABLE IF EXISTS public."ConfigProfiles" OWNER to postgres;
 

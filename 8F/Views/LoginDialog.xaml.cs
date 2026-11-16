@@ -61,7 +61,7 @@ namespace _8F.Views
 
         private async Task AttemptLoginAsync()
         {
-            string enteredPassword = txtPassword.Password;
+            string enteredPassword = !string.IsNullOrEmpty(txtPassword.Password) ? txtPassword.Password : txtAutomationPassword.Text;
             if (string.IsNullOrEmpty(enteredPassword))
             {
                 return;

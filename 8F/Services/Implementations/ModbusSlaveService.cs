@@ -12,6 +12,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using _8F.Auth;
 using _8F.Services.Interfaces;
 
 namespace _8F.Services.Implementations
@@ -90,6 +91,7 @@ namespace _8F.Services.Implementations
         private CancellationTokenSource? _profileCts;
         private Task? _consumerTask;
 
+        private readonly ConcurrentDictionary<TcpClient, byte> _activeClientsMap = new();
         private int _activeClients = 0;
         private long _totalRequestsCount = 0;
         private long _totalExceptionsCount = 0;
@@ -99,6 +101,9 @@ namespace _8F.Services.Implementations
 
         private long _rawFrameLastSec = 0;
         private int _rawFrameLogCount = 0;
+
+        private readonly SemaphoreSlim _startStopLock = new(1, 1);
+        private readonly int? _explicitChannelCount;
         #endregion
 
         #region Events
@@ -107,7 +112,7 @@ namespace _8F.Services.Implementations
         public event Func<int, ushort, Task>? ChannelProfileIdReceivedAsync;
         public event Func<IReadOnlyDictionary<int, ushort>, Task>? ChannelProfilesReceivedAsync;
 
-        public readonly record struct ChannelProfileWrite(int ChannelIndex, ushort ProfileId);
+        public readonly record struct ChannelProfileWrite(int ChannelIndex, ushort ProfileId, string? ClientIp = null);
         #endregion
 
         #region Configuration Resolution
@@ -195,12 +200,29 @@ namespace _8F.Services.Implementations
             }
         }
 
-        public void Start(int port = DefaultPort, int heartbeatIntervalMs = DefaultHeartbeatIntervalMs)
+        public ModbusSlaveService(int? channelCount = null)
         {
-            if (IsRunning) return;
+            if (channelCount.HasValue && channelCount.Value >= MinChannelCount && channelCount.Value <= MaxChannelCount)
+            {
+                _explicitChannelCount = channelCount.Value;
+                ChannelCount = channelCount.Value;
+            }
+        }
 
+        public void Start(int port = DefaultPort, int heartbeatIntervalMs = DefaultHeartbeatIntervalMs, int? channelCount = null)
+        {
+            StartAsync(port, heartbeatIntervalMs, channelCount).GetAwaiter().GetResult();
+        }
+
+        public async Task StartAsync(int port = DefaultPort, int heartbeatIntervalMs = DefaultHeartbeatIntervalMs, int? channelCount = null)
+        {
+            await _startStopLock.WaitAsync();
             try
             {
+                if (IsRunning) return;
+
+                StatusDescription = "Starting...";
+
                 Port = port > 0 ? port : ResolveIntSetting("ModbusServerPort", DefaultPort);
                 HeartbeatIntervalMs = heartbeatIntervalMs > 0 ? heartbeatIntervalMs : ResolveIntSetting("ModbusHeartbeatIntervalMs", DefaultHeartbeatIntervalMs);
 
@@ -210,19 +232,29 @@ namespace _8F.Services.Implementations
                 EnableRawFrameLogging = ResolveBoolSetting("ModbusEnableRawFrameLogging", DefaultEnableRawFrameLogging);
                 AutoAddFirewallRule = ResolveBoolSetting("ModbusAutoAddFirewallRule", DefaultAutoAddFirewallRule);
 
-                string rawConfig = System.Configuration.ConfigurationManager.AppSettings["Channel"] ?? "(null)";
-                var (resolvedCount, configError) = ResolveChannelCount();
-                ChannelCount = resolvedCount;
-                IsChannelCountFallback = !string.IsNullOrEmpty(configError);
-                ChannelCountConfigError = configError;
-
-                if (IsChannelCountFallback)
+                int? targetChCount = channelCount ?? _explicitChannelCount;
+                if (targetChCount.HasValue && targetChCount.Value >= MinChannelCount && targetChCount.Value <= MaxChannelCount)
                 {
-                    ModbusLogger.Error($"[Modbus TCP Slave] Configuration ERROR for 'Channel' setting (raw='{rawConfig}'): {configError}");
+                    ChannelCount = targetChCount.Value;
+                    IsChannelCountFallback = false;
+                    ChannelCountConfigError = null;
                 }
                 else
                 {
-                    ModbusLogger.Info($"[Modbus TCP Slave] Configuration 'Channel' read successfully: raw='{rawConfig}', active channels={ChannelCount}.");
+                    string rawConfig = System.Configuration.ConfigurationManager.AppSettings["Channel"] ?? "(null)";
+                    var (resolvedCount, configError) = ResolveChannelCount();
+                    ChannelCount = resolvedCount;
+                    IsChannelCountFallback = !string.IsNullOrEmpty(configError);
+                    ChannelCountConfigError = configError;
+
+                    if (IsChannelCountFallback)
+                    {
+                        ModbusLogger.Error($"[Modbus TCP Slave] Configuration ERROR for 'Channel' setting (raw='{rawConfig}'): {configError}");
+                    }
+                    else
+                    {
+                        ModbusLogger.Info($"[Modbus TCP Slave] Configuration 'Channel' read successfully: raw='{rawConfig}', active channels={ChannelCount}.");
+                    }
                 }
 
                 lock (_lock)
@@ -256,57 +288,46 @@ namespace _8F.Services.Implementations
                     BindAddress = "0.0.0.0";
                 }
 
-                // Check and warn if bound to loopback
                 if (LoopbackHosts.Contains(BindAddress))
                 {
-                    ModbusLogger.Warn($"[Modbus TCP Slave] WARNING: Bound to loopback ({BindAddress}) — only THIS machine can connect. Set 'ModbusBindAddress' to 0.0.0.0 (or this PC's LAN IP) so other systems can reach it.");
+                    ModbusLogger.Warn($"[Modbus TCP Slave] WARNING: Bound to loopback ({BindAddress}) — only THIS machine can connect.");
                 }
 
-                // Start TCP Listener
                 _tcpListener = new TcpListener(bindIp, Port);
+                _tcpListener.Server.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
                 _tcpListener.Start();
 
-                // Determine and format effective endpoints
-                var lanIps = GetLocalIPv4Addresses();
-                if (bindIp.Equals(IPAddress.Any))
-                {
-                    _listeningEndpointsDescription = lanIps.Count > 0
-                        ? $"0.0.0.0:{Port} (LAN: {string.Join(", ", lanIps.Select(ip => $"{ip}:{Port}"))})"
-                        : $"0.0.0.0:{Port}";
-                }
-                else
-                {
-                    _listeningEndpointsDescription = $"{BindAddress}:{Port}";
-                }
+                _listeningEndpointsDescription = $"{BindAddress}:{Port}";
 
                 _serverCts = new CancellationTokenSource();
                 _listenerTask = Task.Run(() => AcceptClientsLoopAsync(_tcpListener, _serverCts.Token));
 
-                // Start heartbeat timer
                 _heartbeatTimer?.Dispose();
                 _heartbeatTimer = new Timer(OnHeartbeatTick, null, HeartbeatIntervalMs, HeartbeatIntervalMs);
 
                 IsRunning = true;
                 StatusDescription = $"Running · {BindAddress}:{Port}";
 
-                // Startup report
-                var mapDesc = new StringBuilder();
-                mapDesc.AppendLine($"[Modbus TCP Slave] Modbus TCP Slave Server Started Successfully.");
-                mapDesc.AppendLine($"  Listening Endpoint(s): {_listeningEndpointsDescription}");
-                mapDesc.AppendLine($"  Bind Address: {BindAddress} | Port: {Port}");
-                mapDesc.AppendLine($"  Unit ID Mode: {UnitIdModeDescription}");
-                mapDesc.AppendLine($"  Heartbeat Interval: {HeartbeatIntervalMs}ms");
-                mapDesc.AppendLine($"  Raw Frame Logging: {(EnableRawFrameLogging ? "Enabled" : "Disabled")}");
-                mapDesc.AppendLine($"  Register Map ({ChannelCount} active channel(s), {TotalRegisterCount} registers):");
-                mapDesc.AppendLine($"    Address {HeartbeatAddress}: Heartbeat (auto-incrementing 16-bit)");
-                for (int i = 0; i < ChannelCount; i++)
+                // Resolve LAN IPs asynchronously off-thread to prevent blocking
+                _ = Task.Run(async () =>
                 {
-                    mapDesc.AppendLine($"    Address {FirstChannelAddress + i}: Channel {i + 1} Profile ID");
-                }
-                ModbusLogger.Info(mapDesc.ToString().TrimEnd());
+                    try
+                    {
+                        var lanIps = GetLocalIPv4Addresses();
+                        if (bindIp.Equals(IPAddress.Any))
+                        {
+                            _listeningEndpointsDescription = lanIps.Count > 0
+                                ? $"0.0.0.0:{Port} (LAN: {string.Join(", ", lanIps.Select(ip => $"{ip}:{Port}"))})"
+                                : $"0.0.0.0:{Port}";
+                        }
+                    }
+                    catch { }
+                });
 
-                // Post-start firewall check in background
-                Task.Run(() => CheckAndHandleFirewall(Port, AutoAddFirewallRule));
+                ModbusLogger.Info($"[Modbus TCP Slave] Modbus TCP Slave Server Started Successfully on {BindAddress}:{Port} (Channels: {ChannelCount}).");
+
+                // Check firewall asynchronously
+                _ = Task.Run(() => CheckAndHandleFirewall(Port, AutoAddFirewallRule));
             }
             catch (SocketException sex)
             {
@@ -320,20 +341,42 @@ namespace _8F.Services.Implementations
                 };
                 StatusDescription = $"Failed: {reason}";
                 ModbusLogger.Error($"[Modbus TCP Slave] Bind failed: {reason}", sex);
-                Stop();
+                await StopInternalAsync();
                 throw new InvalidOperationException($"Failed to start Modbus TCP Slave on {BindAddress}:{Port}: {reason}", sex);
             }
             catch (Exception ex)
             {
                 IsRunning = false;
                 StatusDescription = $"Failed: {ex.Message}";
-                ModbusLogger.Error($"[Modbus TCP Slave] Failed to start on {BindAddress}:{port}: {ex.Message}", ex);
-                Stop();
+                ModbusLogger.Error($"[Modbus TCP Slave] Failed to start on {BindAddress}:{Port}: {ex.Message}", ex);
+                await StopInternalAsync();
                 throw;
+            }
+            finally
+            {
+                _startStopLock.Release();
             }
         }
 
         public void Stop()
+        {
+            StopAsync().GetAwaiter().GetResult();
+        }
+
+        public async Task StopAsync()
+        {
+            await _startStopLock.WaitAsync();
+            try
+            {
+                await StopInternalAsync();
+            }
+            finally
+            {
+                _startStopLock.Release();
+            }
+        }
+
+        private async Task StopInternalAsync()
         {
             try
             {
@@ -341,7 +384,36 @@ namespace _8F.Services.Implementations
                 _profileCts?.Cancel();
                 _profileChannel?.Writer.TryComplete();
                 _serverCts?.Cancel();
-                _tcpListener?.Stop();
+
+                // Close TCP listener
+                try
+                {
+                    _tcpListener?.Stop();
+                }
+                catch { }
+
+                // Cleanly disconnect all active clients
+                foreach (var client in _activeClientsMap.Keys)
+                {
+                    try
+                    {
+                        client.Close();
+                        client.Dispose();
+                    }
+                    catch { }
+                }
+                _activeClientsMap.Clear();
+
+                // Wait briefly for background tasks to terminate
+                var tasksToWait = new List<Task>();
+                if (_listenerTask != null) tasksToWait.Add(_listenerTask);
+                if (_consumerTask != null) tasksToWait.Add(_consumerTask);
+
+                if (tasksToWait.Count > 0)
+                {
+                    await Task.WhenAny(Task.WhenAll(tasksToWait), Task.Delay(500));
+                }
+
                 ModbusLogger.Info("[Modbus TCP Slave] Stopped.");
             }
             catch (Exception ex)
@@ -372,24 +444,28 @@ namespace _8F.Services.Implementations
                 try
                 {
                     TcpClient client = await listener.AcceptTcpClientAsync(ct);
+                    client.NoDelay = true;
+                    client.LingerState = new LingerOption(false, 0);
+
+                    _activeClientsMap.TryAdd(client, 0);
+                    Interlocked.Increment(ref _activeClients);
+
                     _ = Task.Run(() => HandleClientAsync(client, ct), ct);
                 }
                 catch (OperationCanceledException)
                 {
                     break;
                 }
-                catch (ObjectDisposedException)
+                catch (SocketException) when (ct.IsCancellationRequested)
                 {
                     break;
                 }
                 catch (Exception ex)
                 {
-                    ModbusLogger.Error("[Modbus TCP Slave] Error accepting client in listener loop", ex);
-                    try
+                    if (!ct.IsCancellationRequested)
                     {
-                        await Task.Delay(500, ct);
+                        ModbusLogger.Error("[Modbus TCP Slave] Error accepting client connection", ex);
                     }
-                    catch { break; }
                 }
             }
         }
@@ -399,125 +475,123 @@ namespace _8F.Services.Implementations
             string clientEp = "Unknown";
             try
             {
-                if (client.Client.RemoteEndPoint is IPEndPoint ep)
-                {
-                    clientEp = $"{ep.Address}:{ep.Port}";
-                }
-
-                // Enable socket keep-alive to clean up dead peers
-                try
-                {
-                    client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
-                }
-                catch { }
-
-                int clientCount = Interlocked.Increment(ref _activeClients);
-                ModbusLogger.Info($"[Modbus TCP Slave] Client connected: {clientEp}. Active clients: {clientCount}");
+                clientEp = client.Client.RemoteEndPoint?.ToString() ?? "Unknown";
+                ModbusLogger.Info($"[Modbus TCP Slave] Client connected: {clientEp}. Active clients: {_activeClients}");
 
                 using var stream = client.GetStream();
-                byte[] mbapHeader = new byte[6];
+                byte[] mbapHeader = new byte[7];
 
                 while (!serverCt.IsCancellationRequested && client.Connected)
                 {
-                    // 1. Read MBAP 6-byte header: TxId (2), ProtoId (2), Length (2)
-                    bool ok = await ReadExactAsync(stream, mbapHeader, 0, 6, serverCt);
-                    if (!ok) break; // Client disconnected gracefully
+                    // Read 7-byte MBAP header with 5-second read timeout
+                    bool headerRead = await ReadExactAsync(stream, mbapHeader, 0, 7, serverCt);
+                    if (!headerRead) break; // Client disconnected or timeout
 
-                    ushort txId = (ushort)((mbapHeader[0] << 8) | mbapHeader[1]);
-                    ushort protoId = (ushort)((mbapHeader[2] << 8) | mbapHeader[3]);
+                    ushort transactionId = (ushort)((mbapHeader[0] << 8) | mbapHeader[1]);
+                    ushort protocolId = (ushort)((mbapHeader[2] << 8) | mbapHeader[3]);
                     ushort length = (ushort)((mbapHeader[4] << 8) | mbapHeader[5]);
+                    byte unitId = mbapHeader[6];
 
-                    if (protoId != 0 || length < 2 || length > 260)
+                    // Validate protocol ID: must be 0 for Modbus TCP
+                    if (protocolId != 0)
                     {
-                        ModbusLogger.Warn($"[Modbus TCP Slave] Malformed MBAP from {clientEp}: ProtoId={protoId}, Length={length}. Closing connection.");
+                        Interlocked.Increment(ref _totalExceptionsCount);
+                        ModbusLogger.Warn($"[Modbus TCP Slave] Invalid Modbus Protocol ID {protocolId} from {clientEp}. Disconnecting.");
                         break;
                     }
 
-                    // 2. Read remaining (length) bytes: UnitId (0), FunctionCode (1), Data (length - 2)
-                    byte[] payload = new byte[length];
-                    ok = await ReadExactAsync(stream, payload, 0, length, serverCt);
-                    if (!ok) break;
+                    if (length < 2 || length > 256)
+                    {
+                        Interlocked.Increment(ref _totalExceptionsCount);
+                        ModbusLogger.Warn($"[Modbus TCP Slave] Invalid MBAP length {length} from {clientEp}. Disconnecting.");
+                        break;
+                    }
 
-                    byte unitId = payload[0];
-                    byte fc = payload[1];
+                    int pduLength = length - 1; // Subtract Unit ID byte
+                    byte[] pduBuffer = new byte[pduLength];
 
-                    // Full raw frame for logging
-                    byte[] fullRxFrame = new byte[6 + length];
-                    Buffer.BlockCopy(mbapHeader, 0, fullRxFrame, 0, 6);
-                    Buffer.BlockCopy(payload, 0, fullRxFrame, 6, length);
+                    bool pduRead = await ReadExactAsync(stream, pduBuffer, 0, pduLength, serverCt);
+                    if (!pduRead) break;
+
+                    Interlocked.Increment(ref _totalRequestsCount);
+                    _lastRequestTimeUtc = DateTime.UtcNow;
 
                     if (EnableRawFrameLogging)
                     {
-                        LogRawFrame("RX", clientEp, fullRxFrame, 0, fullRxFrame.Length);
+                        byte[] fullRequest = new byte[7 + pduLength];
+                        Buffer.BlockCopy(mbapHeader, 0, fullRequest, 0, 7);
+                        Buffer.BlockCopy(pduBuffer, 0, fullRequest, 7, pduLength);
+                        LogRawFrame("REQ", clientEp, fullRequest, 0, fullRequest.Length);
                     }
 
-                    _lastRequestTimeUtc = DateTime.UtcNow;
-
-                    // 3. Unit ID Check
-                    bool isFixedMode = string.Equals(UnitIdMode, "Fixed", StringComparison.OrdinalIgnoreCase);
-                    if (isFixedMode && unitId != FixedUnitId)
+                    // Validate Unit ID mode
+                    if (string.Equals(UnitIdMode, "Fixed", StringComparison.OrdinalIgnoreCase) && unitId != FixedUnitId)
                     {
                         Interlocked.Increment(ref _unknownUnitIdRequestsCount);
-                        ModbusLogger.Info($"[Modbus TCP Slave] Request from {clientEp} | Unit: {unitId} | FC: {fc:D2} | Outcome: Ignored (Fixed mode, configured Unit ID is {FixedUnitId})");
-                        // Do not respond in Fixed mode when Unit ID does not match
+                        ModbusLogger.Warn($"[Modbus TCP Slave] Request from {clientEp} had Unit ID {unitId}, expected Fixed Unit ID {FixedUnitId}. Ignoring request.");
                         continue;
                     }
 
-                    Interlocked.Increment(ref _totalRequestsCount);
+                    byte fc = pduBuffer[0];
+                    byte[] pduResponse = ProcessModbusRequest(clientEp, unitId, fc, pduBuffer, 1, pduLength - 1);
 
-                    // 4. Process Request
-                    byte[] responsePdu = ProcessModbusRequest(clientEp, unitId, fc, payload, 2, length - 2);
-
-                    // 5. Send Response
-                    ushort respLength = (ushort)(1 + responsePdu.Length); // 1 byte UnitId + PDU length
-                    byte[] fullTxFrame = new byte[6 + 1 + responsePdu.Length];
-                    fullTxFrame[0] = (byte)(txId >> 8);
-                    fullTxFrame[1] = (byte)(txId & 0xFF);
-                    fullTxFrame[2] = 0; // Modbus protocol ID
-                    fullTxFrame[3] = 0;
-                    fullTxFrame[4] = (byte)(respLength >> 8);
-                    fullTxFrame[5] = (byte)(respLength & 0xFF);
-                    fullTxFrame[6] = unitId; // Echo back the requested unit ID
-                    Buffer.BlockCopy(responsePdu, 0, fullTxFrame, 7, responsePdu.Length);
+                    // Build MBAP response
+                    ushort respLength = (ushort)(1 + pduResponse.Length);
+                    byte[] response = new byte[7 + pduResponse.Length];
+                    response[0] = (byte)(transactionId >> 8);
+                    response[1] = (byte)(transactionId & 0xFF);
+                    response[2] = 0; // Protocol ID 0
+                    response[3] = 0;
+                    response[4] = (byte)(respLength >> 8);
+                    response[5] = (byte)(respLength & 0xFF);
+                    response[6] = unitId;
+                    Buffer.BlockCopy(pduResponse, 0, response, 7, pduResponse.Length);
 
                     if (EnableRawFrameLogging)
                     {
-                        LogRawFrame("TX", clientEp, fullTxFrame, 0, fullTxFrame.Length);
+                        LogRawFrame("RESP", clientEp, response, 0, response.Length);
                     }
 
-                    await stream.WriteAsync(fullTxFrame, 0, fullTxFrame.Length, serverCt);
+                    await stream.WriteAsync(response, 0, response.Length, serverCt);
                     await stream.FlushAsync(serverCt);
                 }
             }
-            catch (IOException ioEx) when (ioEx.InnerException is SocketException sex &&
-                                         (sex.SocketErrorCode == SocketError.ConnectionReset ||
-                                          sex.SocketErrorCode == SocketError.ConnectionAborted))
-            {
-                ModbusLogger.Info($"[Modbus TCP Slave] Client {clientEp} reset/aborted connection.");
-            }
             catch (OperationCanceledException) { }
+            catch (IOException) { }
+            catch (SocketException) { }
             catch (Exception ex)
             {
                 ModbusLogger.Error($"[Modbus TCP Slave] Unexpected error handling client {clientEp}", ex);
             }
             finally
             {
+                _activeClientsMap.TryRemove(client, out _);
                 int remaining = Interlocked.Decrement(ref _activeClients);
                 ModbusLogger.Info($"[Modbus TCP Slave] Client disconnected: {clientEp}. Active clients: {remaining}");
-                try { client.Dispose(); } catch { }
+                try { client.Close(); client.Dispose(); } catch { }
             }
         }
 
         private static async Task<bool> ReadExactAsync(NetworkStream stream, byte[] buffer, int offset, int count, CancellationToken ct)
         {
             int totalRead = 0;
-            while (totalRead < count)
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(5));
+
+            try
             {
-                int read = await stream.ReadAsync(buffer, offset + totalRead, count - totalRead, ct);
-                if (read == 0) return false;
-                totalRead += read;
+                while (totalRead < count)
+                {
+                    int read = await stream.ReadAsync(buffer, offset + totalRead, count - totalRead, timeoutCts.Token);
+                    if (read == 0) return false;
+                    totalRead += read;
+                }
+                return true;
             }
-            return true;
+            catch (OperationCanceledException)
+            {
+                return false;
+            }
         }
 
         private byte[] ProcessModbusRequest(string clientEp, byte unitId, byte fc, byte[] payload, int pduOffset, int pduLength)
@@ -628,9 +702,9 @@ namespace _8F.Services.Implementations
             ModbusLogger.Info($"[Modbus TCP Slave] Request from {clientEp} | Unit: {unitId} | FC: 06 (WriteSingleRegister) | Addr: {address} | Value: {value} | Outcome: OK");
 
             // Handle Heartbeat or Channel Profile Write notification
-            HandleRegisterWriteEvents(address, 1);
+            HandleRegisterWriteEvents(address, 1, clientEp);
 
-            // Echo back FC 06 request as response
+            // Echo back FC 06 request as response immediately
             byte[] response = new byte[5];
             response[0] = 0x06;
             response[1] = payload[offset];
@@ -682,7 +756,7 @@ namespace _8F.Services.Implementations
             ModbusLogger.Info($"[Modbus TCP Slave] Request from {clientEp} | Unit: {unitId} | FC: 16 (WriteMultipleRegisters) | Addr: {startAddress} | Qty: {count} | Values: [{string.Join(", ", writtenValues)}] | Outcome: OK");
 
             // Handle Heartbeat or Channel Profile Write notifications
-            HandleRegisterWriteEvents(startAddress, count);
+            HandleRegisterWriteEvents(startAddress, count, clientEp);
 
             // Response for FC 16: FC (1 byte), StartAddress (2 bytes), Quantity (2 bytes)
             byte[] response = new byte[5];
@@ -694,13 +768,13 @@ namespace _8F.Services.Implementations
             return response;
         }
 
-        private void HandleRegisterWriteEvents(ushort start, ushort count)
+        private void HandleRegisterWriteEvents(ushort start, ushort count, string? clientEp)
         {
             if (_suppressNotification) return;
 
             ushort end = (ushort)(start + count - 1);
 
-            // Heartbeat write at address 0 (HeartbeatAddress)
+            // Heartbeat write at address 0
             if (start <= HeartbeatAddress && end >= HeartbeatAddress)
             {
                 ushort hbVal = ReadRegister(HeartbeatAddress);
@@ -730,9 +804,12 @@ namespace _8F.Services.Implementations
                 {
                     RegisterValueChanged?.Invoke(this, val);
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    ModbusLogger.Error($"[Modbus TCP Slave] Exception invoking RegisterValueChanged for Address {addr}: {ex.Message}", ex);
+                }
 
-                _profileChannel?.Writer.TryWrite(new ChannelProfileWrite(channelIndex, val));
+                _profileChannel?.Writer.TryWrite(new ChannelProfileWrite(channelIndex, val, clientEp));
             }
         }
         #endregion
@@ -746,44 +823,77 @@ namespace _8F.Services.Implementations
             {
                 while (await _profileChannel.Reader.WaitToReadAsync(ct))
                 {
-                    // Drain and coalesce multiple rapid writes per channel:
-                    // Key is channelIndex (0..ChannelCount - 1), value is the latest profileId
-                    var batch = new Dictionary<int, ushort>();
+                    var batch = new Dictionary<int, (ushort ProfileId, string? ClientEp)>();
                     while (_profileChannel.Reader.TryRead(out var item))
                     {
                         if (item.ChannelIndex >= 0 && item.ChannelIndex < ChannelCount)
                         {
-                            batch[item.ChannelIndex] = item.ProfileId;
+                            batch[item.ChannelIndex] = (item.ProfileId, item.ClientIp);
                         }
                     }
 
                     if (batch.Count == 0 || ct.IsCancellationRequested) continue;
 
-                    // Batch notification to MainWindow allows multi-channel atomic apply & single ImplementChanges call
+                    // Fire legacy events if subscribed
                     if (ChannelProfilesReceivedAsync != null)
                     {
+                        var legacyDict = batch.ToDictionary(k => k.Key, v => v.Value.ProfileId);
                         try
                         {
-                            await ChannelProfilesReceivedAsync.Invoke(batch);
+                            await ChannelProfilesReceivedAsync.Invoke(legacyDict);
                         }
                         catch (Exception ex)
                         {
-                            ModbusLogger.Error("[Modbus TCP Slave] Error processing profile writes batch", ex);
+                            ModbusLogger.Error("[Modbus TCP Slave] Error processing profile writes batch event", ex);
                         }
                     }
-                    else if (ChannelProfileIdReceivedAsync != null)
+
+                    if (ChannelProfileIdReceivedAsync != null)
                     {
-                        foreach (var (channelIndex, profileId) in batch)
+                        foreach (var (chIdx, data) in batch)
                         {
-                            if (ct.IsCancellationRequested) break;
                             try
                             {
-                                await ChannelProfileIdReceivedAsync.Invoke(channelIndex, profileId);
+                                await ChannelProfileIdReceivedAsync.Invoke(chIdx, data.ProfileId);
                             }
                             catch (Exception ex)
                             {
-                                ModbusLogger.Error($"[Modbus TCP Slave] Error processing profile write for Channel {channelIndex + 1}, Profile {profileId}", ex);
+                                ModbusLogger.Error($"[Modbus TCP Slave] Exception invoking ChannelProfileIdReceivedAsync for Channel {chIdx + 1}: {ex.Message}", ex);
                             }
+                        }
+                    }
+
+                    // Process profile loads via unified IProfileLoadService
+                    foreach (var (channelIndex, data) in batch)
+                    {
+                        if (ct.IsCancellationRequested) break;
+                        int channelNumber = channelIndex + 1;
+                        ushort profileId = data.ProfileId;
+                        string? clientEp = data.ClientEp;
+
+                        if (profileId == 0)
+                        {
+                            ModbusLogger.Info($"[Modbus TCP Slave] Profile ID 0 received for Channel {channelNumber}. No load triggered.");
+                            continue;
+                        }
+
+                        try
+                        {
+                            var result = await AppServices.ProfileLoadService.LoadFromDbAsync(
+                                profileId,
+                                channelNumber,
+                                ProfileLoadSource.ModbusMaster,
+                                clientIp: clientEp,
+                                isInteractive: false);
+
+                            if (!result.Success)
+                            {
+                                ModbusLogger.Warn($"[Modbus TCP Slave] Load Profile #{profileId} for Channel {channelNumber} failed: {result.Message}");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            ModbusLogger.Error($"[Modbus TCP Slave] Error loading Profile #{profileId} into Channel {channelNumber}", ex);
                         }
                     }
                 }

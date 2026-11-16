@@ -59,7 +59,7 @@
 
             <!-- 1. Header Title -->
             <Grid Grid.Row="0" Margin="0,4,0,8">
-                <Label Content="Import Channel Remapping" FontSize="20" FontWeight="Bold" Foreground="#0F172A" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                <Label Name="lblHeaderTitle" Content="Import Channel Remapping" FontSize="20" FontWeight="Bold" Foreground="#0F172A" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 <Button Name="btnCloseHeader" Content="Close" Width="70" Height="30" Style="{StaticResource MagkraftSecondaryButtonStyle}" FontSize="13" Click="btnCancel_Click" HorizontalAlignment="Right" VerticalAlignment="Center"/>
             </Grid>
 

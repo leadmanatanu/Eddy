@@ -3,10 +3,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using Newtonsoft.Json;
+using _8F.Auth;
 using _8F.Services;
+using _8F.ViewModels;
 
 namespace _8F
 {
@@ -15,46 +18,56 @@ namespace _8F
     /// </summary>
     public partial class ExportProfilePickerWindow : Window
     {
-        private readonly IConfigProfileRepository _repository = new InspectionLogRepository();
+        private readonly IConfigProfileRepository _repository;
 
-        public bool IsSelectionMode { get; set; } = false;
-        public int SelectedProfileId { get; private set; } = 0;
-        public string SelectedProfileName { get; private set; } = string.Empty;
+        public ProfilePickerViewModel ViewModel { get; }
+
+        public bool IsSelectionMode
+        {
+            get => ViewModel.IsSelectionMode;
+            set => ViewModel.IsSelectionMode = value;
+        }
+
+        public bool AllowDelete
+        {
+            get => ViewModel.AllowDelete;
+            set => ViewModel.AllowDelete = value;
+        }
+
+        public string HeaderTitle
+        {
+            get => ViewModel.HeaderTitle;
+            set => ViewModel.HeaderTitle = value;
+        }
+
+        public int SelectedProfileId => ViewModel.SelectedProfileId;
+        public string SelectedProfileName => ViewModel.SelectedProfileName;
+
+        public Func<int?>? GetCurrentOpenProfileId { get; set; }
+        public Action? OnOpenProfileDeleted { get; set; }
 
         public ExportProfilePickerWindow()
         {
+            _repository = new InspectionLogRepository();
+            ViewModel = new ProfilePickerViewModel(
+                _repository,
+                AppServices.ConfigChangeRepository,
+                getCurrentOpenProfileId: () => GetCurrentOpenProfileId?.Invoke(),
+                onOpenProfileDeleted: () => OnOpenProfileDeleted?.Invoke(),
+                confirmDelete: (msg, title) =>
+                    MessageBox.Show(this, msg, title, MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) == MessageBoxResult.Yes,
+                showMessage: (msg, title, icon) =>
+                    MessageBox.Show(this, msg, title, MessageBoxButton.OK, icon),
+                onPrimaryActionAsync: PerformExportAsync,
+                onCloseWindow: Close);
+
             InitializeComponent();
+            DataContext = ViewModel;
         }
 
         private async void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            if (IsSelectionMode)
-            {
-                btnExport.Content = "Select Profile";
-            }
-
-            try
-            {
-                lblStatus.Text = "Loading saved configuration profiles from database...";
-                var profiles = await _repository.ListConfigProfilesAsync();
-
-                if (profiles == null || profiles.Count == 0)
-                {
-                    lblStatus.Text = "No saved configuration profiles found in the database. Please save a configuration first.";
-                    btnExport.IsEnabled = false;
-                    return;
-                }
-
-                dgProfiles.ItemsSource = profiles;
-                dgProfiles.SelectedIndex = 0;
-                lblStatus.Text = $"Found {profiles.Count} saved profile(s). Select a profile and click {(IsSelectionMode ? "Select Profile" : "Export")}.";
-                btnExport.IsEnabled = true;
-            }
-            catch (Exception ex)
-            {
-                lblStatus.Text = $"Error connecting to database: {ex.Message}";
-                btnExport.IsEnabled = false;
-            }
+            await ViewModel.LoadProfilesAsync(selectFirstOnLoad: false);
         }
 
         private void Window_MouseDown(object sender, MouseButtonEventArgs e)
@@ -72,41 +85,16 @@ namespace _8F
             }
         }
 
-        private void btnCancel_Click(object sender, RoutedEventArgs e)
-        {
-            SelectedProfileId = 0;
-            Close();
-        }
-
         private void dgProfiles_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
-            if (dgProfiles.SelectedItem is ConfigProfileSummary)
+            if (dgProfiles.SelectedItem is ConfigProfileSummary && ViewModel.PrimaryCommand.CanExecute(null))
             {
-                PerformExport();
+                ViewModel.PrimaryCommand.Execute(null);
             }
         }
 
-        private void btnExport_Click(object sender, RoutedEventArgs e)
+        private async Task PerformExportAsync(ConfigProfileSummary selectedProfile)
         {
-            PerformExport();
-        }
-
-        private async void PerformExport()
-        {
-            if (dgProfiles.SelectedItem is not ConfigProfileSummary selectedProfile)
-            {
-                MessageBox.Show("Please select a profile from the list.", "Selection Required", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            if (IsSelectionMode)
-            {
-                SelectedProfileId = selectedProfile.Id;
-                SelectedProfileName = selectedProfile.Name;
-                Close();
-                return;
-            }
-
             try
             {
                 string safeProfileName = string.Concat(selectedProfile.Name.Split(Path.GetInvalidFileNameChars())).Replace(" ", "_");
@@ -121,19 +109,19 @@ namespace _8F
                     Filter = "CSV Documents (*.csv)|*.csv|JSON Documents (*.json)|*.json|All Files (*.*)|*.*"
                 };
 
-                bool? dialogResult = saveDlg.ShowDialog();
+                bool? dialogResult = saveDlg.ShowDialog(this);
                 if (dialogResult != true)
                 {
                     return;
                 }
 
                 string targetFilePath = saveDlg.FileName;
-                lblStatus.Text = $"Fetching profile '{selectedProfile.Name}' from database...";
+                ViewModel.StatusText = $"Fetching profile '{selectedProfile.Name}' from database...";
 
                 var channels = await _repository.GetConfigProfileAsync(selectedProfile.Id);
                 if (channels == null || channels.Count == 0)
                 {
-                    MessageBox.Show("The selected configuration profile contains no channel data.", "Empty Profile", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageBox.Show(this, "The selected configuration profile contains no channel data.", "Empty Profile", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
 
@@ -152,15 +140,15 @@ namespace _8F
                 File.WriteAllText(targetFilePath, fileContent, Encoding.UTF8);
 
                 string successMsg = $"Configuration profile '{selectedProfile.Name}' successfully exported to:\n{targetFilePath}";
-                lblStatus.Text = "Export completed successfully.";
-                MessageBox.Show(successMsg, "Export Successful", MessageBoxButton.OK, MessageBoxImage.Information);
+                ViewModel.StatusText = "Export completed successfully.";
+                MessageBox.Show(this, successMsg, "Export Successful", MessageBoxButton.OK, MessageBoxImage.Information);
 
                 Close();
             }
             catch (Exception ex)
             {
-                lblStatus.Text = $"Export error: {ex.Message}";
-                MessageBox.Show($"Failed to export configuration profile: {ex.Message}", "Export Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                ViewModel.StatusText = $"Export error: {ex.Message}";
+                MessageBox.Show(this, $"Failed to export configuration profile: {ex.Message}", "Export Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
