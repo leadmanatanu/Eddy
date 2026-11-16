@@ -286,3 +286,5 @@ D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\Views\ConfigChangeDetailsDialog.b
 D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\Views\LastChangeNoticeDialog.baml
 D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\Views\ConfigChangeDetailsDialog.g.cs
 D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\Views\LastChangeNoticeDialog.g.cs
+D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\Views\RemoteShutdownCountdownWindow.baml
+D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\Views\RemoteShutdownCountdownWindow.g.cs

@@ -221,7 +221,6 @@ namespace _8F.ViewModels
                 return;
             }
 
-            // Enforce role permission in the handler too, not just UI CanExecute
             if (!IsAdmin)
             {
                 _showMessage("Admin access is required to delete configuration profiles.", "Access Denied", MessageBoxImage.Warning);

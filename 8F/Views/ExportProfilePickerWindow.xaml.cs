@@ -14,9 +14,6 @@ using _8F.ViewModels;
 
 namespace _8F
 {
-    /// <summary>
-    /// Interaction logic for ExportProfilePickerWindow.xaml
-    /// </summary>
     public partial class ExportProfilePickerWindow : Window
     {
         private readonly IConfigProfileRepository _repository;
@@ -81,7 +78,6 @@ namespace _8F
                 }
                 catch (InvalidOperationException)
                 {
-                    // Ignore DragMove exceptions if mouse state changes mid-click
                 }
             }
         }

@@ -5,9 +5,6 @@ using _8F.ViewModels;
 
 namespace _8F
 {
-    /// <summary>
-    /// Interaction logic for AutoEllipse.xaml
-    /// </summary>
     public partial class AutoEllipse : Window
     {
         public AutoEllipseViewModel ViewModel { get; }

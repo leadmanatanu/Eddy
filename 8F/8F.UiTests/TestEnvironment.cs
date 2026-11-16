@@ -294,7 +294,8 @@ namespace _8F.UiTests
                     {
                         if (System.Windows.Application.Current == null)
                         {
-                            _ = new System.Windows.Application();
+                            var app = new System.Windows.Application();
+                            app.ShutdownMode = System.Windows.ShutdownMode.OnExplicitShutdown;
                         }
                         _dispatcher = System.Windows.Threading.Dispatcher.CurrentDispatcher;
                         readyEvent.Set();

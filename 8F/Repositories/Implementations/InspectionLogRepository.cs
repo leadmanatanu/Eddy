@@ -10,10 +10,7 @@ using Npgsql;
 
 namespace _8F.Services
 {
-    /// <summary>
-    /// Thread-safe database repository for managing Eddy Current inspection logs in PostgreSQL.
-    /// Includes connection pooling, parameterized queries, and an offline JSON fallback queue for resilience.
-    /// </summary>
+    
     public class InspectionLogRepository : IInspectionLogRepository, IAutoEllipseRepository, IConfigProfileRepository
     {
         private readonly string _connectionString;
@@ -33,9 +30,7 @@ namespace _8F.Services
 
         #region 1. Connection Setup & Health Check
 
-        /// <summary>
-        /// Gets an open NpgsqlConnection wrapped in asynchronous handling.
-        /// </summary>
+        
         public async Task<NpgsqlConnection> GetOpenConnectionAsync()
         {
             var conn = new NpgsqlConnection(_connectionString);
@@ -43,9 +38,7 @@ namespace _8F.Services
             return conn;
         }
 
-        /// <summary>
-        /// Verifies PostgreSQL database connectivity.
-        /// </summary>
+        
         public async Task<(bool IsConnected, string Message)> TestConnectionAsync()
         {
             try
@@ -68,9 +61,7 @@ namespace _8F.Services
 
         #region 2. Create / Insert Operations
 
-        /// <summary>
-        /// Inserts an inspection record into PostgreSQL. Automatically falls back to offline queue if DB is unreachable.
-        /// </summary>
+       
         public async Task<bool> InsertLogAsync(InspectionLog log)
         {
             const string sql = @"
@@ -112,7 +103,6 @@ namespace _8F.Services
             }
             catch (Exception ex)
             {
-                // Fallback: Queue record locally to prevent inspection data loss
                 EnqueueOfflineLog(log, ex.Message);
                 return false;
             }
@@ -153,9 +143,6 @@ namespace _8F.Services
             return list;
         }
 
-        /// <summary>
-        /// Queries inspection records by Component Serial Number.
-        /// </summary>
         public async Task<List<InspectionLog>> GetLogsBySerialNumberAsync(string serialNumber)
         {
             const string sql = @"
@@ -187,10 +174,6 @@ namespace _8F.Services
 
             return list;
         }
-
-        /// <summary>
-        /// Queries inspection records within a specified date range.
-        /// </summary>
         public async Task<List<InspectionLog>> GetLogsByDateRangeAsync(DateTime startDate, DateTime endDate)
         {
             const string sql = @"
@@ -227,10 +210,6 @@ namespace _8F.Services
         #endregion
 
         #region 4. Delete / Maintenance Operations
-
-        /// <summary>
-        /// Purges logs older than a specified number of days to maintain database size.
-        /// </summary>
         public async Task<int> DeleteLogsOlderThanDaysAsync(int daysToKeep)
         {
             const string sql = @"
@@ -283,9 +262,6 @@ namespace _8F.Services
             }
         }
 
-        /// <summary>
-        /// Processes and syncs locally queued logs once PostgreSQL connectivity is restored.
-        /// </summary>
         public async Task<int> ProcessOfflineQueueAsync()
         {
             if (!File.Exists(_offlineQueuePath)) return 0;
@@ -333,10 +309,6 @@ namespace _8F.Services
         #endregion
 
         #region 6. Auto Ellipse Operations
-
-        /// <summary>
-        /// Inserts a raw multi-frequency Auto Ellipse test run into PostgreSQL.
-        /// </summary>
         public async Task<bool> InsertAutoEllipseTestAsync(AutoEllipseTest test)
         {
             const string sql = @"
@@ -373,10 +345,6 @@ namespace _8F.Services
                 return false;
             }
         }
-
-        /// <summary>
-        /// Hard-deletes a raw Auto Ellipse test run permanently from PostgreSQL.
-        /// </summary>
         public async Task<bool> DeleteAutoEllipseTestAsync(long testId)
         {
             const string sql = @"
@@ -398,10 +366,6 @@ namespace _8F.Services
                 return false;
             }
         }
-
-        /// <summary>
-        /// Fetches all active (non-deleted) raw Auto Ellipse test runs for a given channel from PostgreSQL.
-        /// </summary>
         public async Task<List<AutoEllipseTest>> GetAutoEllipseTestsByChannelAsync(int channelId)
         {
             List<AutoEllipseTest> list = new();
@@ -438,10 +402,6 @@ namespace _8F.Services
             }
             return list;
         }
-
-        /// <summary>
-        /// Inserts a computed Auto Ellipse result record into PostgreSQL for audit logging.
-        /// </summary>
         public async Task<bool> InsertAutoEllipseResultAsync(AutoEllipseResultRecord result)
         {
             const string sql = @"
@@ -488,10 +448,6 @@ namespace _8F.Services
                 return false;
             }
         }
-
-        /// <summary>
-        /// Updates AutoEllipseTests rows for a channel setting Applied = true and AppliedTimeStamp = now.
-        /// </summary>
         public async Task<bool> UpdateAutoEllipseTestsAppliedAsync(int channelId)
         {
             const string sql = @"
@@ -546,9 +502,6 @@ namespace _8F.Services
 
         #region 6. Channel Configuration Persistence
 
-        /// <summary>
-        /// Ensures that the 4 channel configuration persistence tables exist in PostgreSQL.
-        /// </summary>
         public async Task EnsureConfigTablesCreatedAsync()
         {
             const string sql = @"
@@ -615,11 +568,6 @@ namespace _8F.Services
                 System.Diagnostics.Debug.WriteLine($"Error ensuring config tables created: {ex.Message}");
             }
         }
-
-        /// <summary>
-        /// <summary>
-        /// Saves a full ChannelData configuration profile transactionally across 4 tables with optional system settings.
-        /// </summary>
         public async Task<int> SaveConfigProfileAsync(string name, string? operatorName, List<ChannelData> channelDatas, SystemSettings? systemSettings = null)
         {
             await EnsureConfigTablesCreatedAsync();
@@ -632,7 +580,6 @@ namespace _8F.Services
                 string resolvedName = string.IsNullOrWhiteSpace(name) ? "Untitled Config" : name.Trim();
                 string? settingsJson = systemSettings != null ? JsonSerializer.Serialize(systemSettings) : null;
 
-                // 1. Insert ConfigProfile
                 const string sqlProfile = @"
                     INSERT INTO public.""ConfigProfiles"" (""Name"", ""OperatorName"", ""CreatedAt"", ""UpdatedAt"", ""SystemSettingsJson"")
                     VALUES (@Name, @OperatorName, @CreatedAt, @UpdatedAt, @SystemSettingsJson)
@@ -647,7 +594,6 @@ namespace _8F.Services
 
                 int profileId = Convert.ToInt32(await cmdProfile.ExecuteScalarAsync());
 
-                // 2. Insert child rows across ConfigChannels, ConfigFrequencies, ConfigEllipses
                 await InsertProfileChildrenAsync(conn, tx, profileId, channelDatas);
 
                 await tx.CommitAsync();
@@ -663,11 +609,6 @@ namespace _8F.Services
 
         public Task<int> SaveConfigProfileAsync(string name, string? operatorName, List<ChannelData> channelDatas) =>
             SaveConfigProfileAsync(name, operatorName, channelDatas, null);
-
-        /// <summary>
-        /// Updates an existing configuration profile and replaces its child rows inside a single transaction.
-        /// Preserves CreatedAt and OperatorName; returns false if the profile ID does not exist.
-        /// </summary>
         public async Task<bool> UpdateConfigProfileAsync(int profileId, string name, List<ChannelData> channelDatas, SystemSettings? systemSettings = null)
         {
             await EnsureConfigTablesCreatedAsync();
@@ -716,10 +657,6 @@ namespace _8F.Services
         public Task<bool> UpdateConfigProfileAsync(int profileId, string name, List<ChannelData> channelDatas) =>
             UpdateConfigProfileAsync(profileId, name, channelDatas, null);
 
-        /// <summary>
-        /// Deletes a configuration profile and all child rows inside a single transaction.
-        /// Returns false if the profile no longer exists.
-        /// </summary>
         public async Task<bool> DeleteProfileAsync(int profileId)
         {
             await EnsureConfigTablesCreatedAsync();
@@ -749,7 +686,6 @@ namespace _8F.Services
 
         private static async Task DeleteProfileChildrenAsync(NpgsqlConnection conn, NpgsqlTransaction tx, int profileId)
         {
-            // Explicit bottom-up deletion guarantees clean child removal regardless of ON DELETE CASCADE state
             const string sqlDeleteEllipses = @"
                 DELETE FROM public.""ConfigEllipses""
                 WHERE ""ConfigFrequencyId"" IN (
@@ -867,10 +803,6 @@ namespace _8F.Services
                 }
             }
         }
-
-        /// <summary>
-        /// Retrieves a saved ChannelData configuration profile and system settings from PostgreSQL by profile ID.
-        /// </summary>
         public async Task<(List<ChannelData> Channels, SystemSettings? Settings)> GetFullConfigProfileAsync(int profileId)
         {
             List<ChannelData> channels = new();
@@ -1001,19 +933,11 @@ namespace _8F.Services
 
             return (channels, settings);
         }
-
-        /// <summary>
-        /// Retrieves a saved ChannelData configuration profile from PostgreSQL by profile ID.
-        /// </summary>
         public async Task<List<ChannelData>> GetConfigProfileAsync(int profileId)
         {
             var (channels, _) = await GetFullConfigProfileAsync(profileId);
             return channels;
         }
-
-        /// <summary>
-        /// Retrieves the name of a saved configuration profile by its ID.
-        /// </summary>
         public async Task<string?> GetProfileNameAsync(int profileId)
         {
             await using var conn = await GetOpenConnectionAsync();
@@ -1024,9 +948,6 @@ namespace _8F.Services
             return result != null && result != DBNull.Value ? result.ToString() : null;
         }
 
-        /// <summary>
-        /// Looks up a saved configuration profile by trimmed case-insensitive name.
-        /// </summary>
         public async Task<ConfigProfileSummary?> GetConfigProfileByNameAsync(string name)
         {
             if (string.IsNullOrWhiteSpace(name)) return null;
@@ -1059,10 +980,6 @@ namespace _8F.Services
 
             return null;
         }
-
-        /// <summary>
-        /// Lists available configuration profiles for selection UI or audit.
-        /// </summary>
         public async Task<List<ConfigProfileSummary>> ListConfigProfilesAsync()
         {
             await EnsureConfigTablesCreatedAsync();

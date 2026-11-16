@@ -54,7 +54,8 @@ namespace _8F.ViewModels
         };
 
         private readonly ICommand _command;
-        private bool _isFileOpBusy;
+        private static bool _isFileOpBusy;
+        public static bool IsFileOpInProgress => _isFileOpBusy;
 
         public MenuItemViewModel()
         {

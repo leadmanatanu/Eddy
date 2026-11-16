@@ -7,15 +7,11 @@ using System.Windows.Input;
 
 namespace _8F
 {
-    /// <summary>
-    /// Interaction logic for ChannelRemappingWindow.xaml
-    /// </summary>
     public partial class ChannelRemappingWindow : Window
     {
         public bool IsConfirmed { get; private set; } = false;
         public bool IsImportAsIs { get; private set; } = false;
 
-        // Key = Source Channel ID, Value = List of Target Channel IDs (1..4)
         public Dictionary<int, List<int>> TargetMappings { get; private set; } = new();
 
         private readonly List<ChannelData> _incomingChannels;
@@ -173,7 +169,6 @@ namespace _8F
                 }
                 catch (InvalidOperationException)
                 {
-                    // Ignore DragMove exceptions if mouse state changes mid-click
                 }
             }
         }

@@ -20,7 +20,7 @@ namespace _8F.Services
 
     public static class EllipseFitter
     {
-        public const double MIN_DIMENSION = 100.0; // Minimum width/height floor for 8F ECT instrument
+        public const double MIN_DIMENSION = 100.0; 
 
         public static AutoEllipseResult FitEllipse(string frequencyName, int frequencyId, IEnumerable<(double X, double Y)> points, double a_stretch = 1.0, double b_stretch = 1.0)
         {
@@ -283,10 +283,6 @@ namespace _8F.Services
             };
         }
 
-        /// <summary>
-        /// Checks whether 2D point (x, y) is inside rotated ellipse centered at (Xc, Yc) with semi-axes (a, b) and rotation thetaRad (radians).
-        /// Uses unified EllipseMath.
-        /// </summary>
         public static bool IsInsideEllipse(double x, double y, double a, double b, double Xc, double Yc, double thetaRad)
         {
             double angleDeg = -(thetaRad * (180.0 / Math.PI));

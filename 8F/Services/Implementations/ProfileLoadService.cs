@@ -47,7 +47,6 @@ namespace _8F.Services.Implementations
         {
             if (availableChannels == null || availableChannels.Count == 0) return null;
 
-            // Rule 1: If the profile contains exactly one saved channel, use it.
             if (availableChannels.Count == 1)
             {
                 return availableChannels[0];

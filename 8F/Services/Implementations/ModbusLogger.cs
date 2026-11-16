@@ -11,6 +11,21 @@ namespace _8F.Services.Implementations
         private static readonly string _logFilePath = Path.Combine(_logDirectory, "modbus.log");
         private const long MaxLogFileSizeBytes = 5 * 1024 * 1024; // 5 MB roll-over limit
 
+        public static string LogFilePath => _logFilePath;
+
+        public static void Flush()
+        {
+            lock (_lock)
+            {
+                try
+                {
+                    Trace.Flush();
+                    Debug.Flush();
+                }
+                catch { }
+            }
+        }
+
         static ModbusLogger()
         {
             try
@@ -41,6 +56,10 @@ namespace _8F.Services.Implementations
             {
                 try
                 {
+                    if (!Directory.Exists(_logDirectory))
+                    {
+                        Directory.CreateDirectory(_logDirectory);
+                    }
                     FileInfo fi = new FileInfo(_logFilePath);
                     if (fi.Exists && fi.Length > MaxLogFileSizeBytes)
                     {

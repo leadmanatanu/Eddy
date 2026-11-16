@@ -55,7 +55,6 @@ namespace _8F.Views
 
         private void TargetRole_Changed(object sender, RoutedEventArgs e)
         {
-            // Fires during InitializeComponent before all controls exist
             if (!IsInitialized || pnlCurrentPassword == null ||
                 txtCurrentPassword == null || txtNewPassword == null ||
                 rbOperatorPassword == null)
@@ -95,7 +94,6 @@ namespace _8F.Views
             {
                 if (_currentRole == Role.Admin && rbOperatorPassword.IsChecked == true)
                 {
-                    // Admin resetting Operator password
                     var (success, errorMsg) = await _authService.ResetOperatorPasswordAsync(newPw);
                     if (success)
                     {
@@ -109,7 +107,6 @@ namespace _8F.Views
                 }
                 else
                 {
-                    // Changing own password (Admin or Operator)
                     string currentPw = txtCurrentPassword.Password;
                     if (string.IsNullOrEmpty(currentPw))
                     {

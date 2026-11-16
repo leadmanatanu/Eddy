@@ -30,7 +30,6 @@ namespace _8F.Services
             _serialPort.StopBits = StopBits.One;
             _serialPort.Handshake = Handshake.None;
 
-            // Subscribe to the DataReceived event
             _serialPort.DataReceived += OnDataReceived;
         }
 
@@ -56,7 +55,6 @@ namespace _8F.Services
         {
             try
             {
-                // Read all available data
                 string data = _serialPort.ReadExisting();
                 Console.WriteLine("Received: " + data);
             }

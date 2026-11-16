@@ -135,6 +135,7 @@ namespace _8F
         public bool isExportConfigWithFile = GetConfigBool("IsExportConfigurationWithFile", false);
 
         bool isExitEnable = GetConfigBool("IsExitEnable", true);
+        public bool isRemoteShutdownEnable = GetConfigBool("IsRemoteShutdownEnable", false);
 
         public bool isModbusServerEnable = GetConfigBool("IsModbusServerEnable", false);
         public int modbusServerPort = GetConfigInt("ModbusServerPort", 5020);
@@ -286,6 +287,7 @@ namespace _8F
             }
 
             portCOM = new DeviceCOM();
+            _8F.Services.Implementations.RemoteShutdownService.MainWindowInstance = this;
 
             if (isModbusServerEnable)
             {
@@ -2478,6 +2480,11 @@ namespace _8F
         }
 
         private void Window_Closed(object sender, EventArgs e)
+        {
+            CloseHardwareConnections();
+        }
+
+        public void CloseHardwareConnections()
         {
             if (isModbusServerEnable && modbusSlaveService != null)
             {

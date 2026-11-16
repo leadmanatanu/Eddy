@@ -283,7 +283,7 @@ namespace _8F.Services
            deviceCOM.ProcessPortDataBytpe(testData);
         }
 
-        private void ProcessPortDataBytpe(short[] indata)
+        public void ProcessPortDataBytpe(short[] indata)
         {
             try
             {
@@ -294,6 +294,38 @@ namespace _8F.Services
                     if (indata[1] == 19)
                     {
                         IsResponseClearRequired = true;
+                    }
+                    else if (indata[1] == 25)
+                    {
+                        // FC 25: Remote Shutdown
+                        // Strictly validate frame:
+                        // Byte 0: STX (0x02)
+                        // Byte 1: FC (25 / 0x19)
+                        // Byte 2: Length (0x00)
+                        // Bytes 3-4: CRC-16 (Low, High)
+                        if (indata.Length == 5 && indata[0] == 2 && indata[2] == 0)
+                        {
+                            byte[] raw = indata.Select(b => (byte)b).ToArray();
+                            ushort computedCrc = ComputeCRC(raw, 3);
+                            byte crcLow = (byte)(computedCrc & 0xFF);
+                            byte crcHigh = (byte)(computedCrc >> 8);
+                            if (raw[3] == crcLow && raw[4] == crcHigh)
+                            {
+                                var task = Task.Run(() => _8F.Services.Implementations.RemoteShutdownService.HandleRemoteShutdownAsync());
+                                if (_8F.Services.Implementations.RemoteShutdownService.CurrentShutdownTask == null || _8F.Services.Implementations.RemoteShutdownService.CurrentShutdownTask.IsCompleted)
+                                {
+                                    _8F.Services.Implementations.RemoteShutdownService.CurrentShutdownTask = task;
+                                }
+                            }
+                            else
+                            {
+                                _8F.Services.Implementations.ModbusLogger.Warn($"[Remote Shutdown] Invalid CRC for FC 25: received {raw[3]:X2}{raw[4]:X2}, expected {crcLow:X2}{crcHigh:X2}. Ignored.");
+                            }
+                        }
+                        else
+                        {
+                            _8F.Services.Implementations.ModbusLogger.Warn($"[Remote Shutdown] Invalid frame format for FC 25 (length={indata.Length}). Ignored.");
+                        }
                     }
                     else if (indata[1] == 20)
                     {
@@ -415,7 +447,7 @@ namespace _8F.Services
             }
         }
 
-        private void ProcessPortData(string indata)
+        public void ProcessPortData(string indata)
         {
             try
             {
@@ -426,6 +458,14 @@ namespace _8F.Services
                     if (res != null && res.FC == 19)
                     {
                         IsResponseClearRequired = true;
+                    }
+                    else if (res != null && res.FC == 25)
+                    {
+                        var task = Task.Run(() => _8F.Services.Implementations.RemoteShutdownService.HandleRemoteShutdownAsync());
+                        if (_8F.Services.Implementations.RemoteShutdownService.CurrentShutdownTask == null || _8F.Services.Implementations.RemoteShutdownService.CurrentShutdownTask.IsCompleted)
+                        {
+                            _8F.Services.Implementations.RemoteShutdownService.CurrentShutdownTask = task;
+                        }
                     }
                     else if (res != null && res.FC == 20)
                     {
@@ -625,6 +665,11 @@ namespace _8F.Services
             }
 
             //Code = string.Empty;
+        }
+
+        public static void WriteLogCSVDirect(bool Result, DateTime TimeStamp, Response res)
+        {
+            WriteLogCSV(Result, TimeStamp, res);
         }
 
         private static void WriteLogCSV(bool Result, DateTime TimeStamp, Response res)
