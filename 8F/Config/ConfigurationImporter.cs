@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using Newtonsoft.Json;
 using _8F.Models;
+using _8F.Services.Implementations;
 
 namespace _8F.Services
 {
@@ -60,26 +61,47 @@ namespace _8F.Services
             return clone;
         }
 
-        public static (List<ChannelData>? Channels, SystemSettings? Settings, string? ProfileName) ImportProfileFromJson(string jsonContent)
+        public static string? LastError { get; set; }
+
+        public static ConfigurationImportResult ImportProfileFromJson(string jsonContent)
         {
-            if (string.IsNullOrWhiteSpace(jsonContent)) return (null, null, null);
+            LastError = null;
+            if (string.IsNullOrWhiteSpace(jsonContent))
+            {
+                LastError = "File content is empty or contains only whitespace.";
+                return new ConfigurationImportResult(null, null, null, LastError);
+            }
+
+            string? lastExMessage = null;
+            var trimmed = jsonContent.Trim();
 
             try
             {
-                var trimmed = jsonContent.Trim();
                 if (trimmed.StartsWith("{"))
                 {
                     var container = JsonConvert.DeserializeObject<ProfileConfigFile>(jsonContent);
                     if (container?.Channels != null && container.Channels.Count > 0)
                     {
-                        return (container.Channels, container.SystemConfig, container.ProfileName);
+                        return new ConfigurationImportResult(container.Channels, container.SystemConfig, container.ProfileName, null);
                     }
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                lastExMessage = ex.Message;
+                ModbusLogger.Error($"[ConfigurationImporter] Failed to parse ProfileConfigFile JSON: {ex.Message}", ex);
+            }
 
-            var channels = ImportFromJson(jsonContent);
-            return (channels, null, null);
+            var (channels, jsonErr) = ImportFromJsonInternal(jsonContent);
+            if (channels != null && channels.Count > 0)
+            {
+                return new ConfigurationImportResult(channels, null, null, null);
+            }
+
+            LastError = (trimmed.StartsWith("{") && !string.IsNullOrWhiteSpace(lastExMessage))
+                ? lastExMessage
+                : (jsonErr ?? lastExMessage ?? "No valid channel configuration found in file.");
+            return new ConfigurationImportResult(null, null, null, LastError);
         }
 
         public static List<ChannelData> ApplyRemapping(List<ChannelData> incomingChannels, Dictionary<int, List<int>> mappings, bool isImportAsIs)
@@ -177,7 +199,15 @@ namespace _8F.Services
 
         public static List<ChannelData>? ImportFromJson(string jsonContent)
         {
-            if (string.IsNullOrWhiteSpace(jsonContent)) return null;
+            var (channels, _) = ImportFromJsonInternal(jsonContent);
+            return channels;
+        }
+
+        private static (List<ChannelData>? Channels, string? LastError) ImportFromJsonInternal(string jsonContent)
+        {
+            if (string.IsNullOrWhiteSpace(jsonContent)) return (null, "JSON content is empty.");
+
+            string? lastEx = null;
 
             try
             {
@@ -185,10 +215,14 @@ namespace _8F.Services
                 var standard = JsonConvert.DeserializeObject<List<ChannelData>>(jsonContent);
                 if (standard != null && standard.Count > 0 && standard.Any(c => c.graphDatas != null && c.graphDatas.Count > 0))
                 {
-                    return standard;
+                    return (standard, null);
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                lastEx = ex.Message;
+                ModbusLogger.Error($"[ConfigurationImporter] Failed to parse standard ChannelData JSON: {ex.Message}", ex);
+            }
 
             try
             {
@@ -256,12 +290,16 @@ namespace _8F.Services
 
                         result.Add(ch);
                     }
-                    return result;
+                    return (result, null);
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                lastEx = ex.Message;
+                ModbusLogger.Error($"[ConfigurationImporter] Failed to parse formatted JSON channel: {ex.Message}", ex);
+            }
 
-            return null;
+            return (null, lastEx);
         }
 
         private class FormattedJsonChannel
@@ -323,5 +361,44 @@ namespace _8F.Services
             }
             return sb.ToString().Trim();
         }
+    }
+
+    public class ConfigurationImportResult
+    {
+        public List<ChannelData>? Channels { get; set; }
+        public SystemSettings? Settings { get; set; }
+        public string? ProfileName { get; set; }
+        public string? LastError { get; set; }
+
+        public ConfigurationImportResult() { }
+
+        public ConfigurationImportResult(List<ChannelData>? channels, SystemSettings? settings, string? profileName, string? lastError = null)
+        {
+            Channels = channels;
+            Settings = settings;
+            ProfileName = profileName;
+            LastError = lastError;
+        }
+
+        public void Deconstruct(out List<ChannelData>? channels, out SystemSettings? settings, out string? profileName)
+        {
+            channels = Channels;
+            settings = Settings;
+            profileName = ProfileName;
+        }
+
+        public void Deconstruct(out List<ChannelData>? channels, out SystemSettings? settings, out string? profileName, out string? lastError)
+        {
+            channels = Channels;
+            settings = Settings;
+            profileName = ProfileName;
+            lastError = LastError;
+        }
+
+        public static implicit operator (List<ChannelData>? Channels, SystemSettings? Settings, string? ProfileName)(ConfigurationImportResult res) =>
+            (res.Channels, res.Settings, res.ProfileName);
+
+        public static implicit operator (List<ChannelData>? Channels, SystemSettings? Settings, string? ProfileName, string? LastError)(ConfigurationImportResult res) =>
+            (res.Channels, res.Settings, res.ProfileName, res.LastError);
     }
 }

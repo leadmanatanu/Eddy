@@ -254,7 +254,6 @@ namespace _8F.UiTests
             content = SetConfigKey(content, "IsSaveAsWithFile", isSaveAsWithFile.ToString().ToLower());
             content = SetConfigKey(content, "IsOpenWithDb", isOpenWithDb.ToString().ToLower());
             content = SetConfigKey(content, "IsOpenWithFile", isOpenWithFile.ToString().ToLower());
-            content = SetConfigKey(content, "IsImportConfigurationWithDb", isImportWithDb.ToString().ToLower());
             content = SetConfigKey(content, "IsImportConfigurationWithFile", isImportWithFile.ToString().ToLower());
             content = SetConfigKey(content, "Channel", channelCount.ToString());
             content = SetConfigKey(content, "IsModbusServerEnable", "false"); // keep port clean during tests

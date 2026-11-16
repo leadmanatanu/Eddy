@@ -235,10 +235,8 @@ D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\8F.csproj.CoreCompileInputs.cache
 D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\8F.sourcelink.json
 D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\8F.csproj.Up2Date
 D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\8F.dll
-D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\refint\8F.dll
 D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\8F.pdb
 D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\8F.genruntimeconfig.cache
-D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\ref\8F.dll
 D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\Views\AutoEllipse.baml
 D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\Views\ChannelRemappingWindow.baml
 D:\New folder\Eddy\8F\obj\Debug\net8.0-windows\Views\ExportProfilePickerWindow.baml

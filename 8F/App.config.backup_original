@@ -67,7 +67,6 @@
 		<add key="IsSaveAsWithDb" value="true" />                    
 		<add key="IsSaveAsWithFile" value="false" />                 
 	
-		<add key="IsImportConfigurationWithDb" value="true" />      
 		<add key="IsImportConfigurationWithFile" value="false" />     
 
 		<add key="IsExportConfigurationWithDb" value="false" />       

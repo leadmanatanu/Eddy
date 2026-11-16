@@ -594,3 +594,7 @@
 [2026-11-14 17:27:25] [CS-02] PASS: Both channels and system configuration restored from file with distinct values.
 [2026-11-14 17:27:25] [CS-04] PASS: Editing one channel leaves the untouched channel bit-for-bit unchanged through update & reopen.
 [2026-11-14 17:27:25] [CS-01] PASS: Both channels and system configuration restored from DB with distinct values.
+[2026-11-16 10:41:34] [CS-07] PASS: Legacy DB profile (NULL SystemSettingsJson) and legacy file format (raw JSON array) load without errors.
+[2026-11-16 10:42:10] [DECIMAL-COMMA-TEST] PASS: de-DE culture produced 1 rows with exactly 20 columns and '.' decimal points.
+[2026-11-16 10:43:32] [DECIMAL-COMMA-TEST] PASS: de-DE culture produced 1 rows with exactly 20 columns and '.' decimal points.
+[2026-11-16 10:43:32] [CORRUPT-JSON-TEST] PASS: LastError contains: 'Invalid character after parsing property name. Expected ':' but got: }. Path 'Channels[0].Id', line 1, position 35.'

@@ -182,6 +182,7 @@ namespace _8F
         {
             IsConfirmed = true;
             IsImportAsIs = true;
+            DialogResult = true;
             Close();
         }
 
@@ -202,14 +203,22 @@ namespace _8F
                 TargetMappings[srcId] = targetList;
             }
 
+            if (!TargetMappings.Values.Any(list => list.Count > 0))
+            {
+                MessageBox.Show("Please select at least one target channel.", "Channel Remapping", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
             IsConfirmed = true;
             IsImportAsIs = false;
+            DialogResult = true;
             Close();
         }
 
         private void btnCancel_Click(object sender, RoutedEventArgs e)
         {
             IsConfirmed = false;
+            DialogResult = false;
             Close();
         }
     }

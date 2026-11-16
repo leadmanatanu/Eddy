@@ -240,19 +240,22 @@ namespace _8F.Services.Implementations
                         };
                         if (dlg.ShowDialog() == true && dlg.IsConfirmed)
                         {
-                            confirmed = true;
-                            if (dlg.IsImportAsIs)
+                            if (dlg.IsImportAsIs || dlg.TargetMappings.Values.Any(v => v.Count > 0))
                             {
-                                sourceChannel = SelectSourceChannel(channels, targetChannel);
-                            }
-                            else
-                            {
-                                var mappedSrc = dlg.TargetMappings.FirstOrDefault(kvp => kvp.Value.Contains(targetChannel));
-                                if (mappedSrc.Value != null)
+                                confirmed = true;
+                                if (dlg.IsImportAsIs)
                                 {
-                                    sourceChannel = channels.FirstOrDefault(c => c.Id == mappedSrc.Key);
+                                    sourceChannel = SelectSourceChannel(channels, targetChannel);
                                 }
-                                sourceChannel ??= SelectSourceChannel(channels, targetChannel);
+                                else
+                                {
+                                    var mappedSrc = dlg.TargetMappings.FirstOrDefault(kvp => kvp.Value.Contains(targetChannel));
+                                    if (mappedSrc.Value != null)
+                                    {
+                                        sourceChannel = channels.FirstOrDefault(c => c.Id == mappedSrc.Key);
+                                    }
+                                    sourceChannel ??= SelectSourceChannel(channels, targetChannel);
+                                }
                             }
                         }
                     });
@@ -358,14 +361,25 @@ namespace _8F.Services.Implementations
                 }
 
                 // Update CurrentProfileState with target channel
-                int? pIdInt = profileId.HasValue && profileId.Value > 0 ? (int)profileId.Value : null;
-                mainWin.CurrentProfile.SetForChannel(targetChannel, pIdInt, profileName, filePath, sourceChannel.Id);
-
-                // Update _loadedChannels tracking
-                if (targetIdx >= 0 && targetIdx < mainWin._loadedChannels.Length)
+                if (source == ProfileLoadSource.MenuImport)
                 {
-                    mainWin._loadedChannels[targetIdx].ProfileId = profileId ?? 0;
-                    mainWin._loadedChannels[targetIdx].ProfileName = profileName;
+                    mainWin.CurrentProfile.SetForChannel(targetChannel, null, null, null, sourceChannel.Id);
+                    if (targetIdx >= 0 && targetIdx < mainWin._loadedChannels.Length)
+                    {
+                        mainWin._loadedChannels[targetIdx].ProfileId = 0;
+                        mainWin._loadedChannels[targetIdx].ProfileName = string.Empty;
+                    }
+                }
+                else
+                {
+                    int? pIdInt = profileId.HasValue && profileId.Value > 0 ? (int)profileId.Value : null;
+                    mainWin.CurrentProfile.SetForChannel(targetChannel, pIdInt, profileName, filePath, sourceChannel.Id);
+
+                    if (targetIdx >= 0 && targetIdx < mainWin._loadedChannels.Length)
+                    {
+                        mainWin._loadedChannels[targetIdx].ProfileId = profileId ?? 0;
+                        mainWin._loadedChannels[targetIdx].ProfileName = profileName;
+                    }
                 }
 
                 // Update display / header

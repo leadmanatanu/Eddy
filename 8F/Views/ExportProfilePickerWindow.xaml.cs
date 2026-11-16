@@ -8,6 +8,7 @@ using System.Windows;
 using System.Windows.Input;
 using Newtonsoft.Json;
 using _8F.Auth;
+using _8F.Models;
 using _8F.Services;
 using _8F.ViewModels;
 
@@ -99,14 +100,14 @@ namespace _8F
             {
                 string safeProfileName = string.Concat(selectedProfile.Name.Split(Path.GetInvalidFileNameChars())).Replace(" ", "_");
                 string timestampStr = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-                string defaultFileName = $"{safeProfileName}_{timestampStr}.csv";
+                string defaultFileName = $"{safeProfileName}_{timestampStr}.json";
 
                 Microsoft.Win32.SaveFileDialog saveDlg = new Microsoft.Win32.SaveFileDialog
                 {
                     Title = "Export Configuration File",
                     FileName = defaultFileName,
-                    DefaultExt = ".csv",
-                    Filter = "CSV Documents (*.csv)|*.csv|JSON Documents (*.json)|*.json|All Files (*.*)|*.*"
+                    DefaultExt = ".json",
+                    Filter = "JSON Documents (*.json)|*.json|CSV Documents (*.csv)|*.csv|All Files (*.*)|*.*"
                 };
 
                 bool? dialogResult = saveDlg.ShowDialog(this);
@@ -118,7 +119,7 @@ namespace _8F
                 string targetFilePath = saveDlg.FileName;
                 ViewModel.StatusText = $"Fetching profile '{selectedProfile.Name}' from database...";
 
-                var channels = await _repository.GetConfigProfileAsync(selectedProfile.Id);
+                var (channels, systemSettings) = await _repository.GetFullConfigProfileAsync(selectedProfile.Id);
                 if (channels == null || channels.Count == 0)
                 {
                     MessageBox.Show(this, "The selected configuration profile contains no channel data.", "Empty Profile", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -130,7 +131,7 @@ namespace _8F
 
                 if (fileExt == ".json")
                 {
-                    fileContent = ExportToJson(channels);
+                    fileContent = ExportToJson(channels, systemSettings, selectedProfile.Name);
                 }
                 else
                 {
@@ -166,12 +167,12 @@ namespace _8F
                     {
                         foreach (var ell in graph.ellipses)
                         {
-                            sb.AppendLine($"{ch.Id},{ch.TxStrength},{graph.Id},\"{graph.Name}\",{graph.freq},{graph.gain},{graph.phase},{graph.isEnable},{graph.strength},{graph.postGain},{ell.ex},{ell.ey},{ell.width},{ell.height},{ell.angel},{graph.ex_O},{graph.ey_O},{graph.width_O},{graph.height_O},{graph.angel_O}");
+                            sb.AppendLine(FormattableString.Invariant($"{ch.Id},{ch.TxStrength},{graph.Id},\"{graph.Name}\",{graph.freq},{graph.gain},{graph.phase},{graph.isEnable},{graph.strength},{graph.postGain},{ell.ex},{ell.ey},{ell.width},{ell.height},{ell.angel},{graph.ex_O},{graph.ey_O},{graph.width_O},{graph.height_O},{graph.angel_O}"));
                         }
                     }
                     else
                     {
-                        sb.AppendLine($"{ch.Id},{ch.TxStrength},{graph.Id},\"{graph.Name}\",{graph.freq},{graph.gain},{graph.phase},{graph.isEnable},{graph.strength},{graph.postGain},{graph.ex},{graph.ey},{graph.width},{graph.height},{graph.angel},{graph.ex_O},{graph.ey_O},{graph.width_O},{graph.height_O},{graph.angel_O}");
+                        sb.AppendLine(FormattableString.Invariant($"{ch.Id},{ch.TxStrength},{graph.Id},\"{graph.Name}\",{graph.freq},{graph.gain},{graph.phase},{graph.isEnable},{graph.strength},{graph.postGain},{graph.ex},{graph.ey},{graph.width},{graph.height},{graph.angel},{graph.ex_O},{graph.ey_O},{graph.width_O},{graph.height_O},{graph.angel_O}"));
                     }
                 }
             }
@@ -179,46 +180,17 @@ namespace _8F
             return sb.ToString();
         }
 
-        private static string ExportToJson(List<ChannelData> channels)
+        private static string ExportToJson(List<ChannelData> channels, SystemSettings? systemSettings, string profileName)
         {
-            var formattedList = channels.Select(ch => new
+            var container = new ProfileConfigFile
             {
-                ChannelNumber = ch.Id,
-                IsSelected = ch.IsSeleted,
-                TxStrength = ch.TxStrength,
-                Frequencies = ch.graphDatas?.Select(g => new
-                {
-                    FrequencyNumber = g.Id,
-                    FrequencyName = g.Name,
-                    FrequencyHz = g.freq,
-                    Gain = g.gain,
-                    Phase = g.phase,
-                    IsEnabled = g.isEnable,
-                    Strength = g.strength,
-                    PostGain = g.postGain,
-                    DefaultCenterX = g.ex,
-                    DefaultCenterY = g.ey,
-                    DefaultWidth = g.width,
-                    DefaultHeight = g.height,
-                    DefaultRotationAngle = g.angel,
-                    OverlayCenterX = g.ex_O,
-                    OverlayCenterY = g.ey_O,
-                    OverlayWidth = g.width_O,
-                    OverlayHeight = g.height_O,
-                    OverlayRotationAngle = g.angel_O,
-                    Ellipses = g.ellipses?.Select(e => new
-                    {
-                        EllipseIndex = e.Id,
-                        CenterX = e.ex,
-                        CenterY = e.ey,
-                        Width = e.width,
-                        Height = e.height,
-                        RotationAngle = e.angel
-                    })
-                })
-            });
+                Version = 2,
+                ProfileName = profileName,
+                SystemConfig = systemSettings,
+                Channels = channels
+            };
 
-            return JsonConvert.SerializeObject(formattedList, Newtonsoft.Json.Formatting.Indented);
+            return JsonConvert.SerializeObject(container, Newtonsoft.Json.Formatting.Indented);
         }
     }
 }

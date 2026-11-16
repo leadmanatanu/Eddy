@@ -129,7 +129,6 @@ namespace _8F
         public bool isSaveAsWithDb = GetConfigBool("IsSaveAsWithDb", GetConfigBool("IsSaveAsToDb", true));
         public bool isSaveAsWithFile = GetConfigBool("IsSaveAsWithFile", GetConfigBool("IsSaveAsToFile", false));
 
-        public bool isImportConfigWithDb = GetConfigBool("IsImportConfigurationWithDb", false);
         public bool isImportConfigWithFile = GetConfigBool("IsImportConfigurationWithFile", GetConfigBool("IsImportConfigurationEnable", true));
 
         public bool isExportConfigWithDb = GetConfigBool("IsExportConfigurationWithDb", GetConfigBool("IsExportConfigurationEnable", false));
@@ -448,7 +447,7 @@ namespace _8F
                 if (isOpenWithDb || isOpenWithFile) fileList.Add(new MenuItemViewModel { Header = "Open", mainWindow = this });
                 if (isSaveWithDb || isSaveWithFile) fileList.Add(new MenuItemViewModel { Header = "Save", mainWindow = this });
                 if (isSaveAsWithDb || isSaveAsWithFile) fileList.Add(new MenuItemViewModel { Header = "Save As", mainWindow = this });
-                if (isImportConfigWithDb || isImportConfigWithFile) fileList.Add(new MenuItemViewModel { Header = "Import Configuration", mainWindow = this });
+                if (isImportConfigWithFile) fileList.Add(new MenuItemViewModel { Header = "Import Configuration", mainWindow = this });
                 if (isExportConfigWithDb || isExportConfigWithFile) fileList.Add(new MenuItemViewModel { Header = "Export Configuration", mainWindow = this });
             }
 
