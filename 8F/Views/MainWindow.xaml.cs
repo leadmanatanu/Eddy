@@ -1728,6 +1728,7 @@ namespace _8F
                     FrequencyWrite frequencyWrite = new FrequencyWrite();
                     frequencyWrite.FC = 4;
                     frequencyWrite.CN = ch.Id;
+                    frequencyWrite.T = ch.TxStrength;
                     frequencyWrite.FD = new List<Frequency>();
 
                     ElliplseWrite ellipseWrite = new ElliplseWrite();

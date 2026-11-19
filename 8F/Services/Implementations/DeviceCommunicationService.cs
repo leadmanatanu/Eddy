@@ -666,7 +666,6 @@ namespace _8F.Services
         {
             try
             {
-                // Write to CSV File
                 var ch = DeviceCOM.channelDatas.FirstOrDefault(c => c.Id == res.CN);
                 if (ch != null)
                 {
