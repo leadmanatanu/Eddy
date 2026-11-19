@@ -297,12 +297,6 @@ namespace _8F.Services
                     }
                     else if (indata[1] == 25)
                     {
-                        // FC 25: Remote Shutdown
-                        // Strictly validate frame:
-                        // Byte 0: STX (0x02)
-                        // Byte 1: FC (25 / 0x19)
-                        // Byte 2: Length (0x00)
-                        // Bytes 3-4: CRC-16 (Low, High)
                         if (indata.Length == 5 && indata[0] == 2 && indata[2] == 0)
                         {
                             byte[] raw = indata.Select(b => (byte)b).ToArray();
@@ -577,13 +571,11 @@ namespace _8F.Services
                 var enabledChannels = targetCh.graphDatas.Where(g => g.isEnable).ToList();
                 var enabledFns = enabledChannels.Select(g => g.Id).ToHashSet();
 
-                // Validate that all enabled frequency numbers are present before saving
                 var uniqueFns = res.FD.Where(f => f != null).Select(f => f.FN).Distinct().ToList();
                 if (enabledFns.Count > 0)
                 {
                     if (!enabledFns.All(fn => uniqueFns.Contains(fn)))
                     {
-                        // Incomplete data for enabled channels - do not fabricate or save
                         return;
                     }
                 }
@@ -639,7 +631,6 @@ namespace _8F.Services
                             {
                                 if (Convert.ToInt32(count) == DeviceCOM.part.BatchSize)
                                 {
-                                    // stop the logging 
                                 }
 
                                 DeviceCOM.part.BatchNo = DeviceCOM.part.BatchNo + 1;
@@ -664,7 +655,6 @@ namespace _8F.Services
 
             }
 
-            //Code = string.Empty;
         }
 
         public static void WriteLogCSVDirect(bool Result, DateTime TimeStamp, Response res)
@@ -741,7 +731,6 @@ namespace _8F.Services
                         {
                             port.DtrEnable = true;
                             port.RtsEnable = true;
-                            // Optional: short delay to let device recognize the signals
                             Thread.Sleep(10);
                         }
                     }
@@ -852,7 +841,6 @@ namespace _8F.Services
                         {
                             port.DtrEnable = true;
                             port.RtsEnable = true;
-                            // Optional: short delay to let device recognize the signals
                             Thread.Sleep(10);
                         }
                     }
@@ -981,17 +969,11 @@ namespace _8F.Services
                         port.Close();
                     }
 
-                    //if (port.IsOpen)
-                    //{
-                    //    port.Close();
-                    //}
-
-                    //InitialPort(CommunicationType, PortName, BaudRate, IpAddress, SPort);
-
                     if (!port.IsOpen)
                     {
                         port.Open();
                     }
+
                     //this.port.ReadExisting();
                     PortAck = true;
                     PortData = "";
@@ -1067,13 +1049,6 @@ namespace _8F.Services
                     {
                         port.Close();
                     }
-
-                    //if (port.IsOpen)
-                    //{
-                    //    port.Close();
-                    //}
-
-                    //InitialPort(CommunicationType, PortName, BaudRate, IpAddress, SPort);
 
                     if (!port.IsOpen)
                     {

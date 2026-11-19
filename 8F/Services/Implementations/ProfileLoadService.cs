@@ -52,14 +52,12 @@ namespace _8F.Services.Implementations
                 return availableChannels[0];
             }
 
-            // Rule 2: If it contains several, use the saved channel whose number equals the target channel's number.
             var match = availableChannels.FirstOrDefault(c => c.Id == targetChannel);
             if (match != null)
             {
                 return match;
             }
 
-            // Rule 3: If there is no such match, use the lowest-numbered saved channel.
             return availableChannels.OrderBy(c => c.Id).First();
         }
 
@@ -305,7 +303,6 @@ namespace _8F.Services.Implementations
                 int currentSelectedCh = mainWin.GetSelectedChannelNumber();
                 isTargetSelected = (targetChannel == currentSelectedCh);
 
-                // Ensure DeviceCOM.channelDatas has 4 channels initialized
                 if (DeviceCOM.channelDatas == null || DeviceCOM.channelDatas.Count < 4)
                 {
                     mainWin.InitialGraphData(false);
@@ -313,18 +310,15 @@ namespace _8F.Services.Implementations
 
                 int targetIdx = targetChannel - 1;
 
-                // Deep clone source channel and assign target Channel ID
                 var cloned = ConfigurationImporter.CloneChannel(sourceChannel);
                 cloned.Id = targetChannel;
                 cloned.IsSeleted = isTargetSelected;
 
-                // Replace ONLY target channel in DeviceCOM.channelDatas
                 if (DeviceCOM.channelDatas != null && targetIdx < DeviceCOM.channelDatas.Count)
                 {
                     DeviceCOM.channelDatas[targetIdx] = cloned;
                 }
 
-                // Ensure Channel 1's data object is not the same object as Channel 2's (no shared references)
                 if (DeviceCOM.channelDatas != null && DeviceCOM.channelDatas.Count > 1)
                 {
                     for (int i = 0; i < DeviceCOM.channelDatas.Count; i++)
@@ -342,10 +336,8 @@ namespace _8F.Services.Implementations
                     }
                 }
 
-                // Mark balance required for target channel ONLY
                 DeviceCOM.ChannelBalanceRequired[targetChannel] = true;
 
-                // Safe system settings: preserve running ChannelCount and AppMode
                 if (settings != null)
                 {
                     if (settings.ChannelCount > 0 && settings.ChannelCount != mainWin.chNo)
@@ -359,7 +351,6 @@ namespace _8F.Services.Implementations
                     mainWin.ApplySafeSystemSettings(settings);
                 }
 
-                // Update CurrentProfileState with target channel
                 if (source == ProfileLoadSource.MenuImport)
                 {
                     mainWin.CurrentProfile.SetForChannel(targetChannel, null, null, null, sourceChannel.Id);
@@ -381,17 +372,14 @@ namespace _8F.Services.Implementations
                     }
                 }
 
-                // Update display / header
                 mainWin.UpdateConfigProfileDisplay();
 
-                // Refresh UI only if target is currently selected
                 if (isTargetSelected)
                 {
                     mainWin.ClearGraphDataByChId(targetChannel);
                 }
             });
 
-            // Push settings to ECT instrument for target channel only
             bool rat = false;
             try
             {
@@ -402,7 +390,6 @@ namespace _8F.Services.Implementations
                 ModbusLogger.Error($"[ProfileLoadService] Error transmitting changes to ECT instrument for Channel {targetChannel}", ex);
             }
 
-            // Ensure target channel balance requirement remains set (preventing unintended reset by serial port write)
             DeviceCOM.ChannelBalanceRequired[targetChannel] = true;
 
             if (!rat && mainWin.portCOM == null)
@@ -414,7 +401,6 @@ namespace _8F.Services.Implementations
                 ModbusLogger.Warn($"[ProfileLoadService] Profile '{profileName}' loaded into Channel {targetChannel}, but no response from ECT instrument.");
             }
 
-            // Silent Modbus holding register update
             var modbus = _modbusServiceProvider();
             if (modbus != null && profileId.HasValue && profileId.Value > 0)
             {
@@ -423,7 +409,6 @@ namespace _8F.Services.Implementations
                 _lastGoodProfileIds[targetChannel] = profileId.Value;
             }
 
-            // Audit log (when database is enabled)
             if (mainWin.isOpenWithDb || mainWin.isSaveWithDb)
             {
                 try

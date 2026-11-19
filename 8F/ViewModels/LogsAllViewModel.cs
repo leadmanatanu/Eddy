@@ -69,7 +69,6 @@ namespace _8F.ViewModels
 
                 using (var con = new NpgsqlConnection(connectionString))
                 {
-                    // PARAMETERIZED QUERY (Fixes SQL Injection)
                     const string sql = @"
                         SELECT 
                             ""BatchName"", 
